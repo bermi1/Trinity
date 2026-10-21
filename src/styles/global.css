@@ -1,0 +1,11 @@
+/* Base styles from the design file. */
+* { box-sizing: border-box; }
+body { margin: 0; background: #F4F1FA; font-family: Manrope, system-ui, sans-serif; color: #17152A; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font-family: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: #6D3CC2; text-decoration: none; }
+a:hover { color: #2B1459; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #D9D2E6; border-radius: 8px; }
+@keyframes tmIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes tmPulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
