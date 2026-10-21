@@ -34,6 +34,19 @@ Modules: Command Center dashboard, Monday Briefing (decisions become tasks, staf
 
 Also: Ctrl K command palette, the Trinity Intelligence assistant (rule-based answers from the live data), and a bottom tab bar with a "More" sheet below 700px.
 
+### The phone app
+
+Below 700px wide (any phone) Trinity Mark 360 runs as an app, not a shrunken website:
+
+- **Install it:** Android shows *Install app*; on iPhone, Share → *Add to Home Screen* (the app explains the steps). It then opens full screen with its own icon, and long-pressing the icon offers shortcuts: Approvals, Request money, My tasks, Notifications.
+- **Sign-in screen** built for thumbs: show/hide password, portal picker, Remember me switch, loading state.
+- **Navigation** like a native app: bottom tab bar for each role, a back button on inner screens, the phone's back button/gesture moves back through screens and closes sheets, and screens slide in and out.
+- **Bottom sheets** for forms, the account menu and *More*, closed by swiping down, tapping outside or going back.
+- **Pull down to refresh**, an offline notice, a light vibration on actions (Android), no zooming when typing, notch and home-indicator aware.
+- **Field app** runs full screen with Home, Money and Report sections.
+
+Tablets and computers keep the full desktop layout.
+
 ### How the main flows connect
 
 - **Money requests** go Requested → Project Manager → Operations → Finance → Management → Payment. Whoever is the approver at a step sees Approve/Reject (staff have an *Approvals* page; Management can approve any step). Each approval notifies the next person. Finance pays, which opens the person's float; reconciling closes it.
@@ -42,6 +55,7 @@ Also: Ctrl K command palette, the Trinity Intelligence assistant (rule-based ans
 - **Field app and staff portal** show the signed-in person's own tasks from the Tasks board; completing work there updates the board. Daily reports are per person. *Photo* uses the phone camera and files the picture under Documents.
 - **Reminders** (staff reports, approvals, questions) go to that person's notifications only.
 - **PDF** buttons (proposals, reports) open a branded document ready to print or save as PDF. **CSV** exports download the live data.
+- **Service worker** (`public/sw.js`) keeps the app loading without a connection; database calls always go to the network.
 - **Documents** stores real files: Supabase Storage on the live database, the browser in demo mode (up to 2 MB).
 - Rejections and resets ask for confirmation first.
 
@@ -85,7 +99,8 @@ src/
     constants.js        icons, people, roles, mobile tabs, chart data
     seed.js             demo data
     view/*.js           turn state into the values each screen renders
-  components/           shell: sidebar, top bar, modal, command palette, assistant, mobile nav, toasts
+  components/           desktop shell: sidebar, top bar, modal, command palette, assistant, toasts
+  mobile/               phone app: sign-in, header, tab bar, bottom sheets, pull to refresh, install
   pages/                one component per page
   styles/
 scripts/

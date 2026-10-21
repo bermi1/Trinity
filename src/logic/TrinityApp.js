@@ -53,7 +53,7 @@ export default class TrinityApp extends Logic {
     let emb = false, er = null; try { const qp = new URLSearchParams(location.search); emb = qp.get('embed') === '1'; er = qp.get('role'); } catch (e) {}
     if (emb) { const rr = this.ROLES[er] ? er : 'ceo'; sv = {auth:true, role:rr, page:this.ROLES[rr].home, projectId:'PRJ-0231'}; }
     const data = this.seed(); Object.keys(data).forEach(k => { if (saved && saved[k] !== undefined) data[k] = saved[k]; });
-    return Object.assign({embed:emb,more:false,colSel:{tasks:1,proc:0,crm:0},mobileRole:sv.role||'ceo',docType:'all',docQ:'',propFilter:'all',prefs:sv.prefs||{push:true,email:true,sms:false,digest:true},auth:!!sv.auth,remember:sv.remember !== false,role:sv.role||'ceo',loginRole:sv.role||'ceo',mTab:'home',page:sv.page||'dashboard',projectId:sv.projectId||'PRJ-0231',email:'daniel.k@trinitymark.co.tz',pw:'demo1234',loginErr:'',range:'12W',tip:-1,menu:false,drawer:false,w:typeof window!=='undefined'?window.innerWidth:1440,reqSel:'REQ-0418',reqFilter:'me',taskFilter:'all',projFilter:'all',stockQ:'',leadQ:'',modal:null,form:{},modalErr:'',cmd:false,cmdQ:'',ai:false,aiQ:'',aiBusy:false,aiMsgs:[{r:'ai',t:'Habari. Ask me about projects, money, stock or staff — I read the live Trinity Mark 360 data.'}],toasts:[],fieldTab:'home',newAct:{d:'',a:'',o:'SK',dl:''}}, data); })();
+    return Object.assign({embed:emb,more:false,colSel:{tasks:1,proc:0,crm:0},mobileRole:sv.role||'ceo',docType:'all',docQ:'',propFilter:'all',prefs:sv.prefs||{push:true,email:true,sms:false,digest:true},auth:!!sv.auth,remember:sv.remember !== false,online:typeof navigator === 'undefined' ? true : navigator.onLine !== false,navDir:'tab',role:sv.role||'ceo',loginRole:sv.role||'ceo',mTab:'home',page:sv.page||'dashboard',projectId:sv.projectId||'PRJ-0231',email:'daniel.k@trinitymark.co.tz',pw:'demo1234',loginErr:'',range:'12W',tip:-1,menu:false,drawer:false,w:typeof window!=='undefined'?window.innerWidth:1440,reqSel:'REQ-0418',reqFilter:'me',taskFilter:'all',projFilter:'all',stockQ:'',leadQ:'',modal:null,form:{},modalErr:'',cmd:false,cmdQ:'',ai:false,aiQ:'',aiBusy:false,aiMsgs:[{r:'ai',t:'Habari. Ask me about projects, money, stock or staff — I read the live Trinity Mark 360 data.'}],toasts:[],fieldTab:'home',newAct:{d:'',a:'',o:'SK',dl:''}}, data); })();
 
   componentDidMount() {
     this._key = e => {
@@ -64,11 +64,32 @@ export default class TrinityApp extends Logic {
     window.addEventListener('keydown', this._key); window.addEventListener('resize', this._rs);
     this._prevData = {}; this.dataKeys().forEach(k => { this._prevData[k] = this.state[k]; });
     if (this.state.db) this.startDb();
+    this._pop = e => this.onPopState(e);
+    this._net = () => this.setState({online:navigator.onLine});
+    window.addEventListener('popstate', this._pop); window.addEventListener('online', this._net); window.addEventListener('offline', this._net);
+    if (!this.state.embed) { try { history.replaceState({tm:1, depth:0, page:this.state.page, projectId:this.state.projectId}, ''); } catch (e) {} }
+    try {
+      const target = new URLSearchParams(location.search).get('go');
+      if (target) {
+        history.replaceState(history.state, '', location.pathname);
+        if (target === 'newreq') this._afterAuth = () => this.openModal('req');
+        else this._afterAuth = () => this.go(target);
+        if (this.state.auth) { this._afterAuth(); this._afterAuth = null; }
+      }
+    } catch (e) {}
     try { this._bc = new BroadcastChannel('tm360'); this._bc.onmessage = e => { if (!e.data || typeof e.data !== 'object') return; this._remote = true; this.setState(e.data, () => { this._remote = false; Object.keys(e.data).forEach(k => { if (this._prevData) this._prevData[k] = this.state[k]; }); }); }; } catch (e) {}
   }
-  componentWillUnmount() { if (this.sync) this.sync.unsubscribe(); if (this._authSub) this._authSub.unsubscribe(); window.removeEventListener('keydown', this._key); window.removeEventListener('resize', this._rs); try { this._bc && this._bc.close(); } catch (e) {} }
+  componentWillUnmount() { window.removeEventListener('popstate', this._pop); window.removeEventListener('online', this._net); window.removeEventListener('offline', this._net); if (this.sync) this.sync.unsubscribe(); if (this._authSub) this._authSub.unsubscribe(); window.removeEventListener('keydown', this._key); window.removeEventListener('resize', this._rs); try { this._bc && this._bc.close(); } catch (e) {} }
   componentDidUpdate(pp, ps) {
     const s = this.state;
+    const was = !!this._overlayWas, now = this.overlayOpen(s);
+    if (now !== was && s.w < 700 && !s.embed) {
+      if (now) this.pushHistory({page:s.page, projectId:s.projectId, overlay:true});
+      else if (this._closingByBack) this._closingByBack = false;
+      else if (history.state && history.state.overlay) { this._ignorePop = true; this._depth = Math.max(0, (this._depth || 1) - 1); history.back(); }
+    }
+    this._overlayWas = now;
+    if (s.auth && this._afterAuth && !this._afterAuthRunning) { this._afterAuthRunning = true; const f = this._afterAuth; this._afterAuth = null; setTimeout(() => { this._afterAuthRunning = false; f(); }, 0); }
     if (!s.embed) { try { localStorage.setItem('tm360', JSON.stringify({auth:s.auth,role:s.role,page:s.page,projectId:s.projectId,prefs:s.prefs,remember:s.remember})); } catch (e) {} }
     const dk = this.dataKeys(), prev = this._prevData || {}, diff = {}; let n = 0;
     dk.forEach(k => { if (s[k] !== prev[k]) { diff[k] = s[k]; n++; } });
@@ -285,10 +306,45 @@ export default class TrinityApp extends Logic {
   av(k) { const p = this.PPL[k] || [String(k || '—'),'#6E6A7C']; return {i:k,n:p[0],c:p[1],first:p[0].split(' ')[0]}; }
   proj(id) { return this.state.projects.find(p => p.id === id) || {id:'',name:'General',client:'Company'}; }
   tone(t) { return ({amber:['#FBF1DD','#8A6414'],purple:['#EFE8FA','#5A2FA8'],green:['#E6F4EC','#1F7549'],blue:['#E9EFFA','#3559A8'],dark:['#EDE8F6','#2B1459'],red:['#FBEDEE','#B23A46']})[t] || ['#F4F1FA','#2B1459']; }
-  go(page, extra) { this.setState(Object.assign({page,menu:false,drawer:false,cmd:false,more:false,tip:-1}, extra || {})); try { window.scrollTo(0,0); } catch (e) {} }
+  go(page, extra) {
+    const s = this.state, x = extra || {}, same = page === s.page && (!x.projectId || x.projectId === s.projectId);
+    this.setState(Object.assign({page,menu:false,drawer:false,cmd:false,more:false,tip:-1,navDir:this.isTab(page) ? 'tab' : 'push'}, x));
+    if (!same) this.pushHistory({page, projectId:x.projectId || s.projectId});
+    try { window.scrollTo(0,0); } catch (e) {}
+  }
+  // ---- Native-style navigation: browser/phone back moves through screens and closes sheets.
+  isTab(page) { const r = this.state.role || 'ceo'; return page === this.ROLES[r].home || (this.TABS[r] || []).some(t => t[0] === page); }
+  pushHistory(entry) {
+    if (this.state.embed || typeof history === 'undefined') return;
+    this._depth = (this._depth || 0) + 1;
+    try { history.pushState(Object.assign({tm:1, depth:this._depth}, entry), ''); } catch (e) {}
+  }
+  overlayOpen(s) { return !!(s.modal || s.more || s.menu || s.ai || s.cmd); }
+  onPopState(e) {
+    if (this._ignorePop) { this._ignorePop = false; return; }
+    const s = this.state, st = e.state || {};
+    this._depth = st.depth || 0;
+    if (this.overlayOpen(s)) { this._closingByBack = true; this.setState({modal:null, more:false, menu:false, ai:false, cmd:false}); return; }
+    if (st.page && s.auth) {
+      this.setState({page:st.page, projectId:st.projectId || s.projectId, navDir:'back', tip:-1});
+      try { window.scrollTo(0,0); } catch (err) {}
+    }
+  }
+  goBack() {
+    if (!this.state.embed && (this._depth || 0) > 0) { try { history.back(); return; } catch (e) {} }
+    this.setState({navDir:'back'});
+    this.go(this.ROLES[this.state.role || 'ceo'].home);
+    this.setState({navDir:'back'});
+  }
+  // Pull to refresh: reloads shared data from the database (demo data is already current).
+  async refresh() {
+    if (!this.sync || !this.state.auth) { await new Promise(r => setTimeout(r, 600)); this.toast('Up to date'); return; }
+    try { this.applyRemote(await withTimeout(this.sync.load(this.seed()), 20000)); this.toast('Up to date'); } catch (err) { console.error(err); this.toast(OFFLINE); }
+  }
+  haptic(ms) { try { if (this.state.w < 700 && navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) {} }
   asRole(r, page, extra) { return () => { if (this.state.db && this.account && this.account.role !== 'ceo' && r !== this.account.role) { this.setState({menu:false, more:false}); this.toast('Your account uses the ' + this.ROLES[this.account.role].label + ' portal'); return; } this.setState(Object.assign({role:r, menu:false, drawer:false, more:false, page:page || this.ROLES[r].home, tip:-1, taskFilter:r === 'staff' ? 'mine' : 'all'}, extra || {})); try { window.scrollTo(0,0); } catch (e) {} }; }
   goTarget(g) { if (g && g.indexOf('project:') === 0) this.go('project',{projectId:g.slice(8)}); else this.go(g || 'dashboard'); }
-  toast(t) { const id = Date.now() + Math.random(); this.setState(s => ({toasts:[...s.toasts,{id,t}]})); setTimeout(() => this.setState(s => ({toasts:s.toasts.filter(x => x.id !== id)})), 3200); }
+  toast(t) { this.haptic(10); const id = Date.now() + Math.random(); this.setState(s => ({toasts:[...s.toasts,{id,t}]})); setTimeout(() => this.setState(s => ({toasts:s.toasts.filter(x => x.id !== id)})), 3200); }
   notify(n) { this.setState(s => ({notes:[Object.assign({id:Date.now()+Math.random(),read:false,time:this.now()}, n), ...s.notes]})); }
   log(ic, tone, t, sub) { this.setState(s => ({activity:[{time:this.now(),ic,tone,t,s:sub}, ...s.activity].slice(0,7)})); }
   smooth(pts) { let d = 'M' + pts[0][0] + ' ' + pts[0][1]; for (let i = 0; i < pts.length - 1; i++) { const p0 = pts[i-1] || pts[i], p1 = pts[i], p2 = pts[i+1], p3 = pts[i+2] || p2; d += ' C' + (p1[0]+(p2[0]-p0[0])/6).toFixed(1) + ' ' + (p1[1]+(p2[1]-p0[1])/6).toFixed(1) + ' ' + (p2[0]-(p3[0]-p1[0])/6).toFixed(1) + ' ' + (p2[1]-(p3[1]-p1[1])/6).toFixed(1) + ' ' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1); } return d; }

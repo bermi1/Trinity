@@ -4,6 +4,7 @@ import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import './styles/global.css';
 import './styles/interactions.css';
+import './styles/mobile.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -12,3 +13,8 @@ createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </StrictMode>
 );
+
+// Offline support and installability (production builds only).
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(err => console.warn('Service worker not registered', err)));
+}

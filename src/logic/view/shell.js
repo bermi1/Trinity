@@ -19,7 +19,7 @@ export function renderVals() {
   const moreActive = !!s.more || !tabDefs.some(t => t[0] === navPage);
   const mobileTabs = tabDefs.map(([k,l,ic,_b,ex]) => { const a = k === navPage && !s.more; const b = BADGE[k] || 0; return {l, ic:IC[ic], c:a ? '#2B1459' : '#8A8698', bar:a ? '#6D3CC2' : 'transparent', fw:a ? 800 : 600, b, hb:b > 0, on:() => this.go(k, ex)}; });
   mobileTabs.push({l:'More', ic:IC.grid, c:moreActive ? '#2B1459' : '#8A8698', bar:moreActive ? '#6D3CC2' : 'transparent', fw:moreActive ? 800 : 600, b:0, hb:false, on:() => this.setState({more:!s.more})});
-  const moreItems = flatNav.filter(i => !tabDefs.some(t => t[0] === i[0])).map(([k,l,ic,b,ex]) => { const a = k === navPage; return {l, ic:IC[ic], b:b || 0, hb:!!b, bg:a ? '#EFE8FA' : '#fff', bd:a ? '#6D3CC2' : '#E8E4EF', on:() => this.go(k, ex)}; });
+  const moreItems = flatNav.filter(i => !tabDefs.some(t => t[0] === i[0]) && !(phone && i[0] === 'ceomobile')).map(([k,l,ic,b,ex]) => { const a = k === navPage; return {l, ic:IC[ic], b:b || 0, hb:!!b, bg:a ? '#EFE8FA' : '#fff', bd:a ? '#6D3CC2' : '#E8E4EF', on:() => this.go(k, ex)}; });
   const portalChips = Object.keys(this.ROLES).map(k => ({l:this.ROLES[k].label, bg:role === k ? '#2B1459' : '#fff', c:role === k ? '#fff' : '#17152A', bd:role === k ? '#2B1459' : '#E8E4EF', on:() => this.asRole(k)()}));
   const is = {}; ['dashboard','briefing','notifications','crm','finance','projects','project','tasks','procurement','store','requests','staff','field','staffportal','financeportal','reception','storekeeper','rooms','ceomobile','proposals','production','logistics','documents','reports','calendar','settings'].forEach(k => is[k] = s.page === k);
   const hr = new Date().getHours();
@@ -77,7 +77,9 @@ export function renderVals() {
     signOut:() => this.signOut(),
     resetDemo:() => this.resetDemo(),
     loginNote:s.db ? 'Sign in with your Trinity Mark account' : 'Demo workspace · any password of 4+ characters', dataBadge:s.db ? 'LIVE DATA' : 'DEMO DATA',
-    nav, is, narrow, wide, phone, notPhone:!phone, tabletNav:narrow && !phone, toastBottom:phone ? '96px' : '24px', deskDisp:phone ? 'none' : 'block',
+    page:s.page, pageKey:s.page + '|' + (s.page === 'project' ? s.projectId : ''), navDir:s.navDir || 'tab', online:s.online !== false, signingIn:!!s.signingIn, db:!!s.db,
+    showBack:phone && !this.isTab(s.page), goSettings:() => this.go('settings'), goBack:() => this.goBack(), refresh:() => this.refresh(), haptic:ms => this.haptic(ms), remember:s.remember !== false,
+    nav, is, narrow, wide, phone, notPhone:!phone, tabletNav:narrow && !phone, toastBottom:phone ? 'calc(78px + env(safe-area-inset-bottom, 0px))' : '24px', deskDisp:phone ? 'none' : 'block',
     pageTitle, mobileTabs, moreOpen:phone && !!s.more, closeMore:() => this.setState({more:false}), moreItems, portalChips,
     me:(() => { const R = this.ROLES[s.role || 'ceo']; return {i:R.k, n:R.n, t:R.t, c:this.av(R.k).c, label:R.label.toUpperCase(), first:R.n.split(' ')[0]}; })(),
     loginRoles:Object.keys(this.ROLES).map(k => { const on = s.loginRole === k; return {l:this.ROLES[k].label, on:() => this.setState({loginRole:k, email:this.ROLES[k].email, loginErr:''}), bg:on ? '#2B1459' : '#fff', c:on ? '#fff' : '#17152A', bd:on ? '#2B1459' : '#E8E4EF'}; }),
