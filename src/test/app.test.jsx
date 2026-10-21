@@ -125,3 +125,33 @@ describe('command palette', () => {
     expect(screen.getByText(/Vehicles, drivers and every trip/)).toBeTruthy();
   });
 });
+
+describe('approval chain permissions', () => {
+  it('lets the project manager approve their step and nobody else in a staff portal', () => {
+    const app = new TrinityApp();
+    const req = { id: 'REQ-9', who: 'GM', p: 'PRJ-0231', step: 1, st: 'pending', log: [] };
+    app.setState({ role: 'staff' });
+    app.ROLES = { ...app.ROLES, staff: { ...app.ROLES.staff, k: 'SK' } };
+    expect(app.canAct(req)).toBe(true);
+    expect(app.canAct({ ...req, step: 2 })).toBe(false);
+    app.ROLES = { ...app.ROLES, staff: { ...app.ROLES.staff, k: 'MM' } };
+    expect(app.canAct({ ...req, step: 2 })).toBe(true);
+    expect(app.canPay()).toBe(false);
+    app.setState({ role: 'finance' });
+    expect(app.canAct({ ...req, step: 3 })).toBe(true);
+    expect(app.canAct({ ...req, step: 4 })).toBe(false);
+    expect(app.canPay()).toBe(true);
+  });
+
+  it('moves one step per approval and notifies the next approver', () => {
+    const app = new TrinityApp();
+    app.setState({ reqs: [{ id: 'REQ-9', who: 'GM', p: 'PRJ-0231', amt: 1000, step: 1, st: 'pending', log: [] }] });
+    for (const [step, to] of [[2, 'MM'], [3, 'RT'], [4, 'DK']]) {
+      app.decide(app.state.reqs[0], true);
+      expect(app.state.reqs[0].step).toBe(step);
+      expect(app.state.notes[0].to).toBe(to);
+    }
+    app.decide(app.state.reqs[0], true);
+    expect(app.state.reqs[0]).toMatchObject({ step: 5, st: 'approved' });
+  });
+});

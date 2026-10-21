@@ -28,12 +28,12 @@ export function pageVals2(s, IC, ST, narrow) {
   V.stockRows = s.stock.filter(i => !sq || (i.n + i.sku + i.cat).toLowerCase().indexOf(sq) >= 0).map(i => { const r = i.q / (i.min * 2), lo = i.q < i.min; return {sku:i.sku, n:i.n, cat:i.cat, q:i.q + ' ' + i.u, min:i.min + ' ' + i.u, loc:i.loc, w:Math.min(100, r*100) + '%', c:lo ? '#D9535F' : r < .75 ? '#D89B2B' : '#2E9B63', low:lo, stl:lo ? 'Low' : 'OK', stbg:lo ? '#FBEDEE' : '#E6F4EC', stfg:lo ? '#B23A46' : '#1F7549',
     issue:() => this.openModal('issue',{sku:i.sku, n:i.n, u:i.u, _meta:{sub:i.n + ' · ' + i.q + ' ' + i.u + ' in store'}}),
     receive:() => this.openModal('receive',{sku:i.sku, n:i.n, u:i.u, _meta:{sub:i.n + ' · ' + i.q + ' ' + i.u + ' in store'}}),
-    reorder:() => { const id = 'PR-0' + (213 + s.proc.length - 7); this.setState(x => ({proc:[{id, t:i.n + ' × ' + (i.min * 2 - i.q), p:'', v:+((i.min * 2 - i.q) * i.cost / 1e6).toFixed(2), s:0, sup:'—'}, ...x.proc]})); this.toast('Purchase request ' + id + ' created for ' + i.n); }}; });
+    reorder:() => { const id = this.nextId('PR', s.proc); this.setState(x => ({proc:[{id, t:i.n + ' × ' + (i.min * 2 - i.q), p:'', v:+((i.min * 2 - i.q) * i.cost / 1e6).toFixed(2), s:0, sup:'—', sku:i.sku, qty:i.min * 2 - i.q}, ...x.proc]})); this.toast('Purchase request ' + id + ' created for ' + i.n); }}; });
   V.stockEmpty = V.stockRows.length === 0;
   // Procurement
   const PS = ['Request','Quotation','Approved','PO issued','Delivered'], RL = ['Get quotes','Approve','Issue PO','Mark delivered'];
   V.procCols = PS.map((l,k) => { const items = s.proc.filter(p => p.s === k); return {l, n:items.length, tot:this.fmtM(items.reduce((a,b) => a + b.v, 0)), empty:!items.length, cards:items.map(p => ({id:p.id, t:p.t, proj:p.p ? this.proj(p.p).client : 'Store stock', v:this.fmtM(p.v), sup:p.sup, canR:k < 4, rl:RL[k], done:k === 4,
-    right:() => { const sup = p.sup === '—' && k === 0 ? 'Chapa Supplies' : p.sup; this.setState(x => ({proc:x.proc.map(y => y.id === p.id ? Object.assign({}, y, {s:k + 1, sup}) : y)})); this.toast(k === 3 ? p.id + ' delivered · received into store' : p.id + ' → ' + PS[k + 1]); if (k === 3) this.log('truck','green','Delivery received · ' + p.t, p.id + ' · ' + sup); }}))}; });
+    right:() => { const sup = p.sup === '—' && k === 0 ? 'Chapa Supplies' : p.sup; this.setState(x => Object.assign({proc:x.proc.map(y => y.id === p.id ? Object.assign({}, y, {s:k + 1, sup}) : y)}, k === 3 ? {deliveries:[{id:this.nextId('DLV', x.deliveries), from:sup, items:p.t, st:'arrived', time:this.now(), sku:p.sku || '', qty:p.qty || 0, po:p.id}, ...x.deliveries]} : {})); this.toast(k === 3 ? p.id + ' delivered · waiting at the store to be received' : p.id + ' → ' + PS[k + 1]); if (k === 3) this.log('truck','green','Delivery received · ' + p.t, p.id + ' · ' + sup); }}))}; });
   V.newProc = () => this.openModal('proc');
   const pvw = this.colView(V.procCols, 'proc'); V.procColsV = pvw.view; V.procTabs = pvw.tabs;
   // CRM
@@ -48,49 +48,56 @@ export function pageVals2(s, IC, ST, narrow) {
   const miss = s.staff.filter(p => !p.rep);
   V.staffSummary = (s.staff.length - miss.length) + ' of ' + s.staff.length + ' shown staff reported yesterday';
   V.hasMissing = miss.length > 0;
-  V.remindAll = () => { this.toast('Reminder sent to ' + miss.length + ' staff via SMS & app'); };
-  V.staffRows = s.staff.map(p => { const a = this.av(p.k); return {n:a.n, i:a.i, c:a.c, role:p.role, dept:p.dept, tasks:s.tasks.filter(t => t.who === p.k && t.st !== 'done').length + ' open', fl:p.fl ? this.fmtT(p.fl) : '—', stl:p.rep ? 'Submitted' : 'Missing', stbg:p.rep ? '#E6F4EC' : '#FBEDEE', stfg:p.rep ? '#1F7549' : '#B23A46', miss:!p.rep, remind:() => this.toast('Reminder sent to ' + a.n)}; });
+  V.remindAll = () => { miss.forEach(p => this.remind(p.k, 'Reminder · submit your daily report', 'staffportal')); this.toast('Reminder sent to ' + miss.length + ' staff'); };
+  V.staffRows = s.staff.map(p => { const a = this.av(p.k); return {n:a.n, i:a.i, c:a.c, role:p.role, dept:p.dept, tasks:s.tasks.filter(t => t.who === p.k && t.st !== 'done').length + ' open', fl:p.fl ? this.fmtT(p.fl) : '—', stl:p.rep ? 'Submitted' : 'Missing', stbg:p.rep ? '#E6F4EC' : '#FBEDEE', stfg:p.rep ? '#1F7549' : '#B23A46', miss:!p.rep, remind:() => { this.remind(p.k, 'Reminder · submit your daily report', 'staffportal'); this.toast('Reminder sent to ' + a.n); }}; });
   // Notifications
-  V.noteRows = s.notes.map(n => ({ic:IC[n.ic] || IC.bell, t:n.t, s:n.s, time:n.time, unread:!n.read, bg:n.read ? '#fff' : '#FBF9FE', fw:n.read ? 500 : 700, on:() => { this.setState(x => ({notes:x.notes.map(y => y.id === n.id ? Object.assign({}, y, {read:true}) : y)})); this.goTarget(n.go); }}));
-  V.markAllRead = () => this.setState(x => ({notes:x.notes.map(y => Object.assign({}, y, {read:true}))}));
-  // Field app
-  const ft = s.fieldTasks, fd = ft.filter(t => t.st === 'done').length;
-  V.fDone = fd + ' of ' + ft.length + ' done'; V.fW = (fd / ft.length * 100) + '%';
-  V.fTasks = ft.map((t,i) => ({t:t.t, s:t.s, time:t.time, done:t.st === 'done', prog:t.st === 'prog', todo:t.st === 'todo', bd:t.st === 'prog' ? '#6D3CC2' : '#E8E4EF', op:t.st === 'done' ? .6 : 1, td:t.st === 'done' ? 'line-through' : 'none',
-    start:() => this.setState(x => ({fieldTasks:x.fieldTasks.map((y,j) => j === i ? Object.assign({}, y, {st:'prog'}) : y)})),
-    complete:() => { this.setState(x => ({fieldTasks:x.fieldTasks.map((y,j) => j === i ? Object.assign({}, y, {st:'done'}) : y)})); this.toast('Task completed · synced to office'); this.log('check','green','John M. completed · ' + t.t, t.s); }}));
+  V.noteRows = this.myNotes(s).map(n => ({ic:IC[n.ic] || IC.bell, t:n.t, s:n.s, time:n.time, unread:!n.read, bg:n.read ? '#fff' : '#FBF9FE', fw:n.read ? 500 : 700, on:() => { this.setState(x => ({notes:x.notes.map(y => y.id === n.id ? Object.assign({}, y, {read:true}) : y)})); this.goTarget(n.go); }}));
+  V.markAllRead = () => { const mine = new Set(this.myNotes(s).map(n => n.id)); this.setState(x => ({notes:x.notes.map(y => mine.has(y.id) ? Object.assign({}, y, {read:true}) : y)})); };
+  // Field app: the person's own tasks from the Tasks board. Management previews it as John, the field supervisor.
+  const fk = this.fieldKey(), fme = this.av(fk);
+  V.fieldMe = fme;
+  const ft = s.tasks.filter(t => t.who === fk), fd = ft.filter(t => t.st === 'done').length;
+  const setTask = (id, st) => this.setState(x => ({tasks:x.tasks.map(y => y.id === id ? Object.assign({}, y, {st}) : y)}));
+  V.fDone = fd + ' of ' + ft.length + ' done'; V.fW = (ft.length ? fd / ft.length * 100 : 0) + '%';
+  V.fTasks = ft.map(t => { const st = t.st === 'done' ? 'done' : t.st === 'todo' ? 'todo' : 'prog', P = this.proj(t.p), tm = /\d\d:\d\d/.exec(t.due); return {t:t.t, s:P.client + ' · ' + P.name, time:tm ? tm[0] : t.due, done:st === 'done', prog:st === 'prog', todo:st === 'todo', bd:st === 'prog' ? '#6D3CC2' : '#E8E4EF', op:st === 'done' ? .6 : 1, td:st === 'done' ? 'line-through' : 'none',
+    start:() => setTask(t.id, 'prog'),
+    complete:() => { setTask(t.id, 'done'); this.toast('Task completed · synced to office'); this.log('check','green',fme.first + ' completed · ' + t.t, P.client); }}; });
   V.fTab = {home:s.fieldTab === 'home', req:s.fieldTab === 'req', report:s.fieldTab === 'report'};
   V.fTabs = [['home','Home','home'],['req','Money','banknote'],['report','Report','fileText']].map(([k,l,ic]) => ({l, ic:IC[ic], c:s.fieldTab === k ? '#2B1459' : '#8A8698', bar:s.fieldTab === k ? '#6D3CC2' : 'transparent', on:() => this.setState({fieldTab:k})}));
   const fr = s.fieldReq, setFR = k => e => this.setState({fieldReq:Object.assign({}, s.fieldReq, {[k]:e.target.value})});
   V.fr = fr; V.frAmt = setFR('amt'); V.frPurpose = setFR('purpose'); V.frP = setFR('p'); V.frCat = setFR('cat');
   V.projOpts = s.projects.filter(p => p.st !== 'done').map(p => ({v:p.id, l:p.client + ' · ' + p.name}));
   V.catOpts = ['Transport','Fuel','Materials','Permits','Meals'].map(x => ({v:x, l:x}));
-  V.frSubmit = () => { const amt = +fr.amt || 0; if (!amt || !fr.purpose.trim()) { this.toast('Enter an amount and a purpose'); return; } const id = 'REQ-0' + (427 + s.reqs.length); this.setState(x => ({reqs:[{id, who:'JM', amt, cat:fr.cat, purpose:fr.purpose, p:fr.p, need:'Today', step:1, st:'pending', log:[this.now()]}, ...x.reqs], fieldReq:{amt:'', purpose:'', p:fr.p, cat:'Transport'}, fieldTab:'home'})); this.toast(id + ' sent · waiting for Project Manager'); this.log('banknote','amber','John M. requested ' + this.fmtT(amt), this.proj(fr.p).name + ' · ' + id); };
-  V.myReqs = s.reqs.filter(r => r.who === 'JM').slice(0,3).map(r => Object.assign({id:r.id, amt:this.fmtT(r.amt), cat:r.cat}, (a => ({stl:a[0], stbg:a[1], stfg:a[2]}))(this.rst(r))));
-  V.reportText = s.reportText; V.onReport = e => this.setState({reportText:e.target.value}); V.reportSent = s.reportSent; V.reportOpen = !s.reportSent;
-  V.fDoneList = ft.filter(t => t.st === 'done').map(t => ({t:t.t, s:t.s}));
-  V.sendReport = () => { this.setState(x => ({reportSent:true, reportsSub:Math.min(48, x.reportsSub + 1)})); this.toast('Daily report submitted'); this.log('fileText','purple','John M. submitted daily report', fd + ' tasks completed'); };
+  V.frSubmit = () => { const amt = +fr.amt || 0; if (amt <= 0 || !fr.purpose.trim()) { this.toast('Enter an amount and a purpose'); return; } const p = fr.p || (V.projOpts[0] || {}).v || ''; const id = this.nextId('REQ', s.reqs); this.setState(x => ({reqs:[{id, who:fk, amt, cat:fr.cat, purpose:fr.purpose.trim(), p, need:'Today', step:1, st:'pending', log:[this.now()]}, ...x.reqs], fieldReq:{amt:'', purpose:'', p, cat:'Transport'}, fieldTab:'home'})); this.toast(id + ' sent · waiting for Project Manager'); this.log('banknote','amber',fme.first + ' requested ' + this.fmtT(amt), this.proj(p).name + ' · ' + id); };
+  V.myReqs = s.reqs.filter(r => r.who === fk).slice(0,3).map(r => Object.assign({id:r.id, amt:this.fmtT(r.amt), cat:r.cat}, (a => ({stl:a[0], stbg:a[1], stfg:a[2]}))(this.rst(r))));
+  const sent = !!(s.reportsToday || {})[fk];
+  V.reportText = s.reportText; V.onReport = e => this.setState({reportText:e.target.value}); V.reportSent = sent; V.reportOpen = !sent;
+  V.fDoneList = ft.filter(t => t.st === 'done').map(t => ({t:t.t, s:this.proj(t.p).client}));
+  V.sendReport = () => this.submitReport(fk, s.reportText || (fd + ' of ' + ft.length + ' tasks completed'), {reportText:''});
   V.clock = this.now();
   V.goFieldReport = () => this.setState({fieldTab:'report'});
+  V.takePhoto = () => this.takePhoto(fk);
 
-  // Staff portal (Grace Mrema, Field Officer)
-  const SPk = 'GM';
+  // Staff portal: the staff member signed in (Grace in the demo)
+  const SPk = this.ROLES.staff.k;
   const spTasks = s.tasks.filter(t => t.who === SPk);
   V.SP = {
     greet:(hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening') + ', ' + this.av(SPk).n.split(' ')[0],
-    kpis:[{l:'Open tasks', v:String(spTasks.filter(t => t.st !== 'done').length)}, {l:'My requests', v:String(s.reqs.filter(r => r.who === SPk).length)}, {l:'Open float', v:this.fmtT(s.staff.find(p => p.k === SPk).fl)}, {l:'Reports this week', v:'5 / 5'}],
+    kpis:[{l:'Open tasks', v:String(spTasks.filter(t => t.st !== 'done').length)}, {l:'My requests', v:String(s.reqs.filter(r => r.who === SPk).length)}, {l:'Open float', v:this.fmtT((s.staff.find(p => p.k === SPk) || {fl:0}).fl)}, {l:'Report today', v:(s.reportsToday || {})[SPk] ? 'Sent' : 'Not yet'}],
     tasks:spTasks.map(t => ({t:t.t, proj:this.proj(t.p).client, due:t.due, td:t.st === 'done' ? 'line-through' : 'none', chkBg:t.st === 'done' ? '#2E9B63' : '#fff', chkBd:t.st === 'done' ? '#2E9B63' : '#D5CFE0', toggle:() => this.setState(x => ({tasks:x.tasks.map(y => y.id === t.id ? Object.assign({}, y, {st:y.st === 'done' ? 'prog' : 'done'}) : y)}))})),
     tasksEmpty:spTasks.length === 0,
     reqs:s.reqs.filter(r => r.who === SPk).map(r => Object.assign({amt:this.fmtT(r.amt), cat:r.cat}, (a => ({stl:a[0], stbg:a[1], stfg:a[2]}))(this.rst(r)))), reqsEmpty:s.reqs.filter(r => r.who === SPk).length === 0,
     newReq:() => this.openModal('req', {who:SPk}), reportText:s.spReportText || '', onReport:e => this.setState({spReportText:e.target.value}),
-    sendReport:() => { if (!(s.spReportText || '').trim()) { this.toast('Write your report first'); return; } this.toast('Report submitted'); this.log('fileText', 'purple', this.av(SPk).n + ' submitted daily report', (s.spReportText || '').slice(0,60)); this.setState({spReportText:'', reportsSub:Math.min(48, s.reportsSub + 1)}); }
+    sendReport:() => { if (!(s.spReportText || '').trim()) { this.toast('Write your report first'); return; } this.submitReport(SPk, s.spReportText, {spReportText:''}); }
   };
 
-  // Finance portal (Rose Temba)
+  // Finance portal: the finance officer signed in (Rose in the demo)
+  const FK = this.av(this.ROLES.finance.k);
   const fReqs = s.reqs.filter(r => r.st === 'pending' && r.step === 3);
   V.FP = {
+    title:FK.n + '\u2019s queue',
     kpis:[{l:'Awaiting verification', v:String(fReqs.length)}, {l:'Overdue invoices', v:String(s.invoices.filter(i => i.st === 'overdue').length), c:'#B23A46'}, {l:'Open floats', v:String(s.staff.filter(p => p.fl > 0).length)}, {l:'Paid this week', v:String(s.reqs.filter(r => r.st === 'paid').length)}],
-    reqs:fReqs.map(r => ({who:this.av(r.who).n, amt:this.fmtT(r.amt), cat:r.cat, proj:this.proj(r.p).name, verify:() => { this.setState(x => ({reqs:x.reqs.map(y => y.id === r.id ? Object.assign({}, y, {step:4, log:[...y.log, this.now()]}) : y)})); this.toast(r.id + ' verified · sent to Management'); this.log('check','green','Rose T. verified ' + this.fmtT(r.amt), this.proj(r.p).name + ' · ' + r.id); }})),
+    reqs:fReqs.map(r => ({who:this.av(r.who).n, amt:this.fmtT(r.amt), cat:r.cat, proj:this.proj(r.p).name, verify:() => this.decide(r, true)})),
     reqsEmpty:fReqs.length === 0,
     overdue:s.invoices.filter(i => i.st === 'overdue').map(i => ({id:i.id, c:i.c, due:i.due, v:this.fmtM(i.v)})), overdueEmpty:s.invoices.filter(i => i.st === 'overdue').length === 0,
     floats:s.staff.filter(p => p.fl > 0).map(p => { const a = this.av(p.k); return {n:a.n, i:a.i, c:a.c, amt:this.fmtT(p.fl), age:({JM:'1 day',GM:'2 days',AJ:'4 days',PL:'12 days'})[p.k] || 'today', rec:() => { this.setState(x => ({staff:x.staff.map(q => q.k === p.k ? Object.assign({}, q, {fl:0}) : q)})); this.toast('Float reconciled · ' + a.n); this.log('receipt','green','Float reconciled · ' + this.fmtT(p.fl), a.n); }}; })
@@ -111,10 +118,11 @@ export function pageVals2(s, IC, ST, narrow) {
   // Storekeeper portal (Fatma Hassan)
   const skLow = s.stock.filter(i => i.q < i.min);
   V.SK = {
+    title:this.av(this.ROLES.store.k).first + '\u2019s store',
     kpis:[{l:'Below minimum', v:String(skLow.length), c:skLow.length ? '#B23A46' : '#17152A'}, {l:'To receive', v:String(s.deliveries.filter(d => d.st === 'expected' || d.st === 'arrived').length)}, {l:'Items tracked', v:String(s.stock.length)}, {l:'Issued this week', v:'46'}],
-    low:skLow.map(i => ({n:i.n, sku:i.sku, loc:i.loc, q:i.q + ' ' + i.u, min:i.min + ' ' + i.u, reorder:() => { const id = 'PR-0' + (213 + s.proc.length - 7); this.setState(x => ({proc:[{id, t:i.n + ' × ' + (i.min * 2 - i.q), p:'', v:+((i.min * 2 - i.q) * i.cost / 1e6).toFixed(2), s:0, sup:'—'}, ...x.proc]})); this.toast('Purchase request ' + id + ' created for ' + i.n); }})),
+    low:skLow.map(i => ({n:i.n, sku:i.sku, loc:i.loc, q:i.q + ' ' + i.u, min:i.min + ' ' + i.u, reorder:() => { const id = this.nextId('PR', s.proc); this.setState(x => ({proc:[{id, t:i.n + ' × ' + (i.min * 2 - i.q), p:'', v:+((i.min * 2 - i.q) * i.cost / 1e6).toFixed(2), s:0, sup:'—', sku:i.sku, qty:i.min * 2 - i.q}, ...x.proc]})); this.toast('Purchase request ' + id + ' created for ' + i.n); }})),
     lowEmpty:skLow.length === 0,
-    deliveries:s.deliveries.map(d => ({from:d.from, items:d.items, canReceive:d.st === 'arrived', received:d.st === 'received', receive:() => { this.setState(x => ({deliveries:x.deliveries.map(y => y.id === d.id ? Object.assign({}, y, {st:'received'}) : y)})); this.toast(d.items + ' received into store'); this.log('package','green','Stock received · ' + d.items, 'from ' + d.from); }})),
+    deliveries:s.deliveries.map(d => ({from:d.from, items:d.items, canReceive:d.st === 'arrived', received:d.st === 'received', receive:() => { const item = d.sku && s.stock.find(i => i.sku === d.sku); this.setState(x => Object.assign({deliveries:x.deliveries.map(y => y.id === d.id ? Object.assign({}, y, {st:'received'}) : y)}, item ? {stock:x.stock.map(y => y.sku === d.sku ? Object.assign({}, y, {q:y.q + (d.qty || 0)}) : y)} : {})); this.toast(item ? d.items + ' received · ' + item.n + ' now ' + (item.q + (d.qty || 0)) + ' ' + item.u : d.items + ' received into store'); this.log('package','green','Stock received · ' + d.items, 'from ' + d.from); }})),
     quick:s.stock.slice(0,5).map(i => ({n:i.n, q:i.q + ' ' + i.u, issue:() => { this.setState(x => ({stock:x.stock.map(y => y.sku === i.sku ? Object.assign({}, y, {q:Math.max(0, y.q - 1)}) : y)})); this.toast('Issued 1 ' + i.u.replace(/s$/,'') + ' of ' + i.n); }}))
   };
   const me = this.ROLES[s.role || 'ceo'];
@@ -129,7 +137,7 @@ export function pageVals2(s, IC, ST, narrow) {
     }}; })}));
   V.roomsFree = s.rooms.reduce((a, rm) => a + H.filter(hh => !rm.b[hh]).length, 0) + ' free slots today';
   const appr = s.reqs.filter(q => q.st === 'pending' && q.step === 4);
-  const unreadN = s.notes.filter(n => !n.read).length;
+  const unreadN = this.myNotes(s).filter(n => !n.read).length;
   const rv = this.CH['12W'].rev, sx = i => i * 300 / (rv.length - 1), sy = v => 76 - v / 100 * 70;
   const sl = this.smooth(rv.map((v,i) => [sx(i), sy(v)]));
   V.MM = {
@@ -141,7 +149,7 @@ export function pageVals2(s, IC, ST, narrow) {
     risk:s.projects.filter(p => p.st === 'risk' || p.st === 'late').map(p => ({n:p.client, t:p.name, stl:ST[p.st].l, stbg:ST[p.st].bg, stfg:ST[p.st].fg})),
     approvals:appr.map(q => ({who:this.av(q.who).n, i:q.who, c:this.av(q.who).c, amt:this.fmtT(q.amt), cat:q.cat, proj:this.proj(q.p).name, need:q.need, approve:() => this.decide(q, true), reject:() => this.decide(q, false)})),
     apprEmpty:appr.length === 0,
-    notes:s.notes.slice(0,8).map(n => ({ic:IC[n.ic] || IC.bell, t:n.t, s:n.s, time:n.time, unread:!n.read, fw:n.read ? 500 : 700, on:() => this.setState(x => ({notes:x.notes.map(y => y.id === n.id ? Object.assign({}, y, {read:true}) : y)}))}))
+    notes:this.myNotes(s).slice(0,8).map(n => ({ic:IC[n.ic] || IC.bell, t:n.t, s:n.s, time:n.time, unread:!n.read, fw:n.read ? 500 : 700, on:() => this.setState(x => ({notes:x.notes.map(y => y.id === n.id ? Object.assign({}, y, {read:true}) : y)}))}))
   };
   {
     const cp = (cur, key, list) => list.map(([k,l]) => ({l, on:() => this.setState({[key]:k}), bg:cur === k ? '#2B1459' : '#fff', c:cur === k ? '#fff' : '#17152A', bd:cur === k ? '#2B1459' : '#E8E4EF'}));
@@ -158,8 +166,10 @@ export function pageVals2(s, IC, ST, narrow) {
       stepLabel:p.s < 0 ? 'Closed · not accepted' : 'Stage ' + (p.s + 1) + ' of 7 · ' + PPS[p.s],
       canAdv:p.s >= 0 && p.s < 6, advL:p.s >= 0 && p.s < 6 ? PNX[p.s] : '', canReject:p.s >= 3 && p.s < 6, canConv:p.s === 6 && !p.conv, conv:!!p.conv,
       adv:() => { setP(p.id, {s:p.s + 1}); this.toast(p.id + ' → ' + PPS[p.s + 1]); if (p.s + 1 === 6) { this.log('trendUp','green','Proposal accepted · ' + p.c, p.t + ' · ' + this.fmtM(p.v)); this.notify({ic:'check',t:'Proposal accepted · ' + p.c,s:p.id + ' · ' + this.fmtM(p.v),go:'proposals'}); } },
-      reject:() => { setP(p.id, {s:-1}); this.toast(p.id + ' marked not accepted'); },
-      pdf:() => this.toast(p.id + '.pdf generated · ready to email'),
+      reject:() => { if (!this.confirm('Mark ' + p.id + ' for ' + p.c + ' as not accepted?')) return; setP(p.id, {s:-1}); this.toast(p.id + ' marked not accepted'); },
+      pdf:() => this.printDoc({kicker:'PROPOSAL · ' + PPS[Math.max(0, p.s)].toUpperCase(), title:p.t, sub:'Prepared for ' + p.c, ref:p.id,
+        fields:[['Client', p.c], ['Scope', p.t], ['Proposal value', this.fmtM(p.v)], ['Valid until', p.valid], ['Account owner', this.av(p.own).n], ['Status', st[0]]],
+        total:['Total investment', this.fmtM(p.v)], note:'All amounts are in Tanzanian shillings (TZS) and exclude VAT unless stated. This proposal is valid until ' + p.valid + '.'}),
       convert:() => { setP(p.id, {conv:true}); this.openModal('project', {client:p.c, name:p.t, val:String(p.v), pm:p.own}); }}; });
     V.propEmpty = V.propRows.length === 0;
     const pOpen = s.proposals.filter(p => p.s >= 0 && p.s < 6), pWon = s.proposals.filter(p => p.s === 6), pClosed = s.proposals.filter(p => p.s === 6 || p.s < 0);
@@ -185,7 +195,7 @@ export function pageVals2(s, IC, ST, narrow) {
     const dq = (s.docQ || '').toLowerCase(), dty = s.docType || 'all';
     V.docChips = cp(dty, 'docType', ['all','Contract','Proposal','Design','Brief','Receipt','Client approval','Purchase','Report'].map(k => [k, k === 'all' ? 'All' : k]));
     V.docQ = s.docQ || ''; V.onDocQ = e => this.setState({docQ:e.target.value});
-    V.docRows = s.docs.filter(d => (dty === 'all' || d.type === dty) && (!dq || (d.n + ' ' + d.type + ' ' + this.proj(d.p).client).toLowerCase().indexOf(dq) >= 0)).map(d => { const ext = (d.n.split('.').pop() || 'file').toUpperCase().slice(0,4); return {n:d.n, ext, extBg:ext === 'PDF' ? '#FBEDEE' : '#E9EFFA', extC:ext === 'PDF' ? '#B23A46' : '#3559A8', meta:d.type + ' · ' + (d.p ? this.proj(d.p).client : 'Company') + ' · ' + this.av(d.by).n + ' · ' + d.d, sz:d.sz, open:() => this.toast('Opening ' + d.n + ' (preview)')}; });
+    V.docRows = s.docs.filter(d => (dty === 'all' || d.type === dty) && (!dq || (d.n + ' ' + d.type + ' ' + this.proj(d.p).client).toLowerCase().indexOf(dq) >= 0)).map(d => { const ext = (d.n.split('.').pop() || 'file').toUpperCase().slice(0,4); return {n:d.n, ext, extBg:ext === 'PDF' ? '#FBEDEE' : '#E9EFFA', extC:ext === 'PDF' ? '#B23A46' : '#3559A8', meta:d.type + ' · ' + (d.p ? this.proj(d.p).client : 'Company') + ' · ' + this.av(d.by).n + ' · ' + d.d, sz:d.sz, open:() => this.openDoc(d)}; });
     V.docEmpty = V.docRows.length === 0;
     V.newDoc = () => this.openModal('doc');
     // Reports
@@ -199,7 +209,7 @@ export function pageVals2(s, IC, ST, narrow) {
       ['Staff daily reports','Submissions and open floats by person','user','Yesterday 18:00', () => [['Name','Role','Department','Reported','Open float (TZS)']].concat(s.staff.map(p => [this.av(p.k).n, p.role, p.dept, p.rep ? 'Yes' : 'No', p.fl]))],
       ['Production report','Jobs, stages, cost and wastage','printer','Live', () => [['Job','Client','Stage','Qty','Cost (M)','Waste %']].concat(s.jobs.map(j => [j.id + ' ' + j.t, this.proj(j.p).client, j.s >= 7 ? 'Delivered' : JST[j.s], j.qty, j.cost, j.waste]))]
     ];
-    V.repRows = RPT.map(([t, d, ic, last, rows]) => ({t, d, ic:IC[ic], last, csv:() => dl(t.replace(/[^a-z0-9]+/gi,'-').toLowerCase() + '.csv', rows()), pdf:() => this.toast(t + ' · PDF generated and emailed to you (demo)')}));
+    V.repRows = RPT.map(([t, d, ic, last, rows]) => ({t, d, ic:IC[ic], last, csv:() => dl(t.replace(/[^a-z0-9]+/gi,'-').toLowerCase() + '.csv', rows()), pdf:() => { const r = rows(); this.printDoc({kicker:'REPORT', title:t, sub:d, ref:'RPT-' + new Date().toISOString().slice(0,10), table:{head:r[0], rows:r.slice(1)}}); }}));
     // Calendar
     const CK = {meet:['Meeting','#EFE8FA','#5A2FA8'], client:['Client','#FBF1DD','#8A6414'], proj:['Project','#E9EFFA','#3559A8'], log:['Logistics','#E6F4EC','#1F7549'], dead:['Deadline','#FBEDEE','#B23A46'], event:['Event','#2B1459','#FFFFFF']};
     V.calLegend = Object.keys(CK).map(k => ({l:CK[k][0], bg:CK[k][1], c:CK[k][2]}));

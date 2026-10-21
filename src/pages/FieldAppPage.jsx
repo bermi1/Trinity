@@ -9,14 +9,14 @@ export default function FieldAppPage({ v }) {
           FIELD STAFF VIEW
         </span>
         <h1 style={{ margin: "0", fontSize: "clamp(22px,2.4vw,28px)", fontWeight: "700", letterSpacing: "-.02em" }}>
-          Mobile app · John Mwakyusa
+          {"Mobile app · "}<span>{v.fieldMe.n}</span>
         </h1>
         <span style={{ fontSize: "13px", color: "#6E6A7C" }}>
           Everything done here syncs live to the office — check the dashboard activity feed.
         </span>
       </div>
       <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 30px" }}>
-        <div style={{ width: "390px", maxWidth: "100%", height: "800px", borderRadius: "44px", background: "#17152A", padding: "10px", boxShadow: "0 24px 60px rgba(29,16,61,.28)" }}>
+        <div style={{ width: "390px", maxWidth: "100%", height: "clamp(600px,calc(100vh - 220px),800px)", borderRadius: "44px", background: "#17152A", padding: "10px", boxShadow: "0 24px 60px rgba(29,16,61,.28)" }}>
           <div style={{ width: "100%", height: "100%", borderRadius: "36px", overflow: "hidden", background: "#F4F1FA", display: "flex", flexDirection: "column", position: "relative" }}>
             <div style={{ background: "#2B1459", padding: "14px 22px 20px", display: "flex", flexDirection: "column", gap: "16px", borderRadius: "0 0 22px 22px", flex: "none" }}>
               <div style={{ display: "flex", justifyContent: "space-between", color: "#fff", fontSize: "13px", fontWeight: "700" }}>
@@ -38,13 +38,13 @@ export default function FieldAppPage({ v }) {
                     TRINITY MARK
                   </span>
                 </span>
-                <span style={{ width: "34px", height: "34px", borderRadius: "50%", background: "#2E9B63", color: "#fff", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  JM
+                <span style={{ width: "34px", height: "34px", borderRadius: "50%", background: v.fieldMe.c, color: "#fff", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {v.fieldMe.i}
                 </span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                 <h2 style={{ margin: "0", color: "#fff", fontSize: "24px", fontWeight: "700", letterSpacing: "-.02em" }}>
-                  Habari, John
+                  {"Habari, "}<span>{v.fieldMe.first}</span>
                 </h2>
                 <span style={{ color: "rgba(255,255,255,.7)", fontSize: "13.5px" }}>
                   Here's your work for today
@@ -101,7 +101,7 @@ export default function FieldAppPage({ v }) {
                           {t.prog ? (
                             <>
                               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                                <button onClick={v.goFieldReport} style={{ height: "44px", border: "1px solid #E8E4EF", borderRadius: "10px", background: "#fff", fontSize: "13.5px", fontWeight: "600", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                                <button onClick={v.takePhoto} style={{ height: "44px", border: "1px solid #E8E4EF", borderRadius: "10px", background: "#fff", fontSize: "13.5px", fontWeight: "600", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
                                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                                     <path d={v.ic.camera} />
                                   </svg>
@@ -248,7 +248,7 @@ export default function FieldAppPage({ v }) {
                             Report submitted
                           </b>
                           <span style={{ fontSize: "13px", color: "#6E6A7C" }}>
-                            Asante John. Your PM can see it now.
+                            {"Asante "}<span>{v.fieldMe.first}</span>. Your PM can see it now.
                           </span>
                         </div>
                       </>

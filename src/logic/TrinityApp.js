@@ -10,6 +10,7 @@ import { pageVals2 } from './view/modules';
 import { overlayVals } from './view/overlays';
 import { supabase } from '../lib/supabase';
 import RecordSync, { applyChange } from './sync';
+import { printDocument } from '../lib/print';
 
 const OFFLINE = 'Could not reach the server. Check your connection and try again.';
 // Supabase retries network failures indefinitely; give up after a while so people get an answer.
@@ -30,12 +31,29 @@ export default class TrinityApp extends Logic {
     super();
     // With a database, the account decides who is signed in, not the browser.
     if (supabase) Object.assign(this.state, {db:true, booting:true, auth:false, email:'', pw:''});
+    // "Remember me" off: the sign-in lasts until the browser closes.
+    if (!supabase && this.forgetOnClose()) this.state.auth = false;
+  }
+  forgetOnClose() {
+    try { return localStorage.getItem('tm360-forget') === '1' && !sessionStorage.getItem('tm360-live'); } catch (e) { return false; }
+  }
+  rememberChoice() {
+    try {
+      sessionStorage.setItem('tm360-live', '1');
+      if (this.state.remember) localStorage.removeItem('tm360-forget'); else localStorage.setItem('tm360-forget', '1');
+    } catch (e) {}
+  }
+  signInWith(provider) {
+    if (!this.state.db) { this.signIn(); return; }
+    supabase.auth.signInWithOAuth({provider, options:{redirectTo:location.origin}}).then(({error}) => {
+      if (error) this.setState({loginErr:/not enabled|unsupported provider/i.test(error.message) ? (provider === 'google' ? 'Google' : 'Microsoft') + ' sign-in is not switched on yet. Use your email and password.' : error.message});
+    });
   }
   state = (() => { let sv = {}, saved = {}; try { sv = JSON.parse(localStorage.getItem('tm360') || '{}'); saved = JSON.parse(localStorage.getItem('tm360data') || '{}'); } catch (e) {}
     let emb = false, er = null; try { const qp = new URLSearchParams(location.search); emb = qp.get('embed') === '1'; er = qp.get('role'); } catch (e) {}
     if (emb) { const rr = this.ROLES[er] ? er : 'ceo'; sv = {auth:true, role:rr, page:this.ROLES[rr].home, projectId:'PRJ-0231'}; }
     const data = this.seed(); Object.keys(data).forEach(k => { if (saved && saved[k] !== undefined) data[k] = saved[k]; });
-    return Object.assign({embed:emb,more:false,colSel:{tasks:1,proc:0,crm:0},mobileRole:sv.role||'ceo',docType:'all',docQ:'',propFilter:'all',prefs:{push:true,email:true,sms:false,digest:true},auth:!!sv.auth,role:sv.role||'ceo',loginRole:sv.role||'ceo',mTab:'home',page:sv.page||'dashboard',projectId:sv.projectId||'PRJ-0231',email:'daniel.k@trinitymark.co.tz',pw:'demo1234',loginErr:'',range:'12W',tip:-1,menu:false,drawer:false,w:typeof window!=='undefined'?window.innerWidth:1440,reqSel:'REQ-0418',reqFilter:'me',taskFilter:'all',projFilter:'all',stockQ:'',leadQ:'',modal:null,form:{},modalErr:'',cmd:false,cmdQ:'',ai:false,aiQ:'',aiBusy:false,aiMsgs:[{r:'ai',t:'Habari Daniel. Ask me about projects, money, stock or staff — I read the live Trinity Mark 360 data.'}],toasts:[],fieldTab:'home',newAct:{d:'',a:'',o:'SK',dl:''}}, data); })();
+    return Object.assign({embed:emb,more:false,colSel:{tasks:1,proc:0,crm:0},mobileRole:sv.role||'ceo',docType:'all',docQ:'',propFilter:'all',prefs:sv.prefs||{push:true,email:true,sms:false,digest:true},auth:!!sv.auth,remember:sv.remember !== false,role:sv.role||'ceo',loginRole:sv.role||'ceo',mTab:'home',page:sv.page||'dashboard',projectId:sv.projectId||'PRJ-0231',email:'daniel.k@trinitymark.co.tz',pw:'demo1234',loginErr:'',range:'12W',tip:-1,menu:false,drawer:false,w:typeof window!=='undefined'?window.innerWidth:1440,reqSel:'REQ-0418',reqFilter:'me',taskFilter:'all',projFilter:'all',stockQ:'',leadQ:'',modal:null,form:{},modalErr:'',cmd:false,cmdQ:'',ai:false,aiQ:'',aiBusy:false,aiMsgs:[{r:'ai',t:'Habari. Ask me about projects, money, stock or staff — I read the live Trinity Mark 360 data.'}],toasts:[],fieldTab:'home',newAct:{d:'',a:'',o:'SK',dl:''}}, data); })();
 
   componentDidMount() {
     this._key = e => {
@@ -51,7 +69,7 @@ export default class TrinityApp extends Logic {
   componentWillUnmount() { if (this.sync) this.sync.unsubscribe(); if (this._authSub) this._authSub.unsubscribe(); window.removeEventListener('keydown', this._key); window.removeEventListener('resize', this._rs); try { this._bc && this._bc.close(); } catch (e) {} }
   componentDidUpdate(pp, ps) {
     const s = this.state;
-    if (!s.embed) { try { localStorage.setItem('tm360', JSON.stringify({auth:s.auth,role:s.role,page:s.page,projectId:s.projectId})); } catch (e) {} }
+    if (!s.embed) { try { localStorage.setItem('tm360', JSON.stringify({auth:s.auth,role:s.role,page:s.page,projectId:s.projectId,prefs:s.prefs,remember:s.remember})); } catch (e) {} }
     const dk = this.dataKeys(), prev = this._prevData || {}, diff = {}; let n = 0;
     dk.forEach(k => { if (s[k] !== prev[k]) { diff[k] = s[k]; n++; } });
     this._prevData = {}; dk.forEach(k => { this._prevData[k] = s[k]; });
@@ -61,10 +79,89 @@ export default class TrinityApp extends Logic {
     if (s.db) return;
     clearTimeout(this._sv); this._sv = setTimeout(() => { try { const o = {}; dk.forEach(k => { o[k] = this.state[k]; }); localStorage.setItem('tm360data', JSON.stringify(o)); } catch (e) {} }, 300);
   }
+  // ---- People and records
+  me() { return this.ROLES[this.state.role || 'ceo']; }
+  // Field app user: management previews it as the field supervisor; everyone else uses their own.
+  fieldKey() { const r = this.state.role || 'ceo'; return r === 'ceo' ? 'JM' : this.ROLES[r].k; }
+  // Company-wide alerts plus the ones addressed to the signed-in person.
+  myNotes(s) { const k = this.me().k; return s.notes.filter(n => !n.to || n.to === k); }
+  remind(to, t, go, ic, sub) { this.notify({to, ic:ic || 'clock', t, s:sub || 'From ' + this.me().n, go}); }
+  // Next number in a series such as REQ-0435, based on the highest number in use.
+  nextId(prefix, list, field) {
+    const f = field || 'id', re = new RegExp('^' + prefix + '-(\\d+)$');
+    const max = list.reduce((m, x) => { const r = re.exec(String(x[f] || '')); return r ? Math.max(m, +r[1]) : m; }, 0);
+    return prefix + '-' + String(max + 1).padStart(4, '0');
+  }
+  fmtSize(b) { return b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; }
+  submitReport(k, text, clear) {
+    const a = this.av(k);
+    this.setState(x => Object.assign({reportsToday:Object.assign({}, x.reportsToday, {[k]:true}), reportsSub:(x.reportsToday || {})[k] ? x.reportsSub : Math.min(48, x.reportsSub + 1), staff:x.staff.map(p => p.k === k ? Object.assign({}, p, {rep:true}) : p)}, clear || {}));
+    this.toast('Daily report submitted');
+    this.log('fileText','purple',a.n + ' submitted daily report', String(text || '').slice(0,60));
+  }
+  // Asks before a decision that notifies people or discards work.
+  confirm(message) { try { return window.confirm(message); } catch (e) { return true; } }
+  printDoc(doc) { if (!printDocument(doc)) this.toast('Allow pop-ups for this site to open the document'); }
+  // Opens a stored document: a signed link from the database, or the file kept in this browser.
+  async openDoc(d) {
+    if (!d.url && !d.path) { this.toast(d.n + ' has no file attached yet · upload it from Documents'); return; }
+    const w = window.open('', '_blank');
+    try {
+      let url = d.url;
+      if (d.path) { const { data, error } = await supabase.storage.from('documents').createSignedUrl(d.path, 3600); if (error) throw error; url = data.signedUrl; }
+      // Browsers refuse to open data: links in a new tab, so hand over a blob link instead.
+      if (url.startsWith('data:')) url = URL.createObjectURL(await (await fetch(url)).blob());
+      if (w) w.location.href = url; else window.location.href = url;
+    } catch (err) { if (w) w.close(); console.error(err); this.toast('Could not open ' + d.n); }
+  }
+  // Field photo: opens the camera on phones (file picker elsewhere) and files the picture under Documents.
+  takePhoto(k) {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = 'image/*'; input.setAttribute('capture', 'environment');
+    input.onchange = async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const task = this.state.tasks.find(t => t.who === k && t.st !== 'done');
+      this.setState({form:{n:'', _file:null}});
+      await this.attachFile(file);
+      const info = this.state.form._file;
+      if (!info) { this.toast(this.state.modalErr || 'Photo could not be saved'); return; }
+      const n = 'Site photo · ' + this.av(k).first + ' · ' + this.now() + ' · ' + file.name;
+      this.setState(x => ({form:{}, docs:[{id:Date.now(), n, type:'Report', p:task ? task.p : '', by:k, d:'Today', sz:this.fmtSize(info.size), url:info.url || '', path:info.path || '', mime:info.mime || ''}, ...x.docs]}));
+      this.toast('Photo saved to Documents');
+      this.log('camera','blue',this.av(k).first + ' added a site photo', task ? this.proj(task.p).client : 'Field');
+    };
+    input.click();
+  }
+  // Reads a picked file: uploads it to Supabase Storage, or keeps small files in the browser in demo mode.
+  async attachFile(file) {
+    if (!file) return;
+    const name = file.name, base = {_file:null, _uploading:true};
+    this.setState(x => ({form:Object.assign({}, x.form, base, x.form.n ? {} : {n:name}), modalErr:''}));
+    try {
+      let info;
+      if (this.state.db) {
+        const path = (crypto.randomUUID ? crypto.randomUUID() : Date.now()) + '/' + name.replace(/[^\w.\- ]+/g, '_');
+        const { error } = await supabase.storage.from('documents').upload(path, file, {contentType:file.type || undefined});
+        if (error) throw error;
+        info = {path, size:file.size, mime:file.type};
+      } else {
+        if (file.size > 2 * 1048576) throw new Error('In the demo, files must be under 2 MB');
+        const url = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(file); });
+        info = {url, size:file.size, mime:file.type};
+      }
+      this.setState(x => ({form:Object.assign({}, x.form, {_file:info, _uploading:false})}));
+    } catch (err) {
+      console.error(err);
+      this.setState(x => ({form:Object.assign({}, x.form, {_file:null, _uploading:false}), modalErr:'Upload failed · ' + (err.message || err)}));
+    }
+  }
+
   // ---- Sign-in and data, in demo mode (browser only) or against Supabase.
   signIn() {
     const s = this.state;
     if (!s.email.trim() || s.pw.length < 4) { this.setState({loginErr:'Enter your email and a password of at least 4 characters.'}); return; }
+    this.rememberChoice();
     if (!s.db) { this.setState({auth:true,role:s.loginRole,page:this.ROLES[s.loginRole].home,taskFilter:s.loginRole === 'staff' ? 'mine' : 'all'}); return; }
     if (s.signingIn) return;
     this.setState({signingIn:true, loginErr:'Signing in…'});
@@ -90,6 +187,7 @@ export default class TrinityApp extends Logic {
   }
   resetDemo() {
     if (this.state.db) { this.setState({menu:false}); this.toast('Reset is only available in the demo, not on the live database'); return; }
+    if (!this.confirm('Reset all demo data to the starting figures? Your changes in this browser will be lost.')) { this.setState({menu:false}); return; }
     this.setState(Object.assign({menu:false,page:'dashboard'}, this.seed())); this.toast('Demo data reset');
   }
   async startDb() {
@@ -101,6 +199,7 @@ export default class TrinityApp extends Logic {
     });
     this._authSub = data.subscription;
     try {
+      if (this.forgetOnClose()) await withTimeout(supabase.auth.signOut());
       const { data: { session } } = await withTimeout(supabase.auth.getSession());
       if (session) await this.enter(session.user); else this.setState({booting:false});
     } catch (err) { console.error(err); this.setState({booting:false, loginErr:OFFLINE}); }
@@ -149,7 +248,7 @@ export default class TrinityApp extends Logic {
   dataKeys() { return this._dk || (this._dk = Object.keys(this.seed())); }
   navGroups(role) {
     const s = this.state, R = this.ROLES[role];
-    const unread = s.notes.filter(n => !n.read).length, myReq = s.reqs.filter(q => q.st === 'pending' && q.step === 4).length, openTasks = s.tasks.filter(t => t.st !== 'done').length;
+    const unread = this.myNotes(s).filter(n => !n.read).length, myReq = s.reqs.filter(q => q.st === 'pending' && q.step === 4).length, openTasks = s.tasks.filter(t => t.st !== 'done').length;
     const lowN = s.stock.filter(i => i.q < i.min).length, finQ = s.reqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === R.k && t.st !== 'done').length;
     const N = {
       ceo:[['Overview',[['dashboard','Dashboard','grid'],['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['notifications','Notifications','bell',unread]]],
@@ -160,7 +259,7 @@ export default class TrinityApp extends Logic {
         ['Records',[['documents','Documents','paperclip'],['reports','Reports','pie']]],
         ['Mobile',[['ceomobile','Mobile apps','phone',0,{mobileRole:'ceo'}],['field','Field capture app','camera']]],
         ['System',[['settings','Settings','settings']]]],
-      staff:[['My work',[['staffportal','My Day','home'],['tasks','My tasks','checkSquare',myOpen,{taskFilter:'mine'}],['field','Field capture','camera'],['ceomobile','Mobile app','phone',0,{mobileRole:'staff'}]]],
+      staff:[['My work',[['staffportal','My Day','home'],['tasks','My tasks','checkSquare',myOpen,{taskFilter:'mine'}],['requests','Approvals','banknote',s.reqs.filter(q => this.canAct(q)).length],['field','Field capture','camera'],['ceomobile','Mobile app','phone',0,{mobileRole:'staff'}]]],
         ['Company',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],['settings','Settings','settings']]]],
       finance:[['Finance',[['financeportal','My queue','wallet',finQ],['finance','Finance & Invoices','chart'],['requests','Requests & Floats','banknote'],['proposals','Proposals','clipboard'],['procurement','Procurement','cart'],['reports','Reports','pie']]],
         ['Company',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],['ceomobile','Mobile app','phone',0,{mobileRole:'finance'}],['settings','Settings','settings']]]],
@@ -210,7 +309,7 @@ export default class TrinityApp extends Logic {
       proposal:{title:'New proposal',sub:'Starts as a draft, then goes to internal review.',submit:'Create draft',fields:[{k:'c',l:'Client',ph:'Client name',req:1},{k:'t',l:'Service / scope',ph:'e.g. Product launch activation',req:1},{k:'v',l:'Value (TZS M)',type:'number',ph:'80'},{k:'valid',l:'Valid until',ph:'e.g. 30 Oct'},{k:'own',l:'Owner',opts:PP}]},
       job:{title:'New production job',sub:'Moves Brief → Design → Approval → Production → QC → Packaging → Delivery.',submit:'Create job',fields:[{k:'t',l:'Job',ph:'e.g. Roll-up banners × 10',req:1},{k:'p',l:'Project',opts:PO},{k:'mat',l:'Materials',ph:'e.g. PET film, roll-up stands'},{k:'qty',l:'Quantity',type:'number',ph:'10'},{k:'due',l:'Deadline',ph:'e.g. Fri 25'},{k:'who',l:'Assigned to',opts:PP}]},
       trip:{title:'Schedule trip',sub:'Every trip is linked to a project.',submit:'Schedule trip',fields:[{k:'what',l:'Load',ph:'e.g. 4 gazebo tents',req:1},{k:'p',l:'Project',opts:PO},{k:'to',l:'Destination',ph:'e.g. Arusha',req:1},{k:'veh',l:'Vehicle',opts:O(['T 482 DXY','T 119 DKL','T 733 DGH'])},{k:'drv',l:'Driver',opts:O(['Amani Juma','Hassan Rajab'])},{k:'date',l:'Date & time',ph:'e.g. Fri 25 · 06:00'}]},
-      doc:{title:'Upload document',sub:'Stored against a project, with permissions.',submit:'Upload',fields:[{k:'n',l:'File name',ph:'e.g. Signed contract.pdf',req:1},{k:'type',l:'Type',opts:O(['Contract','Proposal','Quotation','Invoice','Receipt','Design','Brief','Report','Client approval','Purchase'])},{k:'p',l:'Project',opts:PO}]},
+      doc:{title:'Upload document',sub:'Stored against a project, with permissions.',submit:'Upload',fields:[{k:'file',l:'File',type:'file'},{k:'n',l:'File name',ph:'e.g. Signed contract.pdf',req:1},{k:'type',l:'Type',opts:O(['Contract','Proposal','Quotation','Invoice','Receipt','Design','Brief','Report','Client approval','Purchase'])},{k:'p',l:'Project',opts:PO}]},
       meet:{title:'Schedule meeting',sub:'Participants get a reminder. Actions become tasks.',submit:'Schedule',fields:[{k:'n',l:'Title',ph:'e.g. Production review',req:1},{k:'d',l:'Day',opts:O(['Mon 21','Tue 22','Wed 23','Thu 24','Fri 25','Sat 26'])},{k:'t',l:'Time',ph:'e.g. 10:00'},{k:'k',l:'Type',opts:[{v:'meet',l:'Internal meeting'},{v:'client',l:'Client meeting'},{v:'proj',l:'Project'}]}]},
       proc:{title:'Purchase request',sub:'Request → Quotation → Approved → PO → Delivered.',submit:'Submit purchase request',fields:[{k:'t',l:'Item',ph:'e.g. Vinyl rolls × 10',req:1},{k:'p',l:'Project',opts:PO},{k:'v',l:'Estimated cost (TZS M)',type:'number',ph:'1.5'}]}
     };
@@ -221,28 +320,48 @@ export default class TrinityApp extends Logic {
   }
   submitModal() {
     const s = this.state, m = s.modal, f = s.form;
-    for (const fd of m.fields) if (fd.req && !String(f[fd.k] || '').trim()) { this.setState({modalErr:fd.l + ' is required.'}); return; }
+    for (const fd of m.fields) {
+      if (fd.type === 'file') continue;
+      const val = String(f[fd.k] == null ? '' : f[fd.k]).trim();
+      if (fd.req && !val) { this.setState({modalErr:fd.l + ' is required.'}); return; }
+      if (fd.type === 'number' && val && !(+val > 0)) { this.setState({modalErr:fd.l + ' must be a number above 0.'}); return; }
+    }
+    if (m.act === 'issue') { const item = s.stock.find(i => i.sku === f.sku); if (item && +f.q > item.q) { this.setState({modalErr:'Only ' + item.q + ' ' + item.u + ' in store.'}); return; } }
+    if (m.act === 'doc' && f._uploading) { this.setState({modalErr:'Please wait for the file to finish uploading.'}); return; }
     const P = this.proj(f.p);
     if (m.act === 'task') { this.setState(x => ({tasks:[{id:'T'+Date.now(),t:f.t,p:f.p,who:f.who,due:f.due||'This week',st:'todo',pri:f.pri}, ...x.tasks]})); this.toast('Task created and assigned to ' + this.av(f.who).n); this.log('checkSquare','purple','Task created · ' + f.t, P.client + ' · assigned to ' + this.av(f.who).first); }
-    if (m.act === 'req') { const amt = +f.amt || 0; const id = 'REQ-0' + (427 + s.reqs.length); const who = f.who || 'DK'; this.setState(x => ({reqs:[{id,who,amt,cat:f.cat,purpose:f.purpose,p:f.p,need:f.need||'This week',step:1,st:'pending',log:[this.now()]}, ...x.reqs], reqSel:id})); this.toast(id + ' submitted · waiting for Project Manager'); this.log('banknote','amber',this.av(who).first + ' requested ' + this.fmtT(amt), P.name + ' · ' + id); }
+    if (m.act === 'req') { const amt = +f.amt || 0; const id = this.nextId('REQ', s.reqs); const who = f.who || this.me().k; this.setState(x => ({reqs:[{id,who,amt,cat:f.cat,purpose:f.purpose,p:f.p,need:f.need||'This week',step:1,st:'pending',log:[this.now()]}, ...x.reqs], reqSel:id})); this.toast(id + ' submitted · waiting for Project Manager'); this.log('banknote','amber',this.av(who).first + ' requested ' + this.fmtT(amt), P.name + ' · ' + id); }
     if (m.act === 'lead') { this.setState(x => ({leads:[{id:'L'+Date.now(),c:f.c,t:f.t,v:+f.v||0,s:0,src:f.src}, ...x.leads]})); this.toast('Lead added · ' + f.c); this.log('users','blue','New lead · ' + f.c, f.t); }
-    if (m.act === 'project') { const id = 'PRJ-0' + (236 + s.projects.length - 8); const val = +f.val || 0; this.setState(x => ({projects:[{id,name:f.name,client:f.client,pm:f.pm,st:'on',prog:0,val,bud:+(val*0.7).toFixed(1),spent:0,stage:2,due:f.due||'TBC',team:[f.pm]}, ...x.projects]})); this.toast('Project ' + id + ' created'); this.log('folder','purple','Project created · ' + f.client, f.name); setTimeout(() => this.go('project',{projectId:id}), 50); }
+    if (m.act === 'project') { const id = this.nextId('PRJ', s.projects); const val = +f.val || 0; this.setState(x => ({projects:[{id,name:f.name,client:f.client,pm:f.pm,st:'on',prog:0,val,bud:+(val*0.7).toFixed(1),spent:0,stage:2,due:f.due||'TBC',team:[f.pm]}, ...x.projects]})); this.toast('Project ' + id + ' created'); this.log('folder','purple','Project created · ' + f.client, f.name); setTimeout(() => this.go('project',{projectId:id}), 50); }
     if (m.act === 'issue') { const q = Math.max(0, +f.q || 0); this.setState(x => ({stock:x.stock.map(i => i.sku === f.sku ? Object.assign({}, i, {q:Math.max(0, i.q - q)}) : i)})); this.toast('Issued ' + q + ' ' + f.u + ' of ' + f.n + ' to ' + P.client); this.log('package','dark','Store issued ' + q + ' ' + f.u + ' · ' + f.n, P.name + ' · ' + this.av(f.who).first); }
     if (m.act === 'receive') { const q = Math.max(0, +f.q || 0); this.setState(x => ({stock:x.stock.map(i => i.sku === f.sku ? Object.assign({}, i, {q:i.q + q}) : i)})); this.toast('Received ' + q + ' ' + f.u + ' · ' + f.n); this.log('package','green','Stock received · ' + f.n, q + ' ' + f.u + (f.sup ? ' from ' + f.sup : '')); }
-    if (m.act === 'invoice') { const id = 'INV-0' + (199 + s.invoices.length - 7); this.setState(x => ({invoices:[{id,c:P.client,p:f.p,v:+f.v||0,st:'draft',due:f.due||'—'}, ...x.invoices]})); this.toast('Invoice ' + id + ' saved as draft'); }
-    if (m.act === 'proc') { const id = 'PR-0' + (213 + s.proc.length - 7); this.setState(x => ({proc:[{id,t:f.t,p:f.p,v:+f.v||0,s:0,sup:'—'}, ...x.proc]})); this.toast('Purchase request ' + id + ' submitted'); }
-    if (m.act === 'proposal') { const id = 'PRO-0' + (153 + s.proposals.length - 6); this.setState(x => ({proposals:[{id,c:f.c,t:f.t,v:+f.v||0,s:0,own:f.own,valid:f.valid||'30 days'}, ...x.proposals]})); this.toast('Proposal ' + id + ' saved as draft'); this.log('clipboard','purple','Proposal drafted · ' + f.c, f.t); }
-    if (m.act === 'job') { const id = 'JOB-0' + (317 + s.jobs.length - 6); this.setState(x => ({jobs:[{id,t:f.t,p:f.p,mat:f.mat||'—',qty:+f.qty||1,s:0,due:f.due||'TBC',who:f.who,cost:0,waste:0}, ...x.jobs]})); this.toast('Production job ' + id + ' created'); this.log('printer','purple','Production job created · ' + f.t, P.client); }
-    if (m.act === 'trip') { const id = 'TRP-0' + (94 + s.trips.length - 5); this.setState(x => ({trips:[{id,what:f.what,p:f.p,to:f.to,veh:f.veh,drv:f.drv,s:0,date:f.date||'TBC'}, ...x.trips]})); this.toast('Trip ' + id + ' scheduled · ' + f.to); this.log('truck','dark','Trip scheduled to ' + f.to, f.what + ' · ' + f.veh); }
-    if (m.act === 'doc') { this.setState(x => ({docs:[{id:Date.now(),n:f.n,type:f.type,p:f.p,by:this.ROLES[x.role || 'ceo'].k,d:'Today',sz:'0.4 MB'}, ...x.docs]})); this.toast('Uploaded · ' + f.n); this.log('paperclip','blue','Document uploaded · ' + f.type, f.n); }
+    if (m.act === 'invoice') { const id = this.nextId('INV', s.invoices); this.setState(x => ({invoices:[{id,c:P.client,p:f.p,v:+f.v||0,st:'draft',due:f.due||'—'}, ...x.invoices]})); this.toast('Invoice ' + id + ' saved as draft'); }
+    if (m.act === 'proc') { const id = this.nextId('PR', s.proc); this.setState(x => ({proc:[{id,t:f.t,p:f.p,v:+f.v||0,s:0,sup:'—'}, ...x.proc]})); this.toast('Purchase request ' + id + ' submitted'); }
+    if (m.act === 'proposal') { const id = this.nextId('PRO', s.proposals); this.setState(x => ({proposals:[{id,c:f.c,t:f.t,v:+f.v||0,s:0,own:f.own,valid:f.valid||'30 days'}, ...x.proposals]})); this.toast('Proposal ' + id + ' saved as draft'); this.log('clipboard','purple','Proposal drafted · ' + f.c, f.t); }
+    if (m.act === 'job') { const id = this.nextId('JOB', s.jobs); this.setState(x => ({jobs:[{id,t:f.t,p:f.p,mat:f.mat||'—',qty:+f.qty||1,s:0,due:f.due||'TBC',who:f.who,cost:0,waste:0}, ...x.jobs]})); this.toast('Production job ' + id + ' created'); this.log('printer','purple','Production job created · ' + f.t, P.client); }
+    if (m.act === 'trip') { const id = this.nextId('TRP', s.trips); this.setState(x => ({trips:[{id,what:f.what,p:f.p,to:f.to,veh:f.veh,drv:f.drv,s:0,date:f.date||'TBC'}, ...x.trips]})); this.toast('Trip ' + id + ' scheduled · ' + f.to); this.log('truck','dark','Trip scheduled to ' + f.to, f.what + ' · ' + f.veh); }
+    if (m.act === 'doc') { const fl = f._file || {}; this.setState(x => ({docs:[{id:Date.now(),n:f.n,type:f.type,p:f.p,by:this.me().k,d:'Today',sz:fl.size ? this.fmtSize(fl.size) : '—',url:fl.url || '',path:fl.path || '',mime:fl.mime || ''}, ...x.docs]})); this.toast('Uploaded · ' + f.n); this.log('paperclip','blue','Document uploaded · ' + f.type, f.n); }
     if (m.act === 'meet') { this.setState(x => ({events:[...x.events, {id:Date.now(),d:f.d,t:f.t||'09:00',n:f.n,k:f.k}]})); this.toast('Meeting scheduled · ' + f.d + ' ' + (f.t || '09:00')); this.notify({ic:'calendar',t:'Meeting scheduled · ' + f.n,s:f.d + ' ' + (f.t || '09:00'),go:'calendar'}); }
     this.setState({modal:null});
   }
+  // Who approves a request at each step of the chain (index = step).
+  approverAt(r, step) { return [r.who, this.proj(r.p).pm || 'SK', 'MM', 'RT', 'DK', 'RT'][step]; }
+  // Management can act at any step; Finance verifies at step 3; the PM and Operations at their own step.
+  canAct(r) {
+    if (r.st !== 'pending') return false;
+    const role = this.state.role || 'ceo';
+    return role === 'ceo' || (role === 'finance' && r.step === 3) || (r.step > 0 && r.step < 3 && this.me().k === this.approverAt(r, r.step));
+  }
+  canPay() { const role = this.state.role || 'ceo'; return role === 'ceo' || role === 'finance'; }
   decide(r, ok) {
-    const t = this.now();
-    this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, ok ? {step:5,st:'approved',log:[...q.log,t]} : {st:'rejected',log:[...q.log,t]}) : q)}));
-    this.toast(ok ? r.id + ' approved · sent to Finance for payment' : r.id + ' rejected · ' + this.av(r.who).first + ' notified');
-    this.log(ok ? 'check' : 'x', ok ? 'green' : 'red', 'Daniel K. ' + (ok ? 'approved ' : 'rejected ') + this.fmtT(r.amt), this.proj(r.p).name + ' · ' + r.id);
+    const t = this.now(), last = r.step >= 4;
+    const patch = ok ? (last ? {step:5, st:'approved'} : {step:r.step + 1}) : {st:'rejected'};
+    this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, patch, {log:[...q.log, t]}) : q)}));
+    const next = ok ? (last ? 'RT' : this.approverAt(r, r.step + 1)) : r.who;
+    if (ok) this.remind(next, last ? r.id + ' is approved · ready to pay' : r.id + ' needs your approval', 'requests', 'banknote', this.av(r.who).n + ' · ' + this.fmtT(r.amt));
+    else this.remind(r.who, r.id + ' was not approved', 'requests', 'x', 'Rejected by ' + this.me().n);
+    this.toast(ok ? r.id + (last ? ' approved · sent to Finance for payment' : (r.step === 3 ? ' verified' : ' approved') + ' · sent to ' + this.CHAIN[r.step + 1]) : r.id + ' rejected · ' + this.av(r.who).first + ' notified');
+    this.log(ok ? 'check' : 'x', ok ? 'green' : 'red', this.me().n + (ok ? ' approved ' : ' rejected ') + this.fmtT(r.amt), this.proj(r.p).name + ' · ' + r.id);
   }
   payReq(r) {
     const t = this.now();
@@ -253,7 +372,7 @@ export default class TrinityApp extends Logic {
   answer(q) {
     const s = this.state; q = q.toLowerCase();
     const list = a => a.join('\n• ');
-    if (/budget|over|margin|profit/.test(q)) { const o = s.projects.filter(p => p.st !== 'done' && p.spent > p.bud * 0.6).sort((a,b) => b.spent/b.bud - a.spent/a.bud).slice(0,4); return 'Budget usage, highest first:\n• ' + list(o.map(p => p.client + ' · ' + p.name + ' — ' + Math.round(p.spent/p.bud*100) + '% of ' + this.fmtM(p.bud))) + '\n\nPwani Beverages is over budget; I recommend a cost review before the Wednesday deadline.'; }
+    if (/budget|\bover\b|margin|profit/.test(q)) { const o = s.projects.filter(p => p.st !== 'done' && p.spent > p.bud * 0.6).sort((a,b) => b.spent/b.bud - a.spent/a.bud).slice(0,4); return 'Budget usage, highest first:\n• ' + list(o.map(p => p.client + ' · ' + p.name + ' — ' + Math.round(p.spent/p.bud*100) + '% of ' + this.fmtM(p.bud))) + '\n\nPwani Beverages is over budget; I recommend a cost review before the Wednesday deadline.'; }
     if (/approv|pending|request|money/.test(q)) { const r = s.reqs.filter(x => x.st === 'pending' && x.step === 4); const tot = r.reduce((a,b) => a + b.amt, 0); return r.length ? r.length + ' requests are waiting for you (' + this.fmtT(tot) + '):\n• ' + list(r.map(x => this.av(x.who).first + ' — ' + this.fmtT(x.amt) + ' · ' + x.cat + ' · needed ' + x.need)) : 'Nothing is waiting for your approval.'; }
     if (/stock|inventory|material|low|vinyl|ink/.test(q)) { const l = s.stock.filter(i => i.q < i.min); return l.length + ' items are below minimum:\n• ' + list(l.map(i => i.n + ' — ' + i.q + ' ' + i.u + ' (min ' + i.min + ')')); }
     if (/float/.test(q)) { const f = s.staff.filter(p => p.fl > 0); return 'Open staff floats total ' + this.fmtT(f.reduce((a,b) => a + b.fl, 0)) + ':\n• ' + list(f.map(p => this.av(p.k).n + ' — ' + this.fmtT(p.fl))) + '\n\nPeter Laizer\u2019s float is 12 days old with no receipts.'; }
@@ -269,7 +388,7 @@ export default class TrinityApp extends Logic {
     setTimeout(() => this.setState(s => ({aiMsgs:[...s.aiMsgs,{r:'ai',t:this.answer(q)}], aiBusy:false})), 650);
   }
   tst(k) { return ({todo:['To do','#F1EEF6','#6E6A7C','#A9A3B8'],prog:['In progress','#EFE8FA','#5A2FA8','#6D3CC2'],review:['Submitted','#FBF1DD','#8A6414','#D89B2B'],done:['Done','#E6F4EC','#1F7549','#2E9B63']})[k]; }
-  rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (r.step === 4) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
+  rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
 Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals });

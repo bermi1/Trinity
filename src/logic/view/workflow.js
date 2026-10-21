@@ -18,7 +18,7 @@ export function pageVals(s, IC, ST, narrow) {
   V.people = Object.keys(this.PPL).map(k => ({v:k, l:this.PPL[k][0]}));
   V.addAction = () => {
     if (!na.d.trim() || !na.a.trim()) { this.toast('Add a decision and an action first'); return; }
-    const tk = 'TSK-' + (1045 + s.actions.length - 3);
+    const tk = this.nextId('TSK', s.actions, 'task');
     this.setState(x => ({actions:[...x.actions, {d:na.d, a:na.a, o:na.o, dl:na.dl || 'This week', task:tk}], tasks:[{id:'T'+Date.now(), t:na.a, p:'PRJ-0231', who:na.o, due:na.dl || 'This week', st:'todo', pri:'med'}, ...x.tasks], newAct:{d:'',a:'',o:'SK',dl:''}}));
     this.toast(tk + ' created and assigned to ' + this.av(na.o).n);
   };
@@ -74,7 +74,8 @@ export function pageVals(s, IC, ST, narrow) {
 
   // Requests
   const rf = s.reqFilter;
-  const RF = {me:r => r.st === 'pending' && r.step === 4, all:() => true, approved:r => r.st === 'approved' || r.st === 'paid', rejected:r => r.st === 'rejected'};
+  const role = s.role || 'ceo';
+  const RF = {me:r => this.canAct(r) && (role !== 'ceo' || r.step === 4), all:() => true, approved:r => r.st === 'approved' || r.st === 'paid', rejected:r => r.st === 'rejected'};
   V.reqTabs = [['me','Awaiting me'],['all','All'],['approved','Approved'],['rejected','Rejected']].map(([k,l]) => ({l:l + ' · ' + s.reqs.filter(RF[k]).length, on:() => this.setState({reqFilter:k}), bg:rf === k ? '#2B1459' : 'transparent', c:rf === k ? '#fff' : '#6E6A7C'}));
   const rl = s.reqs.filter(RF[rf]);
   const sel = rl.find(r => r.id === s.reqSel) || rl[0];
@@ -82,21 +83,21 @@ export function pageVals(s, IC, ST, narrow) {
   V.reqEmpty = rl.length === 0; V.hasSel = !!sel;
   if (sel) {
     const rp = this.proj(sel.p), ru = rp.bud ? rp.spent / rp.bud : 0, after = rp.bud ? (rp.spent + sel.amt/1e6) / rp.bud : 0;
-    const ppl = [sel.who, rp.pm || 'SK', 'MM', 'RT', 'DK', 'RT'];
+    const ppl = [0,1,2,3,4,5].map(i => this.approverAt(sel, i));
     const chain = this.CHAIN.map((l,i) => {
       let st = i < sel.step ? 'done' : i === sel.step ? 'cur' : 'todo';
       if (sel.st === 'rejected' && i === sel.step) st = 'rej';
       if (sel.st === 'rejected' && i > sel.step) st = 'todo';
       if (sel.st === 'paid') st = 'done';
       const a = this.av(ppl[i]);
-      return {l:i === 4 ? 'Management · you' : l, who:a.n, time:st === 'done' || st === 'rej' ? (sel.log[i] || '—') : st === 'cur' ? 'Pending' : '', dotBg:st === 'done' ? '#2E9B63' : st === 'rej' ? '#D9535F' : st === 'cur' ? '#FBF6EA' : '#fff', dotBd:st === 'done' ? '#2E9B63' : st === 'rej' ? '#D9535F' : st === 'cur' ? '#B49A5A' : '#D5CFE0', icon:st === 'done' ? IC.check : st === 'rej' ? IC.x : '', lineC:st === 'done' ? '#2E9B63' : '#E8E4EF', lc:st === 'cur' ? '#8A6414' : st === 'todo' ? '#6E6A7C' : '#17152A', notLast:i !== 5};
+      return {l:i === 4 && role === 'ceo' ? 'Management · you' : l, who:a.n, time:st === 'done' || st === 'rej' ? (sel.log[i] || '—') : st === 'cur' ? 'Pending' : '', dotBg:st === 'done' ? '#2E9B63' : st === 'rej' ? '#D9535F' : st === 'cur' ? '#FBF6EA' : '#fff', dotBd:st === 'done' ? '#2E9B63' : st === 'rej' ? '#D9535F' : st === 'cur' ? '#B49A5A' : '#D5CFE0', icon:st === 'done' ? IC.check : st === 'rej' ? IC.x : '', lineC:st === 'done' ? '#2E9B63' : '#E8E4EF', lc:st === 'cur' ? '#8A6414' : st === 'todo' ? '#6E6A7C' : '#17152A', notLast:i !== 5};
     });
-    V.R = Object.assign({id:sel.id, cat:sel.cat, amt:this.fmtT(sel.amt), purpose:sel.purpose, proj:rp.id + ' · ' + rp.name, projGo:() => rp.id && this.go('project',{projectId:rp.id}), who:this.av(sel.who).n, need:sel.need, chain,
+    V.R = Object.assign({id:sel.id, cat:sel.cat, amt:this.fmtT(sel.amt), purpose:sel.purpose, proj:rp.id + ' · ' + rp.name, projGo:e => { if (e && e.preventDefault) e.preventDefault(); if (rp.id) this.go('project',{projectId:rp.id}); }, who:this.av(sel.who).n, need:sel.need, chain,
       budFrom:Math.round(ru*100) + '%', budTo:Math.round(after*100) + '%', w1:Math.min(100, ru*100) + '%', w2:Math.max(0, Math.min(100, after*100) - Math.min(100, ru*100)) + '%', budLine:this.fmtM(rp.bud || 0) + ' project budget',
-      canDecide:sel.st === 'pending' && sel.step === 4, canPay:sel.st === 'approved', waiting:sel.st === 'pending' && sel.step < 4, waitLabel:sel.step < this.CHAIN.length ? 'Waiting for ' + this.CHAIN[sel.step] + ' · ' + this.av(ppl[sel.step]).n : '', isPaid:sel.st === 'paid', isRej:sel.st === 'rejected',
-      approve:() => this.decide(sel, true), reject:() => this.decide(sel, false), pay:() => this.payReq(sel),
-      ask:() => { this.toast('Question sent to ' + this.av(sel.who).n); this.notify({ic:'message', t:'You asked ' + this.av(sel.who).first + ' for more info', s:sel.id + ' · ' + sel.cat, go:'requests'}); },
-      nudge:() => this.toast('Reminder sent to ' + this.av(ppl[sel.step]).n)
+      canDecide:this.canAct(sel), canPay:sel.st === 'approved' && this.canPay(), waiting:sel.st === 'pending' && sel.step < 4 && (!this.canAct(sel) || role === 'ceo'), waitLabel:sel.step < this.CHAIN.length ? 'Waiting for ' + this.CHAIN[sel.step] + ' · ' + this.av(ppl[sel.step]).n : '', isPaid:sel.st === 'paid', isRej:sel.st === 'rejected',
+      approve:() => this.decide(sel, true), reject:() => { if (this.confirm('Reject ' + sel.id + ' (' + this.fmtT(sel.amt) + ')? ' + this.av(sel.who).first + ' will be notified.')) this.decide(sel, false); }, pay:() => this.payReq(sel),
+      ask:() => { this.remind(sel.who, this.me().first + ' needs more information on ' + sel.id, 'requests', 'message', sel.cat + ' · ' + this.fmtT(sel.amt)); this.toast('Question sent to ' + this.av(sel.who).n); },
+      nudge:() => { const to = ppl[Math.min(sel.step, 5)]; this.remind(to, sel.id + ' is waiting for your approval', 'requests', 'banknote', this.av(sel.who).n + ' · ' + this.fmtT(sel.amt)); this.toast('Reminder sent to ' + this.av(to).n); }
     }, pill(this.rst(sel)));
   } else V.R = {chain:[]};
   const fl = s.staff.filter(p => p.fl > 0);

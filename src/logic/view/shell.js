@@ -3,7 +3,7 @@
 export function renderVals() {
   const s = this.state, IC = this.IC, ST = this.ST;
   const narrow = s.w < 960, wide = s.w >= 1240;
-  const unread = s.notes.filter(n => !n.read).length;
+  const unread = this.myNotes(s).filter(n => !n.read).length;
   const myReq = s.reqs.filter(r => r.st === 'pending' && r.step === 4);
   const navPage = s.page === 'project' ? 'projects' : s.page;
   const role = s.role || 'ceo', R = this.ROLES[role];
@@ -70,7 +70,8 @@ export function renderVals() {
   return Object.assign({
     ic:IC, showLogin:!s.auth, showApp:s.auth, email:s.email, pw:s.pw, loginErr:s.loginErr,
     onEmail:e => this.setState({email:e.target.value,loginErr:''}), onPw:e => this.setState({pw:e.target.value,loginErr:''}),
-    signIn:() => this.signIn(),
+    signIn:() => this.signIn(), signInGoogle:() => this.signInWith('google'), signInMicrosoft:() => this.signInWith('azure'),
+    toggleRemember:() => this.setState({remember:!s.remember}), rememberBg:s.remember ? '#6D3CC2' : '#fff', rememberBd:s.remember ? '#6D3CC2' : '#D5CFE0',
     loginKey:e => { if (e.key === 'Enter') this.signIn(); },
     forgot:e => { e.preventDefault(); this.forgotPassword(); },
     signOut:() => this.signOut(),
@@ -78,7 +79,7 @@ export function renderVals() {
     loginNote:s.db ? 'Sign in with your Trinity Mark account' : 'Demo workspace · any password of 4+ characters', dataBadge:s.db ? 'LIVE DATA' : 'DEMO DATA',
     nav, is, narrow, wide, phone, notPhone:!phone, tabletNav:narrow && !phone, toastBottom:phone ? '96px' : '24px', deskDisp:phone ? 'none' : 'block',
     pageTitle, mobileTabs, moreOpen:phone && !!s.more, closeMore:() => this.setState({more:false}), moreItems, portalChips,
-    me:(() => { const R = this.ROLES[s.role || 'ceo']; return {i:R.k, n:R.n, t:R.t, c:this.av(R.k).c, label:R.label.toUpperCase()}; })(),
+    me:(() => { const R = this.ROLES[s.role || 'ceo']; return {i:R.k, n:R.n, t:R.t, c:this.av(R.k).c, label:R.label.toUpperCase(), first:R.n.split(' ')[0]}; })(),
     loginRoles:Object.keys(this.ROLES).map(k => { const on = s.loginRole === k; return {l:this.ROLES[k].label, on:() => this.setState({loginRole:k, email:this.ROLES[k].email, loginErr:''}), bg:on ? '#2B1459' : '#fff', c:on ? '#fff' : '#17152A', bd:on ? '#2B1459' : '#E8E4EF'}; }),
     asCeo:this.asRole('ceo'), asStaff:this.asRole('staff'), asFinance:this.asRole('finance'), asReception:this.asRole('reception'), asStore:this.asRole('store'), asStaffMobile:this.asRole('staff','field'), asCeoMobile:this.asRole(s.role || 'ceo','ceomobile',{mobileRole:s.role || 'ceo'}), showSidebar:!narrow || s.drawer, drawerOpen:narrow && s.drawer, sb:{pos:narrow ? 'fixed' : 'sticky', z:narrow ? 50 : 1},
     openDrawer:() => this.setState({drawer:true}), closeDrawer:() => this.setState({drawer:false}),

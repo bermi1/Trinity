@@ -9,7 +9,7 @@ export default function FinancePortalPage({ v }) {
           FINANCE PORTAL
         </span>
         <h1 style={{ margin: "0", fontSize: "clamp(22px,2.4vw,28px)", fontWeight: "700", letterSpacing: "-.02em" }}>
-          Rose Temba's queue
+          {v.FP.title}
         </h1>
         <span style={{ fontSize: "13px", color: "#6E6A7C" }}>
           Verify requests, chase invoices, watch open floats

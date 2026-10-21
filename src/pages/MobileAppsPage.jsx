@@ -25,7 +25,7 @@ export default function MobileAppsPage({ v }) {
         ))}
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "28px", alignItems: "flex-start", justifyContent: "center" }}>
-        <div style={{ flex: "none", width: "390px", maxWidth: "100%", height: "844px", borderRadius: "54px", background: "#17152A", padding: "12px", boxShadow: "0 30px 70px rgba(29,16,61,.3)" }}>
+        <div style={{ flex: "none", width: "390px", maxWidth: "100%", height: "clamp(600px,calc(100vh - 280px),844px)", borderRadius: "54px", background: "#17152A", padding: "12px", boxShadow: "0 30px 70px rgba(29,16,61,.3)" }}>
           <div style={{ width: "100%", height: "100%", borderRadius: "42px", overflow: "hidden", background: "#fff", display: "flex", flexDirection: "column" }}>
             <div style={{ flex: "none", height: "46px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 28px", fontSize: "13.5px", fontWeight: "700", background: "#fff", color: "#17152A" }}>
               <span>

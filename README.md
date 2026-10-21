@@ -11,11 +11,14 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # production build in dist/
 npm run preview    # serve the production build
-npm test           # workflow and page tests
+npm test           # unit and integration tests (logic, sync, database flow)
+npm run test:e2e   # end-to-end: clicks through every flow in a real browser
 npm run lint
 ```
 
 Sign in with a Supabase account (see [Database](#database-supabase)). In demo mode (no database configured) any email and a password of 4+ characters works.
+
+The end-to-end suite (`e2e/`) builds the app on demo data and drives Chromium through every module on desktop, phone and tablet: sign-in, the full money-request chain from staff to paid float, procurement to stock, proposals to projects, documents, reports, the field app and more. First run on a new machine: `npx playwright install chromium`.
 
 ## What's inside
 
@@ -31,13 +34,24 @@ Modules: Command Center dashboard, Monday Briefing (decisions become tasks, staf
 
 Also: Ctrl K command palette, the Trinity Intelligence assistant (rule-based answers from the live data), and a bottom tab bar with a "More" sheet below 700px.
 
+### How the main flows connect
+
+- **Money requests** go Requested → Project Manager → Operations → Finance → Management → Payment. Whoever is the approver at a step sees Approve/Reject (staff have an *Approvals* page; Management can approve any step). Each approval notifies the next person. Finance pays, which opens the person's float; reconciling closes it.
+- **Procurement → store:** a purchase marked *Delivered* waits at the store; *Receive into store* adds it to stock. *Reorder* on a low item creates the purchase request with the right item and quantity.
+- **Sales:** a won lead or an accepted proposal opens a pre-filled new project.
+- **Field app and staff portal** show the signed-in person's own tasks from the Tasks board; completing work there updates the board. Daily reports are per person. *Photo* uses the phone camera and files the picture under Documents.
+- **Reminders** (staff reports, approvals, questions) go to that person's notifications only.
+- **PDF** buttons (proposals, reports) open a branded document ready to print or save as PDF. **CSV** exports download the live data.
+- **Documents** stores real files: Supabase Storage on the live database, the browser in demo mode (up to 2 MB).
+- Rejections and resets ask for confirmation first.
+
 ## Database (Supabase)
 
 The app is connected to the Supabase project `mvjodqspewbjyroygsre` through [`.env`](.env). That file holds only the project URL and the publishable key, which are public by design. **Never add the secret key (`sb_secret_…`) to this repo or to Vercel's `VITE_` variables.**
 
 ### One-time setup
 
-1. **Create the tables.** In the Supabase dashboard open *SQL Editor → New query*, paste [`supabase/migrations/20261021000000_trinity_mark_360.sql`](supabase/migrations/20261021000000_trinity_mark_360.sql) and click *Run*. It creates `profiles` and `app_records`, the access rules, and turns on live updates. Running it again is safe.
+1. **Create the tables.** In the Supabase dashboard open *SQL Editor → New query*, paste [`supabase/migrations/20261021000000_trinity_mark_360.sql`](supabase/migrations/20261021000000_trinity_mark_360.sql) and click *Run*. It creates `profiles` and `app_records`, the access rules, live updates and the private `documents` storage bucket. Running it again is safe.
 2. **Add people.** *Authentication → Users → Add user* (email and password, tick *Auto confirm*). Each new user gets a profile in the Staff portal.
 3. **Give each person their portal.** In *Table Editor → profiles* set `role` (`ceo` for Management, `staff`, `finance`, `reception` or `store`), plus `full_name`, `title` and `person_key` (initials used in the records, e.g. `DK`, `GM`, `RT`, `AM`, `FH`). Or in SQL:
    ```sql
@@ -46,6 +60,7 @@ The app is connected to the Supabase project `mvjodqspewbjyroygsre` through [`.e
    ```
 4. **Sign in.** The first sign-in fills the empty database with the starting data, so every screen has content. Everyone then works on the same data.
 5. **Password reset links:** in *Authentication → URL Configuration* set *Site URL* to the live address (e.g. your Vercel URL).
+6. **Optional — Google / Microsoft sign-in:** enable the provider under *Authentication → Providers*. Until then those buttons explain that they are not switched on.
 
 ### How it works
 

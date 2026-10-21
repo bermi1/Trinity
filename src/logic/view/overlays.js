@@ -6,7 +6,7 @@ export function overlayVals(s, IC) {
   V.modalOpen = !!m;
   V.M = m ? {title:m.title, sub:m.sub, submit:m.submit} : {};
   V.modalErr = s.modalErr;
-  V.modalFields = m ? m.fields.map(f => ({l:f.l, v:s.form[f.k] == null ? '' : s.form[f.k], ph:f.ph || '', type:f.type || 'text', isSel:!!f.opts, isInput:!f.opts, opts:f.opts || [], on:e => this.setState({form:Object.assign({}, s.form, {[f.k]:e.target.value}), modalErr:''})})) : [];
+  V.modalFields = m ? m.fields.map(f => f.type === 'file' ? {l:s.form._uploading ? 'File · uploading…' : s.form._file ? 'File · attached (' + this.fmtSize(s.form._file.size) + ')' : 'File', v:'', ph:'', type:'file', isSel:false, isInput:true, opts:[], on:e => this.attachFile(e.target.files && e.target.files[0])} : ({l:f.l, v:s.form[f.k] == null ? '' : s.form[f.k], ph:f.ph || '', type:f.type || 'text', isSel:!!f.opts, isInput:!f.opts, opts:f.opts || [], on:e => this.setState({form:Object.assign({}, s.form, {[f.k]:e.target.value}), modalErr:''})})) : [];
   V.modalClose = () => this.setState({modal:null});
   V.modalSubmit = () => this.submitModal();
   V.modalKey = e => { if (e.key === 'Enter') this.submitModal(); };
@@ -30,7 +30,7 @@ export function overlayVals(s, IC) {
   V.cmdKey = e => { if (e.key === 'Enter' && items[0]) { this.setState({cmd:false}); items[0].run(); } };
   V.closeCmd = () => this.setState({cmd:false});
   V.aiOpen = s.ai; V.aiQ = s.aiQ; V.aiBusy = s.aiBusy;
-  V.aiMsgs = s.aiMsgs.map(x => ({t:x.t, me:x.r === 'me', ai:x.r === 'ai'}));
+  V.aiMsgs = s.aiMsgs.map((x, i) => ({t:i === 0 && x.t.indexOf('Habari.') === 0 ? x.t.replace('Habari.', 'Habari ' + this.me().n.split(' ')[0] + '.') : x.t, me:x.r === 'me', ai:x.r === 'ai'}));
   V.onAiQ = e => this.setState({aiQ:e.target.value});
   V.aiKey = e => { if (e.key === 'Enter') this.askAI(); };
   V.aiSend = () => this.askAI();

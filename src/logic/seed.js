@@ -24,7 +24,11 @@ export function seed() {
     {id:'T9',t:'QC 400 branded T-shirts',p:'PRJ-0226',who:'MM',due:'Tue 22',st:'done',pri:'med'},
     {id:'T10',t:'Venue walkthrough · Serena ballroom',p:'PRJ-0235',who:'NL',due:'Fri 25',st:'todo',pri:'low'},
     {id:'T11',t:'Billboard site photos · 6 sites',p:'PRJ-0230',who:'GM',due:'Fri 25',st:'review',pri:'med'},
-    {id:'T12',t:'Final artwork approval from client',p:'PRJ-0224',who:'RS',due:'Mon 28',st:'prog',pri:'low'}
+      {id:'T12',t:'Final artwork approval from client',p:'PRJ-0224',who:'RS',due:'Mon 28',st:'prog',pri:'low'},
+    {id:'T13',t:'Collect roll-ups from store · SIN-0932',p:'PRJ-0231',who:'JM',due:'Today 07:30',st:'done',pri:'med'},
+    {id:'T14',t:'Install wall branding · Kariakoo outlet 4 of 8',p:'PRJ-0228',who:'JM',due:'Today 08:00',st:'prog',pri:'high'},
+    {id:'T15',t:'Check printing production · print floor',p:'PRJ-0233',who:'JM',due:'Today 10:00',st:'todo',pri:'med'},
+    {id:'T16',t:'Deliver banners · Mikocheni',p:'PRJ-0226',who:'JM',due:'Today 14:00',st:'todo',pri:'med'}
   ],
   reqs:[
     {id:'REQ-0418',who:'JM',amt:300000,cat:'Transport',purpose:'Bajaji and daladala fares for a 6-person install crew, Mwanza activations Tue–Thu. The company van is on the Musoma run.',p:'PRJ-0231',need:'Today 12:00',step:4,st:'pending',log:['07:12','07:40','08:05','08:38']},
@@ -57,12 +61,12 @@ export function seed() {
     {sku:'GZB-3X3',n:'Gazebo tent 3×3',cat:'Equipment',q:6,min:4,u:'pcs',loc:'E-01',cost:420000}
   ],
   proc:[
-    {id:'PR-0207',t:'Vinyl rolls × 12',p:'PRJ-0228',v:2.2,s:3,sup:'Chapa Supplies'},
+    {id:'PR-0207',t:'Vinyl rolls × 12',p:'PRJ-0228',v:2.2,s:3,sup:'Chapa Supplies',sku:'VNL-137G',qty:12},
     {id:'PR-0209',t:'Stand graphics print (outsourced)',p:'PRJ-0233',v:4.8,s:1,sup:'PrintHub DSM'},
-    {id:'PR-0210',t:'Eco-solvent ink × 8L',p:'',v:0.76,s:0,sup:'—'},
-    {id:'PR-0211',t:'Gazebo tents × 2',p:'PRJ-0235',v:0.84,s:2,sup:'Kariakoo Tents'},
+    {id:'PR-0210',t:'Eco-solvent ink × 8L',p:'',v:0.76,s:0,sup:'—',sku:'INK-ECO-C',qty:8},
+    {id:'PR-0211',t:'Gazebo tents × 2',p:'PRJ-0235',v:0.84,s:2,sup:'Kariakoo Tents',sku:'GZB-3X3',qty:2},
     {id:'PR-0204',t:'Forex boards × 30',p:'PRJ-0230',v:1.56,s:4,sup:'Plastiko Ltd'},
-    {id:'PR-0212',t:'Spray adhesive × 24',p:'PRJ-0228',v:0.43,s:0,sup:'—'},
+    {id:'PR-0212',t:'Spray adhesive × 24',p:'PRJ-0228',v:0.43,s:0,sup:'—',sku:'ADH-SPR',qty:24},
     {id:'PR-0206',t:'Polo shirts × 300',p:'PRJ-0235',v:3.9,s:1,sup:'Mavazi Wear'}
   ],
   leads:[
@@ -100,13 +104,7 @@ export function seed() {
     {d:'Escalate Kivuko overdue invoice',a:'MD to call client finance lead',o:'DK',dl:'Tue 22 · 12:00',task:'TSK-1044'}
   ],
   agenda:[true,true,false,false,false,false],
-  fieldTasks:[
-    {t:'Collect roll-ups from store',s:'SIN-0932 · 24 units',time:'07:30',st:'done'},
-    {t:'Install wall branding',s:'Pwani · Kariakoo outlet 4 of 8',time:'08:00',st:'prog'},
-    {t:'Check printing production',s:'Mlimani Bank · print floor',time:'10:00',st:'todo'},
-    {t:'Deliver banners',s:'Kivuko Foods · Mikocheni',time:'14:00',st:'todo'}
-  ],
-  reportsSub:44, reportSent:false, reportText:'', fieldReq:{amt:'',purpose:'',p:'PRJ-0231',cat:'Transport'},
+  reportsSub:44, reportsToday:{}, reportText:'', fieldReq:{amt:'',purpose:'',p:'PRJ-0231',cat:'Transport'},
   proposals:[
     {id:'PRO-0152',c:'Zawadi Telecom',t:'Christmas activations · 4 regions',v:96,s:0,own:'NL',valid:'30 Oct'},
     {id:'PRO-0150',c:'Nyota Insurance',t:'AGM 2026 production',v:64,s:1,own:'NL',valid:'22 Oct'},
@@ -167,9 +165,9 @@ export function seed() {
   ],
   roomTitle:'Client meeting',
   deliveries:[
-    {id:'DLV-401',from:'Chapa Supplies',items:'Vinyl rolls × 12',st:'arrived',time:'08:50'},
+    {id:'DLV-401',from:'Chapa Supplies',items:'Vinyl rolls × 12',st:'arrived',time:'08:50',sku:'VNL-137G',qty:12},
     {id:'DLV-402',from:'PrintHub DSM',items:'Stand graphics proof',st:'expected',time:'14:00'},
-    {id:'DLV-403',from:'Kariakoo Tents',items:'Gazebo tents × 2',st:'arrived',time:'09:30'}
+    {id:'DLV-403',from:'Kariakoo Tents',items:'Gazebo tents × 2',st:'arrived',time:'09:30',sku:'GZB-3X3',qty:2}
   ]
 };
 }

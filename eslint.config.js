@@ -5,7 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default [
-  { ignores: ['dist', 'design', 'node_modules'] },
+  { ignores: ['dist', 'dist-e2e', 'design', 'node_modules', 'test-results'] },
   {
     files: ['**/*.{js,jsx,mjs}'],
     languageOptions: {
@@ -24,5 +24,10 @@ export default [
       'react-hooks/refs': 'off',
       'no-empty': ['error', { allowEmptyCatch: true }]
     }
+  },
+  {
+    // Playwright fixtures take a parameter named `use`; it is not the React hook.
+    files: ['e2e/**'],
+    rules: { 'react-hooks/rules-of-hooks': 'off' }
   }
 ];

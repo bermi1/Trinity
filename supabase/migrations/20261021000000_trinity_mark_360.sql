@@ -91,3 +91,15 @@ do $$ begin
     alter publication supabase_realtime add table public.app_records;
   end if;
 end $$;
+
+-- 6. Uploaded documents (contracts, designs, receipts…), private to signed-in staff.
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('documents', 'documents', false, 52428800)
+on conflict (id) do nothing;
+
+drop policy if exists "Staff read documents" on storage.objects;
+create policy "Staff read documents" on storage.objects
+  for select to authenticated using (bucket_id = 'documents');
+drop policy if exists "Staff upload documents" on storage.objects;
+create policy "Staff upload documents" on storage.objects
+  for insert to authenticated with check (bucket_id = 'documents');

@@ -10,7 +10,7 @@ export default function DashboardPage({ v }) {
             COMPANY COMMAND CENTER
           </span>
           <h1 style={{ margin: "0", fontSize: "clamp(22px,2.4vw,28px)", fontWeight: "700", letterSpacing: "-.02em" }}>
-            <span>{v.greeting}</span>, Daniel
+            <span>{v.greeting}</span>{", "}<span>{v.me.first}</span>
           </h1>
           <p style={{ margin: "0", color: "#6E6A7C", fontSize: "14px" }}>
             Here's what's happening across Trinity Mark today.

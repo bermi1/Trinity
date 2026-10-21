@@ -92,8 +92,8 @@ export default function LoginScreen({ v }) {
                 </div>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px" }}>
-                <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ width: "16px", height: "16px", borderRadius: "4px", background: "#6D3CC2", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span onClick={v.toggleRemember} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
+                  <span style={{ width: "16px", height: "16px", borderRadius: "4px", background: v.rememberBg, border: `1.5px solid ${v.rememberBd}`, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                       <path d={v.ic.check} />
                     </svg>
@@ -121,10 +121,10 @@ export default function LoginScreen({ v }) {
               <span style={{ flex: "1", height: "1px", background: "#E8E4EF" }} />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              <button className="tm-h3" onClick={v.signIn} style={{ height: "44px", border: "1px solid #E8E4EF", background: "#fff", borderRadius: "10px", fontSize: "13px", fontWeight: "600" }}>
+              <button className="tm-h3" onClick={v.signInGoogle} style={{ height: "44px", border: "1px solid #E8E4EF", background: "#fff", borderRadius: "10px", fontSize: "13px", fontWeight: "600" }}>
                 Google
               </button>
-              <button className="tm-h3" onClick={v.signIn} style={{ height: "44px", border: "1px solid #E8E4EF", background: "#fff", borderRadius: "10px", fontSize: "13px", fontWeight: "600" }}>
+              <button className="tm-h3" onClick={v.signInMicrosoft} style={{ height: "44px", border: "1px solid #E8E4EF", background: "#fff", borderRadius: "10px", fontSize: "13px", fontWeight: "600" }}>
                 Microsoft
               </button>
             </div>

@@ -2,7 +2,7 @@
   "name": "trinity-mark-360",
   "private": true,
   "version": "1.0.0",
-  "description": "Trinity Mark 360 — operations system for Trinity Mark Solutions (projects, money, store, people, portals and mobile apps).",
+  "description": "Trinity Mark 360 \u2014 operations system for Trinity Mark Solutions (projects, money, store, people, portals and mobile apps).",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
-    "sync-design": "node scripts/dc-to-jsx.mjs"
+    "sync-design": "node scripts/dc-to-jsx.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.56.1",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@vitejs/plugin-react": "^5.2.0",
