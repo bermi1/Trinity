@@ -129,7 +129,7 @@ export default function LoginScreen({ v }) {
               </button>
             </div>
             <p style={{ margin: "0", fontSize: "12px", color: "#6E6A7C", textAlign: "center" }}>
-              Demo workspace · any password of 4+ characters
+              {v.loginNote}
             </p>
           </div>
         </div>

@@ -55,7 +55,7 @@ export default function TopBar({ v }) {
         {v.wide ? (
           <>
             <span style={{ font: "600 10.5px 'IBM Plex Mono',monospace", letterSpacing: ".08em", padding: "4px 8px", borderRadius: "6px", background: "#F7EFDD", color: "#8A6414" }}>
-              DEMO DATA
+              {v.dataBadge}
             </span>
             <span style={{ fontSize: "13px", color: "#6E6A7C", whiteSpace: "nowrap" }}>
               {v.dateLabel}

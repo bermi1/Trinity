@@ -8,6 +8,12 @@ import { renderVals } from './view/shell';
 import { pageVals } from './view/workflow';
 import { pageVals2 } from './view/modules';
 import { overlayVals } from './view/overlays';
+import { supabase } from '../lib/supabase';
+import RecordSync, { applyChange } from './sync';
+
+const OFFLINE = 'Could not reach the server. Check your connection and try again.';
+// Supabase retries network failures indefinitely; give up after a while so people get an answer.
+const withTimeout = (promise, ms = 15000) => Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error(OFFLINE)), ms))]);
 
 export default class TrinityApp extends Logic {
   IC = IC;
@@ -19,6 +25,12 @@ export default class TrinityApp extends Logic {
   CHAIN = CHAIN;
   CH = CH;
   seed() { return seed(); }
+
+  constructor() {
+    super();
+    // With a database, the account decides who is signed in, not the browser.
+    if (supabase) Object.assign(this.state, {db:true, booting:true, auth:false, email:'', pw:''});
+  }
   state = (() => { let sv = {}, saved = {}; try { sv = JSON.parse(localStorage.getItem('tm360') || '{}'); saved = JSON.parse(localStorage.getItem('tm360data') || '{}'); } catch (e) {}
     let emb = false, er = null; try { const qp = new URLSearchParams(location.search); emb = qp.get('embed') === '1'; er = qp.get('role'); } catch (e) {}
     if (emb) { const rr = this.ROLES[er] ? er : 'ceo'; sv = {auth:true, role:rr, page:this.ROLES[rr].home, projectId:'PRJ-0231'}; }
@@ -33,9 +45,10 @@ export default class TrinityApp extends Logic {
     this._rs = () => this.setState({w:window.innerWidth});
     window.addEventListener('keydown', this._key); window.addEventListener('resize', this._rs);
     this._prevData = {}; this.dataKeys().forEach(k => { this._prevData[k] = this.state[k]; });
+    if (this.state.db) this.startDb();
     try { this._bc = new BroadcastChannel('tm360'); this._bc.onmessage = e => { if (!e.data || typeof e.data !== 'object') return; this._remote = true; this.setState(e.data, () => { this._remote = false; Object.keys(e.data).forEach(k => { if (this._prevData) this._prevData[k] = this.state[k]; }); }); }; } catch (e) {}
   }
-  componentWillUnmount() { window.removeEventListener('keydown', this._key); window.removeEventListener('resize', this._rs); try { this._bc && this._bc.close(); } catch (e) {} }
+  componentWillUnmount() { if (this.sync) this.sync.unsubscribe(); if (this._authSub) this._authSub.unsubscribe(); window.removeEventListener('keydown', this._key); window.removeEventListener('resize', this._rs); try { this._bc && this._bc.close(); } catch (e) {} }
   componentDidUpdate(pp, ps) {
     const s = this.state;
     if (!s.embed) { try { localStorage.setItem('tm360', JSON.stringify({auth:s.auth,role:s.role,page:s.page,projectId:s.projectId})); } catch (e) {} }
@@ -43,8 +56,95 @@ export default class TrinityApp extends Logic {
     dk.forEach(k => { if (s[k] !== prev[k]) { diff[k] = s[k]; n++; } });
     this._prevData = {}; dk.forEach(k => { this._prevData[k] = s[k]; });
     if (!n || this._remote) return;
+    if (this.sync && s.auth) this.sync.push(prev, s, Object.keys(diff), err => this.dbError(err));
     try { this._bc && this._bc.postMessage(diff); } catch (e) {}
+    if (s.db) return;
     clearTimeout(this._sv); this._sv = setTimeout(() => { try { const o = {}; dk.forEach(k => { o[k] = this.state[k]; }); localStorage.setItem('tm360data', JSON.stringify(o)); } catch (e) {} }, 300);
+  }
+  // ---- Sign-in and data, in demo mode (browser only) or against Supabase.
+  signIn() {
+    const s = this.state;
+    if (!s.email.trim() || s.pw.length < 4) { this.setState({loginErr:'Enter your email and a password of at least 4 characters.'}); return; }
+    if (!s.db) { this.setState({auth:true,role:s.loginRole,page:this.ROLES[s.loginRole].home,taskFilter:s.loginRole === 'staff' ? 'mine' : 'all'}); return; }
+    if (s.signingIn) return;
+    this.setState({signingIn:true, loginErr:'Signing in…'});
+    withTimeout(supabase.auth.signInWithPassword({email:s.email.trim(), password:s.pw})).then(({data, error}) => {
+      if (error) { this.setState({signingIn:false, loginErr:error.message === 'Invalid login credentials' ? 'Wrong email or password.' : /fetch|network/i.test(error.message) || !error.status ? OFFLINE : error.message}); return; }
+      return this.enter(data.user, s.loginRole, true);
+    }).catch(err => { console.error(err); this.setState({signingIn:false, loginErr:OFFLINE}); });
+  }
+  forgotPassword() {
+    const s = this.state;
+    if (!s.db) { this.setState({loginErr:'A reset link has been sent to ' + s.email + ' (demo).'}); return; }
+    if (!s.email.trim()) { this.setState({loginErr:'Enter your email first, then click "Forgot password?".'}); return; }
+    supabase.auth.resetPasswordForEmail(s.email.trim(), {redirectTo:location.origin}).then(({error}) => {
+      this.setState({loginErr:error ? error.message : 'A reset link has been sent to ' + s.email.trim() + '.'});
+    });
+  }
+  signOut() {
+    if (!this.state.db) { this.setState({auth:false,menu:false}); return; }
+    if (this.sync) this.sync.unsubscribe();
+    this.account = null;
+    this.ROLES = ROLES;
+    supabase.auth.signOut().finally(() => this.setState({auth:false, menu:false, pw:'', signingIn:false}));
+  }
+  resetDemo() {
+    if (this.state.db) { this.setState({menu:false}); this.toast('Reset is only available in the demo, not on the live database'); return; }
+    this.setState(Object.assign({menu:false,page:'dashboard'}, this.seed())); this.toast('Demo data reset');
+  }
+  async startDb() {
+    this.sync = new RecordSync(supabase, this.dataKeys());
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' && this.state.auth) this.setState({auth:false});
+      if (event === 'PASSWORD_RECOVERY') setTimeout(() => this.choosePassword(), 0);
+      if (event === 'SIGNED_IN' && session && !this.state.auth && !this.state.signingIn && !this.state.booting) this.enter(session.user);
+    });
+    this._authSub = data.subscription;
+    try {
+      const { data: { session } } = await withTimeout(supabase.auth.getSession());
+      if (session) await this.enter(session.user); else this.setState({booting:false});
+    } catch (err) { console.error(err); this.setState({booting:false, loginErr:OFFLINE}); }
+  }
+  async choosePassword() {
+    const pw = window.prompt('Choose a new password (at least 8 characters):');
+    if (!pw) return;
+    const { error } = await supabase.auth.updateUser({password:pw});
+    this.toast(error ? error.message : 'Password updated');
+  }
+  // Loads the signed-in person's profile and all shared data, then opens their portal.
+  async enter(user, wanted, fresh) {
+    try {
+      const { data: prof, error } = await withTimeout(supabase.from('profiles').select('role,full_name,title,person_key').eq('user_id', user.id).maybeSingle());
+      if (error) throw error;
+      const acc = prof || {role:'staff'};
+      const role = ROLES[acc.role] ? acc.role : 'staff';
+      this.account = {role};
+      this.ROLES = Object.assign({}, ROLES, {[role]:Object.assign({}, ROLES[role], {email:user.email}, acc.full_name ? {n:acc.full_name} : {}, acc.title ? {t:acc.title} : {}, acc.person_key ? {k:acc.person_key} : {})});
+      const shared = await withTimeout(this.sync.load(this.seed()), 30000);
+      this.applyRemote(shared);
+      this.sync.unsubscribe();
+      this.sync.subscribe((c, change) => { const next = applyChange(this.state[c], change); if (next !== undefined) this.applyRemote({[c]:next}); });
+      const s = this.state;
+      // Management may open any portal; everyone else gets their own.
+      const pick = fresh ? wanted : s.role;
+      const r = role === 'ceo' && ROLES[pick] ? pick : role;
+      const keepPage = !fresh && r === s.role && s.page;
+      this.setState({auth:true, booting:false, signingIn:false, loginErr:'', pw:'', email:user.email, role:r, loginRole:r, page:keepPage ? s.page : this.ROLES[r].home, taskFilter:r === 'staff' ? 'mine' : 'all'});
+    } catch (err) {
+      console.error(err);
+      const missing = err && (err.code === '42P01' || err.code === 'PGRST205' || /does not exist|schema cache/i.test(err.message || ''));
+      await supabase.auth.signOut().catch(() => {});
+      this.setState({booting:false, signingIn:false, auth:false, loginErr:missing ? 'The database is not set up yet. Run supabase/migrations in the Supabase SQL Editor.' : 'Could not load your workspace: ' + (err.message || err)});
+    }
+  }
+  // Applies changes that came from the database or another tab without saving them back.
+  applyRemote(patch) {
+    this._remote = true;
+    this.setState(patch, () => { this._remote = false; Object.keys(patch).forEach(k => { if (this._prevData) this._prevData[k] = this.state[k]; }); });
+  }
+  dbError(err) {
+    console.error('Save failed', err);
+    this.toast('Could not save your last change · ' + ((err && err.message) || 'check your connection'));
   }
   dataKeys() { return this._dk || (this._dk = Object.keys(this.seed())); }
   navGroups(role) {
@@ -87,7 +187,7 @@ export default class TrinityApp extends Logic {
   proj(id) { return this.state.projects.find(p => p.id === id) || {id:'',name:'General',client:'Company'}; }
   tone(t) { return ({amber:['#FBF1DD','#8A6414'],purple:['#EFE8FA','#5A2FA8'],green:['#E6F4EC','#1F7549'],blue:['#E9EFFA','#3559A8'],dark:['#EDE8F6','#2B1459'],red:['#FBEDEE','#B23A46']})[t] || ['#F4F1FA','#2B1459']; }
   go(page, extra) { this.setState(Object.assign({page,menu:false,drawer:false,cmd:false,more:false,tip:-1}, extra || {})); try { window.scrollTo(0,0); } catch (e) {} }
-  asRole(r, page, extra) { return () => { this.setState(Object.assign({role:r, menu:false, drawer:false, more:false, page:page || this.ROLES[r].home, tip:-1, taskFilter:r === 'staff' ? 'mine' : 'all'}, extra || {})); try { window.scrollTo(0,0); } catch (e) {} }; }
+  asRole(r, page, extra) { return () => { if (this.state.db && this.account && this.account.role !== 'ceo' && r !== this.account.role) { this.setState({menu:false, more:false}); this.toast('Your account uses the ' + this.ROLES[this.account.role].label + ' portal'); return; } this.setState(Object.assign({role:r, menu:false, drawer:false, more:false, page:page || this.ROLES[r].home, tip:-1, taskFilter:r === 'staff' ? 'mine' : 'all'}, extra || {})); try { window.scrollTo(0,0); } catch (e) {} }; }
   goTarget(g) { if (g && g.indexOf('project:') === 0) this.go('project',{projectId:g.slice(8)}); else this.go(g || 'dashboard'); }
   toast(t) { const id = Date.now() + Math.random(); this.setState(s => ({toasts:[...s.toasts,{id,t}]})); setTimeout(() => this.setState(s => ({toasts:s.toasts.filter(x => x.id !== id)})), 3200); }
   notify(n) { this.setState(s => ({notes:[Object.assign({id:Date.now()+Math.random(),read:false,time:this.now()}, n), ...s.notes]})); }

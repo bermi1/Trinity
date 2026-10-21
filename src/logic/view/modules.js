@@ -212,7 +212,7 @@ export function pageVals2(s, IC, ST, narrow) {
     const PERM = {Management:[2,2,2,2,2,2,2,2,2,2], Finance:[1,1,1,2,2,1,2,1,0,2], Staff:[0,1,2,0,1,0,0,0,0,0], Reception:[0,0,1,0,0,0,0,1,1,0], Store:[0,1,1,0,1,2,2,0,0,1]};
     V.permHead = MODS.map(m => ({m}));
     V.permRows = Object.keys(PERM).map(rl => ({r:rl, cells:PERM[rl].map(v => ({l:v === 2 ? 'Full' : v === 1 ? 'View' : '—', bg:v === 2 ? '#E6F4EC' : v === 1 ? '#EFE8FA' : 'transparent', c:v === 2 ? '#1F7549' : v === 1 ? '#5A2FA8' : '#A9A3B8'}))}));
-    V.company = [['Company','Trinity Mark Solutions Ltd'],['Location','Dar es Salaam, Tanzania'],['Currency','TZS · Tanzanian shilling'],['Time zone','Africa/Dar_es_Salaam (EAT)'],['Financial year','January – December'],['Data','Demo data only']].map(([k,v]) => ({k,v}));
+    V.company = [['Company','Trinity Mark Solutions Ltd'],['Location','Dar es Salaam, Tanzania'],['Currency','TZS · Tanzanian shilling'],['Time zone','Africa/Dar_es_Salaam (EAT)'],['Financial year','January – December'],['Data',s.db ? 'Live · Supabase database' : 'Demo data only']].map(([k,v]) => ({k,v}));
     V.audit = s.activity.slice(0,6).map(e => ({time:e.time, t:e.t, s:e.s}));
     V.meP = {n:me.n, t:me.t, e:me.email, i:me.k, c:this.av(me.k).c, role:me.label};
     // Mobile apps preview

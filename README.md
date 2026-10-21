@@ -15,7 +15,7 @@ npm test           # workflow and page tests
 npm run lint
 ```
 
-Sign in with any email and a password of 4+ characters. Choose a portal on the sign-in screen, or switch later from the profile menu.
+Sign in with a Supabase account (see [Database](#database-supabase)). In demo mode (no database configured) any email and a password of 4+ characters works.
 
 ## What's inside
 
@@ -31,19 +31,42 @@ Modules: Command Center dashboard, Monday Briefing (decisions become tasks, staf
 
 Also: Ctrl K command palette, the Trinity Intelligence assistant (rule-based answers from the live data), and a bottom tab bar with a "More" sheet below 700px.
 
-## How data works
+## Database (Supabase)
 
-- All figures are demo data in TZS ([`src/logic/seed.js`](src/logic/seed.js)).
-- Changes are saved in the browser (`localStorage`) and shared live between open tabs, including the phone preview on the Mobile apps page.
-- Each browser keeps its own copy; there is no server yet. "Reset demo data" in the profile menu restores the starting data.
+The app is connected to the Supabase project `mvjodqspewbjyroygsre` through [`.env`](.env). That file holds only the project URL and the publishable key, which are public by design. **Never add the secret key (`sb_secret_…`) to this repo or to Vercel's `VITE_` variables.**
+
+### One-time setup
+
+1. **Create the tables.** In the Supabase dashboard open *SQL Editor → New query*, paste [`supabase/migrations/20261021000000_trinity_mark_360.sql`](supabase/migrations/20261021000000_trinity_mark_360.sql) and click *Run*. It creates `profiles` and `app_records`, the access rules, and turns on live updates. Running it again is safe.
+2. **Add people.** *Authentication → Users → Add user* (email and password, tick *Auto confirm*). Each new user gets a profile in the Staff portal.
+3. **Give each person their portal.** In *Table Editor → profiles* set `role` (`ceo` for Management, `staff`, `finance`, `reception` or `store`), plus `full_name`, `title` and `person_key` (initials used in the records, e.g. `DK`, `GM`, `RT`, `AM`, `FH`). Or in SQL:
+   ```sql
+   update public.profiles p set role = 'ceo', full_name = 'Daniel K.', title = 'Managing Director', person_key = 'DK'
+   from auth.users u where u.id = p.user_id and u.email = 'daniel.k@trinitymark.co.tz';
+   ```
+4. **Sign in.** The first sign-in fills the empty database with the starting data, so every screen has content. Everyone then works on the same data.
+5. **Password reset links:** in *Authentication → URL Configuration* set *Site URL* to the live address (e.g. your Vercel URL).
+
+### How it works
+
+- Sign-in uses Supabase Auth. Management can open any portal; everyone else stays in their own.
+- Every project, task, request, invoice, stock item and so on is one row in `app_records` (`collection`, `id`, `position`, `data`). Only the items that change are written, so people editing different things never overwrite each other.
+- Changes appear on every open screen straight away (Supabase Realtime).
+- Drafts (report text, unfinished forms) stay on the device.
+- Only signed-in users can read or change data (row level security).
+- "Reset demo data" is switched off on the live database.
+
+Without the two `VITE_SUPABASE_*` values the app runs as a demo, with data saved in the browser only.
 
 ## Project layout
 
 ```
 src/
   App.jsx               hosts the logic and renders login or the app shell
+  lib/supabase.js       Supabase client (from the VITE_SUPABASE_* values)
   logic/
-    TrinityApp.js       state, actions (approve, pay, create, move…) and the assistant
+    TrinityApp.js       state, sign-in, actions (approve, pay, create, move…) and the assistant
+    sync.js             saves changes to Supabase and applies live updates
     constants.js        icons, people, roles, mobile tabs, chart data
     seed.js             demo data
     view/*.js           turn state into the values each screen renders
@@ -53,6 +76,7 @@ src/
 scripts/
   dc-to-jsx.mjs         regenerates components/pages from the design file
   make-icons.mjs        renders the PNG app icons from the logo
+supabase/migrations/    database setup SQL
 design/                 the original Claude Design handoff (mockups and chat)
 ```
 
@@ -60,4 +84,4 @@ design/                 the original Claude Design handoff (mockups and chat)
 
 ## Deploy
 
-The repo is ready for Vercel: import it at vercel.com/new and keep the defaults (Vite, `npm run build`, output `dist`). `vercel.json` sends every route to the app.
+The repo is ready for Vercel: import it at vercel.com/new and keep the defaults (Vite, `npm run build`, output `dist`). The Supabase URL and publishable key come from `.env`, so no extra settings are needed. `vercel.json` sends every route to the app.
