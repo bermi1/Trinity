@@ -81,6 +81,27 @@ The app is connected to the Supabase project `mvjodqspewbjyroygsre` through [`.e
 
 ### One-time setup
 
+**Quickest: one command from your computer** (Node.js 18+ installed). In the project folder:
+
+```bash
+npm install
+# macOS / Linux
+export DATABASE_URL='postgresql://postgres:<db-password>@db.mvjodqspewbjyroygsre.supabase.co:5432/postgres'
+export SUPABASE_URL='https://mvjodqspewbjyroygsre.supabase.co'
+export SUPABASE_SECRET_KEY='sb_secret_…'
+npm run setup-db
+```
+
+On Windows PowerShell use `$env:DATABASE_URL='…'` (and the same for the other two) instead of `export`.
+
+- Write any `@` inside the database password as `%40`.
+- If it can't reach the database, open Supabase → *Connect* → **Session pooler** and use that connection string instead (some networks can't reach the direct address).
+- It creates the tables and rules, the six staff accounts with their portals, and prints each account's starting password. Running it again is safe: existing accounts are left as they are.
+
+Then sign in to the app as Daniel to load the starting data, and continue from step 5 below.
+
+**Or by hand in the Supabase dashboard:**
+
 1. **Create the tables.** In the Supabase dashboard open *SQL Editor → New query*, paste [`supabase/migrations/20261021000000_trinity_mark_360.sql`](supabase/migrations/20261021000000_trinity_mark_360.sql) and click *Run*. It creates `profiles` and `app_records`, the access rules, live updates and the private `documents` storage bucket. Running it again is safe.
 2. **Add people.** *Authentication → Users → Add user* (email and password, tick *Auto confirm*). Each new user gets a profile in the Staff portal.
 3. **Give each person their portal.** In *Table Editor → profiles* set `role` (`ceo` for Management, `staff`, `finance`, `reception`, `store` or `production` for the printing department), plus `full_name`, `title` and `person_key` (initials used in the records, e.g. `DK`, `GM`, `RT`, `AM`, `FH`). Or in SQL:
