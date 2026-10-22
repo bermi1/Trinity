@@ -79,9 +79,12 @@ test('reception: check visitors in and out, deliveries arrive for the store', as
 
 test('production and logistics move jobs and trips through every stage', async ({ page }) => {
   await openAs(page, 'ceo', 'production');
-  for (const step of ['Approved · produce', 'Send to QC', 'Pass QC', 'Packed · dispatch', 'Mark delivered']) await btn(rowOf(page, 'JOB-0313'), step).click();
-  await toast(page, 'JOB-0313 → Delivered');
-  expect((await saved(page)).jobs.find(j => j.id === 'JOB-0313').s).toBe(7);
+  // No printing without materials from the store.
+  await btn(rowOf(page, 'JOB-0313'), 'Approved · produce').click();
+  await toast(page, 'Materials not issued yet · request them from the store first');
+  for (const step of ['Send to QC', 'Pass QC', 'Packed · dispatch', 'Mark delivered']) await btn(rowOf(page, 'JOB-0315'), step).click();
+  await toast(page, 'JOB-0315 → Delivered');
+  expect((await saved(page)).jobs.find(j => j.id === 'JOB-0315').s).toBe(7);
   await btn(page, 'New job').click();
   await fillModal(page, { Job: 'Table cloths × 40', Quantity: '40' });
   await modal(page).locator('button').last().click();

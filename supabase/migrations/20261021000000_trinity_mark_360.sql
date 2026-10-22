@@ -7,12 +7,17 @@ create table if not exists public.profiles (
   user_id     uuid primary key references auth.users (id) on delete cascade,
   full_name   text not null default '',
   title       text not null default '',
-  -- ceo = Management, staff, finance, reception, store
-  role        text not null default 'staff' check (role in ('ceo', 'staff', 'finance', 'reception', 'store')),
+  -- ceo = Management, staff, finance, reception, store, production (printing department)
+  role        text not null default 'staff',
   -- Initials used across the app's records, e.g. 'DK' for Daniel K.
   person_key  text,
   created_at  timestamptz not null default now()
 );
+
+-- Allowed portals (kept as a named constraint so it can be updated on re-run).
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check
+  check (role in ('ceo', 'staff', 'finance', 'reception', 'store', 'production'));
 
 -- 2. All business data. One row per item (project, task, request, invoice…).
 create table if not exists public.app_records (

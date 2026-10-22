@@ -58,10 +58,15 @@ export function seed() {
     {sku:'TSH-WHT-L',n:'T-shirt white · L',cat:'Apparel',q:820,min:300,u:'pcs',loc:'C-10',cost:6500},
     {sku:'RLU-850',n:'Roll-up stand 85×200',cat:'Display',q:18,min:10,u:'pcs',loc:'D-04',cost:78000},
     {sku:'PVC-5MM',n:'Forex PVC board 5mm',cat:'Boards',q:40,min:20,u:'sheets',loc:'A-09',cost:52000},
-    {sku:'GZB-3X3',n:'Gazebo tent 3×3',cat:'Equipment',q:6,min:4,u:'pcs',loc:'E-01',cost:420000}
+    {sku:'GZB-3X3',n:'Gazebo tent 3×3',cat:'Equipment',q:6,min:4,u:'pcs',loc:'E-01',cost:420000},
+    {sku:'CST-VNL',n:'Cast vinyl 1.52m (vehicle wrap)',cat:'Print media',q:1,min:2,u:'rolls',loc:'A-06',cost:690000},
+    {sku:'LAM-GLS',n:'Gloss laminate 1.37m',cat:'Print media',q:7,min:4,u:'rolls',loc:'A-04',cost:160000},
+    {sku:'SEG-FAB',n:'SEG fabric 3.2m',cat:'Print media',q:2,min:3,u:'rolls',loc:'A-10',cost:380000},
+    {sku:'DTF-FILM',n:'DTF transfer film 60cm',cat:'Print media',q:6,min:4,u:'rolls',loc:'A-07',cost:145000},
+    {sku:'PET-ROLL',n:'PET roll-up film 85cm',cat:'Print media',q:5,min:4,u:'rolls',loc:'A-08',cost:210000}
   ],
   proc:[
-    {id:'PR-0207',t:'Vinyl rolls × 12',p:'PRJ-0228',v:2.2,s:3,sup:'Chapa Supplies',sku:'VNL-137G',qty:12},
+    {id:'PR-0207',t:'Vinyl rolls × 12',p:'PRJ-0228',v:2.2,s:3,sup:'Chapa Supplies',sku:'VNL-137G',qty:12,srq:'SRQ-0104'},
     {id:'PR-0209',t:'Stand graphics print (outsourced)',p:'PRJ-0233',v:4.8,s:1,sup:'PrintHub DSM'},
     {id:'PR-0210',t:'Eco-solvent ink × 8L',p:'',v:0.76,s:0,sup:'—',sku:'INK-ECO-C',qty:8},
     {id:'PR-0211',t:'Gazebo tents × 2',p:'PRJ-0235',v:0.84,s:2,sup:'Kariakoo Tents',sku:'GZB-3X3',qty:2},
@@ -104,6 +109,27 @@ export function seed() {
     {d:'Escalate Kivuko overdue invoice',a:'MD to call client finance lead',o:'DK',dl:'Tue 22 · 12:00',task:'TSK-1044'}
   ],
   agenda:[true,true,false,false,false,false],
+  requisitions:[
+    {id:'SRQ-0105',job:'JOB-0314',p:'PRJ-0233',by:'RS',purpose:'Expo stand graphics',items:[{sku:'SEG-FAB',qty:4,issued:0},{sku:'PVC-5MM',qty:18,issued:0}],st:'pending',d:'Today · 08:10'},
+    {id:'SRQ-0104',job:'JOB-0315',p:'PRJ-0228',by:'JM',purpose:'Outlet wall branding · 8 walls',items:[{sku:'VNL-137G',qty:8,issued:8},{sku:'LAM-GLS',qty:2,issued:2}],st:'issued',d:'Mon 21 · 09:40'},
+    {id:'SRQ-0103',job:'JOB-0311',p:'PRJ-0231',by:'JA',purpose:'Branded T-shirts × 600',items:[{sku:'TSH-WHT-L',qty:600,issued:600},{sku:'DTF-FILM',qty:3,issued:3}],st:'issued',d:'Mon 21 · 08:20'},
+    {id:'SRQ-0102',job:'JOB-0316',p:'PRJ-0230',by:'JA',purpose:'Billboard skins × 12',items:[{sku:'BNR-FLX',qty:4,issued:4},{sku:'INK-ECO-K',qty:2,issued:2}],st:'issued',d:'Fri 18 · 14:05'},
+    {id:'SRQ-0101',job:'JOB-0312',p:'PRJ-0231',by:'JA',purpose:'Roll-up banners × 24',items:[{sku:'RLU-850',qty:24,issued:24},{sku:'PET-ROLL',qty:3,issued:3}],st:'issued',d:'Thu 17 · 10:30'}
+  ],
+  movements:[
+    {id:'MV-0212',d:'Mon 21 · 09:52',sku:'VNL-137G',type:'issue',qty:-8,ref:'SRQ-0104',p:'PRJ-0228',by:'FH',v:1520000},
+    {id:'MV-0211',d:'Mon 21 · 09:52',sku:'LAM-GLS',type:'issue',qty:-2,ref:'SRQ-0104',p:'PRJ-0228',by:'FH',v:320000},
+    {id:'MV-0210',d:'Mon 21 · 08:35',sku:'TSH-WHT-L',type:'issue',qty:-600,ref:'SRQ-0103',p:'PRJ-0231',by:'FH',v:3900000},
+    {id:'MV-0209',d:'Mon 21 · 08:35',sku:'DTF-FILM',type:'issue',qty:-3,ref:'SRQ-0103',p:'PRJ-0231',by:'FH',v:435000},
+    {id:'MV-0208',d:'Sat 19 · 11:00',sku:'ADH-SPR',type:'adjust',qty:-2,ref:'Stock count · 2 cans damaged',p:'',by:'FH',v:-36000},
+    {id:'MV-0207',d:'Fri 18 · 16:20',sku:'TSH-WHT-L',type:'receipt',qty:1000,ref:'GRN-0398 · Mavazi Wear',p:'',by:'FH',v:6500000},
+    {id:'MV-0206',d:'Fri 18 · 14:15',sku:'BNR-FLX',type:'issue',qty:-4,ref:'SRQ-0102',p:'PRJ-0230',by:'FH',v:960000},
+    {id:'MV-0205',d:'Fri 18 · 14:15',sku:'INK-ECO-K',type:'issue',qty:-2,ref:'SRQ-0102',p:'PRJ-0230',by:'FH',v:190000},
+    {id:'MV-0204',d:'Thu 17 · 17:40',sku:'RLU-850',type:'return',qty:2,ref:'Unused from JOB-0312',p:'PRJ-0231',by:'JA',v:156000},
+    {id:'MV-0203',d:'Thu 17 · 10:45',sku:'RLU-850',type:'issue',qty:-24,ref:'SRQ-0101',p:'PRJ-0231',by:'FH',v:1872000},
+    {id:'MV-0202',d:'Thu 17 · 10:45',sku:'PET-ROLL',type:'issue',qty:-3,ref:'SRQ-0101',p:'PRJ-0231',by:'FH',v:630000},
+    {id:'MV-0201',d:'Wed 16 · 15:10',sku:'PET-ROLL',type:'receipt',qty:6,ref:'GRN-0396 · Chapa Supplies',p:'',by:'FH',v:1260000}
+  ],
   reportsSub:44, reportsToday:{}, reportText:'', fieldReq:{amt:'',purpose:'',p:'PRJ-0231',cat:'Transport'},
   proposals:[
     {id:'PRO-0152',c:'Zawadi Telecom',t:'Christmas activations · 4 regions',v:96,s:0,own:'NL',valid:'30 Oct'},
@@ -114,12 +140,12 @@ export function seed() {
     {id:'PRO-0141',c:'Safari Mobile',t:'Brand Launch Gala',v:210,s:6,own:'NL',valid:'—',conv:true}
   ],
   jobs:[
-    {id:'JOB-0311',t:'Branded T-shirts × 600',p:'PRJ-0231',mat:'Cotton tees, DTF film',qty:600,s:3,due:'Thu 24',who:'JA',cost:3.9,waste:2},
-    {id:'JOB-0312',t:'Roll-up banners × 24',p:'PRJ-0231',mat:'Roll-up 85×200, PET film',qty:24,s:6,due:'Mon 21',who:'JA',cost:1.9,waste:0},
-    {id:'JOB-0313',t:'Truck wrap · 1 vehicle',p:'PRJ-0231',mat:'Cast vinyl + laminate',qty:1,s:2,due:'Fri 25',who:'RS',cost:2.4,waste:0},
-    {id:'JOB-0314',t:'Expo stand graphics',p:'PRJ-0233',mat:'SEG fabric, Forex 5mm',qty:18,s:1,due:'Wed 23',who:'RS',cost:6.2,waste:0},
-    {id:'JOB-0315',t:'Outlet wall branding · 8 walls',p:'PRJ-0228',mat:'Vinyl 1.37m gloss',qty:8,s:3,due:'Wed 23',who:'JM',cost:4.1,waste:6},
-    {id:'JOB-0316',t:'Billboard skins × 12',p:'PRJ-0230',mat:'Flex banner 3.2m',qty:12,s:4,due:'Mon 28',who:'JA',cost:5.6,waste:3}
+    {id:'JOB-0311',t:'Branded T-shirts × 600',p:'PRJ-0231',mat:'Cotton tees, DTF film',qty:600,s:3,due:'Thu 24',who:'JA',cost:3.9,waste:2,bom:[{sku:'TSH-WHT-L',qty:600},{sku:'DTF-FILM',qty:3}],req:'SRQ-0103'},
+    {id:'JOB-0312',t:'Roll-up banners × 24',p:'PRJ-0231',mat:'Roll-up 85×200, PET film',qty:24,s:6,due:'Mon 21',who:'JA',cost:1.9,waste:0,bom:[{sku:'RLU-850',qty:24},{sku:'PET-ROLL',qty:3}],req:'SRQ-0101'},
+    {id:'JOB-0313',t:'Truck wrap · 1 vehicle',p:'PRJ-0231',mat:'Cast vinyl + laminate',qty:1,s:2,due:'Fri 25',who:'RS',cost:0.4,waste:0,bom:[{sku:'CST-VNL',qty:3},{sku:'LAM-GLS',qty:1}]},
+    {id:'JOB-0314',t:'Expo stand graphics',p:'PRJ-0233',mat:'SEG fabric, Forex 5mm',qty:18,s:1,due:'Wed 23',who:'RS',cost:1.1,waste:0,bom:[{sku:'SEG-FAB',qty:4},{sku:'PVC-5MM',qty:18}],req:'SRQ-0105'},
+    {id:'JOB-0315',t:'Outlet wall branding · 8 walls',p:'PRJ-0228',mat:'Vinyl 1.37m gloss',qty:8,s:3,due:'Wed 23',who:'JM',cost:4.1,waste:6,bom:[{sku:'VNL-137G',qty:8},{sku:'LAM-GLS',qty:2}],req:'SRQ-0104'},
+    {id:'JOB-0316',t:'Billboard skins × 12',p:'PRJ-0230',mat:'Flex banner 3.2m',qty:12,s:4,due:'Mon 28',who:'JA',cost:5.6,waste:3,bom:[{sku:'BNR-FLX',qty:4},{sku:'INK-ECO-K',qty:2}],req:'SRQ-0102'}
   ],
   trips:[
     {id:'TRP-0091',what:'3 display units + gazebo',p:'PRJ-0231',to:'Mwanza',veh:'T 482 DXY',drv:'Amani Juma',s:1,date:'Tue 22 · 05:30'},

@@ -146,6 +146,12 @@ export default function TopBar({ v }) {
                   </svg>
                   Storekeeper portal
                 </div>
+                <div className="tm-h3" onClick={v.asProduction} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={v.ic.printer} />
+                  </svg>
+                  Printing portal
+                </div>
                 <div style={{ height: "1px", background: "#E8E4EF", margin: "6px 0" }} />
                 <div className="tm-h3" onClick={v.resetDemo} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer" }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6E6A7C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

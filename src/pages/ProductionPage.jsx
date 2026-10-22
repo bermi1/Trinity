@@ -53,7 +53,7 @@ export default function ProductionPage({ v }) {
                     {j.client}
                   </span>
                 </div>
-                <b style={{ fontSize: "13.5px", fontWeight: "600" }}>
+                <b className="tm-h17" onClick={j.open} style={{ fontSize: "13.5px", fontWeight: "600", cursor: "pointer", color: "#2B1459" }}>
                   {j.t}
                 </b>
                 <span style={{ fontSize: "12px", color: "#6E6A7C" }}>

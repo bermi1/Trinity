@@ -1,4 +1,5 @@
 // Generated from the Claude Design file by scripts/dc-to-jsx.mjs.
+import CustomPage from '../pages/custom/CustomPage';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import DashboardPage from '../pages/DashboardPage';
@@ -77,6 +78,7 @@ export default function AppShell({ v }) {
                 <div style={{ height: "84px", flex: "none" }} />
               </>
             ) : null}
+            <CustomPage v={v} />
           </div>
         </main>
       </div>

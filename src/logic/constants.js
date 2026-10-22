@@ -52,14 +52,16 @@ export const ROLES = {
   staff:{k:'GM',n:'Grace Mrema',t:'Field Officer',label:'Staff',home:'staffportal',email:'grace.m@trinitymark.co.tz'},
   finance:{k:'RT',n:'Rose Temba',t:'Finance Officer',label:'Finance',home:'financeportal',email:'rose.t@trinitymark.co.tz'},
   reception:{k:'AM',n:'Aisha Mbwana',t:'Front Office',label:'Reception',home:'reception',email:'reception@trinitymark.co.tz'},
-  store:{k:'FH',n:'Fatma Hassan',t:'Storekeeper',label:'Store',home:'storekeeper',email:'store@trinitymark.co.tz'}
+  store:{k:'FH',n:'Fatma Hassan',t:'Storekeeper',label:'Store',home:'storekeeper',email:'store@trinitymark.co.tz'},
+  production:{k:'JA',n:'Juma Ally',t:'Print Production Lead',label:'Printing',home:'printshop',email:'print@trinitymark.co.tz'}
 };
 export const TABS = {
   ceo:[['dashboard','Home','home'],['requests','Approvals','banknote'],['projects','Projects','folder'],['notifications','Alerts','bell']],
   staff:[['staffportal','My Day','home'],['tasks','Tasks','checkSquare',0,{taskFilter:'mine'}],['projects','Projects','folder'],['notifications','Alerts','bell']],
   finance:[['financeportal','Queue','wallet'],['requests','Requests','banknote'],['finance','Finance','chart'],['notifications','Alerts','bell']],
   reception:[['reception','Desk','message'],['rooms','Rooms','calendar'],['calendar','Calendar','calendar'],['notifications','Alerts','bell']],
-  store:[['storekeeper','Store','home'],['store','Inventory','package'],['procurement','Buying','cart'],['notifications','Alerts','bell']]
+  store:[['storekeeper','Store','home'],['requisitions','Requests','clipboard'],['store','Inventory','package'],['notifications','Alerts','bell']],
+  production:[['printshop','Print floor','printer'],['production','Jobs','checkSquare'],['requisitions','Materials','package'],['notifications','Alerts','bell']]
 };
 export const ST = {on:{l:'On track',c:'#2E9B63',bg:'#E6F4EC',fg:'#1F7549'},risk:{l:'At risk',c:'#D89B2B',bg:'#FBF1DD',fg:'#8A6414'},late:{l:'Delayed',c:'#D9535F',bg:'#FBEDEE',fg:'#B23A46'},done:{l:'Completed',c:'#2B1459',bg:'#EDE8F6',fg:'#2B1459'}};
 export const STAGES = ['Client brief','Project created','Planning','Budget','Team','Design','Production','Procurement','Store','Logistics','Execution','Delivery','Reporting','Reconciliation','Closure'];

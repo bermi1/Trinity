@@ -7,7 +7,7 @@ test.afterEach(() => expect(errors).toEqual([]));
 
 const tab = (page, label) => page.locator('nav').getByText(label, { exact: true }).click();
 const title = page => page.locator('.m-header-title b');
-const PAGES = ['dashboard', 'briefing', 'projects', 'project', 'tasks', 'requests', 'finance', 'store', 'procurement', 'crm', 'staff', 'notifications', 'field', 'staffportal', 'financeportal', 'reception', 'storekeeper', 'rooms', 'proposals', 'production', 'logistics', 'documents', 'reports', 'calendar', 'settings'];
+const PAGES = ['dashboard', 'briefing', 'projects', 'project', 'tasks', 'requests', 'finance', 'store', 'procurement', 'crm', 'staff', 'notifications', 'field', 'staffportal', 'financeportal', 'reception', 'storekeeper', 'rooms', 'proposals', 'production', 'logistics', 'documents', 'reports', 'calendar', 'settings', 'requisitions', 'movements', 'job', 'printshop'];
 
 test('sign-in screen works like an app: show password, portal picker, remember switch', async ({ page }) => {
   await page.goto('/');
@@ -172,12 +172,12 @@ test('installable: manifest, icons and offline support are in place', async ({ p
   await expect.poll(() => page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration())), { timeout: 10000 }).toBe(true);
 });
 
-for (const role of ['ceo', 'staff', 'finance', 'reception', 'store']) {
+for (const role of ['ceo', 'staff', 'finance', 'reception', 'store', 'production']) {
   test(`no screen scrolls sideways · ${role}`, async ({ page }) => {
     await openAs(page, role, 'dashboard');
     const wide = [];
     for (const p of PAGES) {
-      await page.evaluate(([role, p]) => localStorage.setItem('tm360', JSON.stringify({ auth: true, role, page: p, projectId: 'PRJ-0231' })), [role, p]);
+      await page.evaluate(([role, p]) => localStorage.setItem('tm360', JSON.stringify({ auth: true, role, page: p, projectId: 'PRJ-0231', jobId: 'JOB-0313' })), [role, p]);
       await page.reload();
       await expect(page.locator('main.m-screen')).toBeVisible();
       const extra = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -186,6 +186,20 @@ for (const role of ['ceo', 'staff', 'finance', 'reception', 'store']) {
     expect(wide).toEqual([]);
   });
 }
+
+test('printing on the phone: request materials, the store issues them', async ({ page }) => {
+  await openAs(page, 'production', 'printshop');
+  await expect(page.locator('nav')).toContainText('Print floor');
+  await btn(page.locator('[data-job="JOB-0313"]'), 'Request materials').click();
+  await toast(page, 'SRQ-0106 sent to the store');
+  await page.getByRole('button', { name: /^Account/ }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Store', exact: true }).click();
+  await tab(page, 'Requests');
+  await btn(page.locator('[data-req="SRQ-0106"]'), 'Issue from store').click();
+  await toast(page, 'Issued what is in stock · 1 item short');
+  await btn(page.locator('[data-req="SRQ-0106"]'), 'Raise purchase request').click();
+  await toast(page, 'PR-0213 raised for the shortfall');
+});
 
 test.describe('tablet', () => {
   test.use({ viewport: { width: 820, height: 1180 } });

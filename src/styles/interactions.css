@@ -15,4 +15,5 @@
 .tm-h14:hover { background:#23804F !important }
 .tm-h15:hover { opacity:.85 !important }
 .tm-h16:hover { border-color:#6D3CC2 !important }
-.tm-f17:focus { border-color:#6D3CC2 !important; box-shadow:0 0 0 4px rgba(109,60,194,.1) !important }
+.tm-h17:hover { text-decoration:underline !important }
+.tm-f18:focus { border-color:#6D3CC2 !important; box-shadow:0 0 0 4px rgba(109,60,194,.1) !important }

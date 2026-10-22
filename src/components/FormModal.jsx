@@ -41,7 +41,7 @@ export default function FormModal({ v }) {
                   ) : null}
                   {f.isInput ? (
                     <>
-                      <input className="tm-f17" type={f.type} value={f.v ?? ''} onChange={f.on} onKeyDown={v.modalKey} placeholder={f.ph} style={{ height: "44px", border: "1px solid #E8E4EF", borderRadius: "10px", padding: "0 12px", fontSize: "14px", outline: "none", fontWeight: "500" }} />
+                      <input className="tm-f18" type={f.type} value={f.v ?? ''} onChange={f.on} onKeyDown={v.modalKey} placeholder={f.ph} style={{ height: "44px", border: "1px solid #E8E4EF", borderRadius: "10px", padding: "0 12px", fontSize: "14px", outline: "none", fontWeight: "500" }} />
                     </>
                   ) : null}
                 </label>

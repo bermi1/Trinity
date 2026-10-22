@@ -165,6 +165,8 @@ function childrenJsx(n, scope, ind) {
     }
     out.push(nodeJsx(c, scope, ind));
   });
+  // Hand-written pages (src/pages/custom) render after the design's pages.
+  if (kids.some(c => c.tag === 'sc-if' && /^\s*\{\{\s*is\./.test(attr(c, 'value') || ''))) out.push(ind + '<CustomPage v={v} />');
   return out.join('\n');
 }
 
@@ -204,7 +206,8 @@ function fileFor(name, node, isPage) {
   const rel = isPage ? '../components/' : './';
   const imports = used.map(c => 'import ' + c + " from '" + (pages.has(c) ? (isPage ? './' : '../pages/') : rel) + c + "';").join('\n');
   return "// Generated from the Claude Design file by scripts/dc-to-jsx.mjs.\n" +
-    (body.includes('<Fragment') ? "import { Fragment } from 'react';\n" : '') + (imports ? imports + '\n' : '') +
+    (body.includes('<Fragment') ? "import { Fragment } from 'react';\n" : '') +
+    (body.includes('<CustomPage') ? "import CustomPage from '../pages/custom/CustomPage';\n" : '') + (imports ? imports + '\n' : '') +
     '\nexport default function ' + name + '({ v }) {\n  return (\n    <>\n' + body + '\n    </>\n  );\n}\n';
 }
 

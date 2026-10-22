@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import PAGES from '../pages';
+import CUSTOM from '../pages/custom';
 import CommandPalette from '../components/CommandPalette';
 import AssistantPanel from '../components/AssistantPanel';
 import Toasts from '../components/Toasts';
@@ -17,7 +18,7 @@ import { useKeyboardOpen, useThemeColor } from './native';
 export default function MobileApp({ v }) {
   const keyboard = useKeyboardOpen();
   useThemeColor('#FFFFFF');
-  const Page = PAGES[v.page] || PAGES.dashboard;
+  const Page = PAGES[v.page] || CUSTOM[v.page] || PAGES.dashboard;
   const refresh = useCallback(() => v.refresh(), [v]);
   const sheetOpen = v.modalOpen || v.moreOpen || v.menu;
   // Each screen opens at the top, including the first one after signing in.

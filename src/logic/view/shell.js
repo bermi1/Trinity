@@ -5,7 +5,7 @@ export function renderVals() {
   const narrow = s.w < 960, wide = s.w >= 1240;
   const unread = this.myNotes(s).filter(n => !n.read).length;
   const myReq = s.reqs.filter(r => r.st === 'pending' && r.step === 4);
-  const navPage = s.page === 'project' ? 'projects' : s.page;
+  const navPage = s.page === 'project' ? 'projects' : s.page === 'job' ? 'production' : s.page;
   const role = s.role || 'ceo', R = this.ROLES[role];
   const lowN = s.stock.filter(i => i.q < i.min).length, finQ = s.reqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === R.k && t.st !== 'done').length;
   const G = this.navGroups(role);
@@ -15,7 +15,7 @@ export function renderVals() {
   const tabDefs = this.TABS[role] || this.TABS.ceo;
   const BADGE = {notifications:unread, requests:role === 'ceo' ? myReq.length : 0, financeportal:finQ, storekeeper:lowN, tasks:myOpen};
   const curNav = flatNav.find(i => i[0] === navPage);
-  const pageTitle = s.page === 'project' ? this.proj(s.projectId).client : curNav ? curNav[1] : 'Trinity Mark 360';
+  const pageTitle = s.page === 'job' ? ((s.jobs.find(j => j.id === s.jobId) || {}).id || 'Production job') : s.page === 'project' ? this.proj(s.projectId).client : curNav ? curNav[1] : 'Trinity Mark 360';
   const moreActive = !!s.more || !tabDefs.some(t => t[0] === navPage);
   const mobileTabs = tabDefs.map(([k,l,ic,_b,ex]) => { const a = k === navPage && !s.more; const b = BADGE[k] || 0; return {l, ic:IC[ic], c:a ? '#2B1459' : '#8A8698', bar:a ? '#6D3CC2' : 'transparent', fw:a ? 800 : 600, b, hb:b > 0, on:() => this.go(k, ex)}; });
   mobileTabs.push({l:'More', ic:IC.grid, c:moreActive ? '#2B1459' : '#8A8698', bar:moreActive ? '#6D3CC2' : 'transparent', fw:moreActive ? 800 : 600, b:0, hb:false, on:() => this.setState({more:!s.more})});
@@ -77,18 +77,18 @@ export function renderVals() {
     signOut:() => this.signOut(),
     resetDemo:() => this.resetDemo(),
     loginNote:s.db ? 'Sign in with your Trinity Mark account' : 'Demo workspace · any password of 4+ characters', dataBadge:s.db ? 'LIVE DATA' : 'DEMO DATA',
-    page:s.page, pageKey:s.page + '|' + (s.page === 'project' ? s.projectId : ''), navDir:s.navDir || 'tab', online:s.online !== false, signingIn:!!s.signingIn, db:!!s.db,
+    page:s.page, pageKey:s.page + '|' + (s.page === 'project' ? s.projectId : s.page === 'job' ? s.jobId : ''), navDir:s.navDir || 'tab', online:s.online !== false, signingIn:!!s.signingIn, db:!!s.db,
     showBack:phone && !this.isTab(s.page), goSettings:() => this.go('settings'), goBack:() => this.goBack(), refresh:() => this.refresh(), haptic:ms => this.haptic(ms), remember:s.remember !== false,
     nav, is, narrow, wide, phone, notPhone:!phone, tabletNav:narrow && !phone, toastBottom:phone ? 'calc(78px + env(safe-area-inset-bottom, 0px))' : '24px', deskDisp:phone ? 'none' : 'block',
     pageTitle, mobileTabs, moreOpen:phone && !!s.more, closeMore:() => this.setState({more:false}), moreItems, portalChips,
     me:(() => { const R = this.ROLES[s.role || 'ceo']; return {i:R.k, n:R.n, t:R.t, c:this.av(R.k).c, label:R.label.toUpperCase(), first:R.n.split(' ')[0]}; })(),
     loginRoles:Object.keys(this.ROLES).map(k => { const on = s.loginRole === k; return {l:this.ROLES[k].label, on:() => this.setState({loginRole:k, email:this.ROLES[k].email, loginErr:''}), bg:on ? '#2B1459' : '#fff', c:on ? '#fff' : '#17152A', bd:on ? '#2B1459' : '#E8E4EF'}; }),
-    asCeo:this.asRole('ceo'), asStaff:this.asRole('staff'), asFinance:this.asRole('finance'), asReception:this.asRole('reception'), asStore:this.asRole('store'), asStaffMobile:this.asRole('staff','field'), asCeoMobile:this.asRole(s.role || 'ceo','ceomobile',{mobileRole:s.role || 'ceo'}), showSidebar:!narrow || s.drawer, drawerOpen:narrow && s.drawer, sb:{pos:narrow ? 'fixed' : 'sticky', z:narrow ? 50 : 1},
+    asCeo:this.asRole('ceo'), asStaff:this.asRole('staff'), asFinance:this.asRole('finance'), asReception:this.asRole('reception'), asStore:this.asRole('store'), asProduction:this.asRole('production'), asStaffMobile:this.asRole('staff','field'), asCeoMobile:this.asRole(s.role || 'ceo','ceomobile',{mobileRole:s.role || 'ceo'}), showSidebar:!narrow || s.drawer, drawerOpen:narrow && s.drawer, sb:{pos:narrow ? 'fixed' : 'sticky', z:narrow ? 50 : 1},
     openDrawer:() => this.setState({drawer:true}), closeDrawer:() => this.setState({drawer:false}),
     dateLabel, unread, hasUnread:unread > 0, menu:s.menu, toggleMenu:() => this.setState({menu:!s.menu}),
     goHome:() => this.go(this.ROLES[s.role || 'ceo'].home), goField:() => this.go('field'), goStaffPortal:() => this.go('staffportal'), goFinancePortal:() => this.go('financeportal'), goReception:() => this.go('reception'), goStorekeeper:() => this.go('storekeeper'), goNotes:() => this.go('notifications'), goBrief:() => this.go('briefing'), goProjects:e => { e && e.preventDefault && e.preventDefault(); this.go('projects',{projFilter:'all'}); }, goReq:e => { e && e.preventDefault && e.preventDefault(); this.go('requests'); }, goProc:() => this.go('procurement'), goStaff:() => this.go('staff'), goTasks:() => this.go('tasks'),
     openCmd:() => this.setState({cmd:true,cmdQ:''}), openAI:() => this.setState({ai:true,drawer:false,more:false}),
     greeting:hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening',
     kpis, chart, tip, chartLeave:() => this.setState({tip:-1}), rangeBtns, donut, attention, activity, pipe, procPipe, reports, quick
-  }, this.pageVals(s, IC, ST, narrow), this.overlayVals(s, IC));
+  }, this.pageVals(s, IC, ST, narrow), this.overlayVals(s, IC), this.storeVals(s, IC));
 }

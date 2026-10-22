@@ -11,6 +11,8 @@ import { overlayVals } from './view/overlays';
 import { supabase } from '../lib/supabase';
 import RecordSync, { applyChange } from './sync';
 import { printDocument } from '../lib/print';
+import { storeMethods } from './store';
+import { storeVals } from './view/storeops';
 
 const OFFLINE = 'Could not reach the server. Check your connection and try again.';
 // Supabase retries network failures indefinitely; give up after a while so people get an answer.
@@ -53,7 +55,7 @@ export default class TrinityApp extends Logic {
     let emb = false, er = null; try { const qp = new URLSearchParams(location.search); emb = qp.get('embed') === '1'; er = qp.get('role'); } catch (e) {}
     if (emb) { const rr = this.ROLES[er] ? er : 'ceo'; sv = {auth:true, role:rr, page:this.ROLES[rr].home, projectId:'PRJ-0231'}; }
     const data = this.seed(); Object.keys(data).forEach(k => { if (saved && saved[k] !== undefined) data[k] = saved[k]; });
-    return Object.assign({embed:emb,more:false,colSel:{tasks:1,proc:0,crm:0},mobileRole:sv.role||'ceo',docType:'all',docQ:'',propFilter:'all',prefs:sv.prefs||{push:true,email:true,sms:false,digest:true},auth:!!sv.auth,remember:sv.remember !== false,online:typeof navigator === 'undefined' ? true : navigator.onLine !== false,navDir:'tab',role:sv.role||'ceo',loginRole:sv.role||'ceo',mTab:'home',page:sv.page||'dashboard',projectId:sv.projectId||'PRJ-0231',email:'daniel.k@trinitymark.co.tz',pw:'demo1234',loginErr:'',range:'12W',tip:-1,menu:false,drawer:false,w:typeof window!=='undefined'?window.innerWidth:1440,reqSel:'REQ-0418',reqFilter:'me',taskFilter:'all',projFilter:'all',stockQ:'',leadQ:'',modal:null,form:{},modalErr:'',cmd:false,cmdQ:'',ai:false,aiQ:'',aiBusy:false,aiMsgs:[{r:'ai',t:'Habari. Ask me about projects, money, stock or staff — I read the live Trinity Mark 360 data.'}],toasts:[],fieldTab:'home',newAct:{d:'',a:'',o:'SK',dl:''}}, data); })();
+    return Object.assign({embed:emb,more:false,colSel:{tasks:1,proc:0,crm:0},mobileRole:sv.role||'ceo',docType:'all',docQ:'',propFilter:'all',prefs:sv.prefs||{push:true,email:true,sms:false,digest:true},auth:!!sv.auth,remember:sv.remember !== false,online:typeof navigator === 'undefined' ? true : navigator.onLine !== false,navDir:'tab',role:sv.role||'ceo',loginRole:sv.role||'ceo',mTab:'home',page:sv.page||'dashboard',projectId:sv.projectId||'PRJ-0231',jobId:sv.jobId||'JOB-0313',email:'daniel.k@trinitymark.co.tz',pw:'demo1234',loginErr:'',range:'12W',tip:-1,menu:false,drawer:false,w:typeof window!=='undefined'?window.innerWidth:1440,reqSel:'REQ-0418',reqFilter:'me',taskFilter:'all',projFilter:'all',stockQ:'',leadQ:'',modal:null,form:{},modalErr:'',cmd:false,cmdQ:'',ai:false,aiQ:'',aiBusy:false,aiMsgs:[{r:'ai',t:'Habari. Ask me about projects, money, stock or staff — I read the live Trinity Mark 360 data.'}],toasts:[],fieldTab:'home',newAct:{d:'',a:'',o:'SK',dl:''}}, data); })();
 
   componentDidMount() {
     this._key = e => {
@@ -90,7 +92,7 @@ export default class TrinityApp extends Logic {
     }
     this._overlayWas = now;
     if (s.auth && this._afterAuth && !this._afterAuthRunning) { this._afterAuthRunning = true; const f = this._afterAuth; this._afterAuth = null; setTimeout(() => { this._afterAuthRunning = false; f(); }, 0); }
-    if (!s.embed) { try { localStorage.setItem('tm360', JSON.stringify({auth:s.auth,role:s.role,page:s.page,projectId:s.projectId,prefs:s.prefs,remember:s.remember})); } catch (e) {} }
+    if (!s.embed) { try { localStorage.setItem('tm360', JSON.stringify({auth:s.auth,role:s.role,page:s.page,projectId:s.projectId,jobId:s.jobId,prefs:s.prefs,remember:s.remember})); } catch (e) {} }
     const dk = this.dataKeys(), prev = this._prevData || {}, diff = {}; let n = 0;
     dk.forEach(k => { if (s[k] !== prev[k]) { diff[k] = s[k]; n++; } });
     this._prevData = {}; dk.forEach(k => { this._prevData[k] = s[k]; });
@@ -270,11 +272,12 @@ export default class TrinityApp extends Logic {
   navGroups(role) {
     const s = this.state, R = this.ROLES[role];
     const unread = this.myNotes(s).filter(n => !n.read).length, myReq = s.reqs.filter(q => q.st === 'pending' && q.step === 4).length, openTasks = s.tasks.filter(t => t.st !== 'done').length;
+    const srqN = s.requisitions.filter(q => q.st === 'pending' || q.st === 'partial').length, waitN = s.jobs.filter(j => j.s < 7 && !this.materialsReady(j)).length;
     const lowN = s.stock.filter(i => i.q < i.min).length, finQ = s.reqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === R.k && t.st !== 'done').length;
     const N = {
       ceo:[['Overview',[['dashboard','Dashboard','grid'],['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['notifications','Notifications','bell',unread]]],
         ['Commercial',[['crm','CRM','users'],['proposals','Sales & Proposals','clipboard'],['finance','Finance & Invoices','chart']]],
-        ['Operations',[['projects','Projects','folder'],['tasks','Tasks','checkSquare',openTasks],['production','Production','printer'],['procurement','Procurement','cart'],['store','Store & Inventory','package'],['logistics','Logistics','truck']]],
+        ['Operations',[['projects','Projects','folder'],['tasks','Tasks','checkSquare',openTasks],['production','Production','printer'],['procurement','Procurement','cart'],['store','Store & Inventory','package'],['requisitions','Store requisitions','clipboard',srqN],['movements','Stock ledger','receipt'],['logistics','Logistics','truck']]],
         ['Money',[['requests','Requests & Floats','banknote',myReq]]],
         ['People',[['staff','Staff & Reports','user'],['rooms','Meeting rooms','calendar']]],
         ['Records',[['documents','Documents','paperclip'],['reports','Reports','pie']]],
@@ -286,8 +289,10 @@ export default class TrinityApp extends Logic {
         ['Company',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],['ceomobile','Mobile app','phone',0,{mobileRole:'finance'}],['settings','Settings','settings']]]],
       reception:[['Front office',[['reception','Front desk','message'],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['crm','Client enquiries','users'],['staff','Staff directory','user']]],
         ['Company',[['briefing','Monday Briefing','presentation'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],['ceomobile','Mobile app','phone',0,{mobileRole:'reception'}],['settings','Settings','settings']]]],
-      store:[['Store',[['storekeeper','My store','home',lowN],['store','Inventory','package'],['procurement','Procurement','cart'],['production','Production','printer'],['logistics','Logistics','truck']]],
-        ['Company',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],['ceomobile','Mobile app','phone',0,{mobileRole:'store'}],['settings','Settings','settings']]]]
+      store:[['Store',[['storekeeper','My store','home',lowN],['requisitions','Requisitions','clipboard',srqN],['store','Inventory','package'],['movements','Stock ledger','receipt'],['procurement','Procurement','cart'],['production','Production','printer'],['logistics','Logistics','truck']]],
+        ['Company',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],['ceomobile','Mobile app','phone',0,{mobileRole:'store'}],['settings','Settings','settings']]]],
+      production:[['Printing',[['printshop','Print floor','printer',waitN],['production','Production jobs','checkSquare'],['requisitions','Store requisitions','clipboard'],['store','Inventory','package'],['procurement','Procurement','cart']]],
+        ['Company',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],['ceomobile','Mobile app','phone',0,{mobileRole:'production'}],['settings','Settings','settings']]]]
     };
     let G = N[role] || N.ceo;
     if (s.embed) G = G.map(([t, items]) => [t, items.filter(i => i[0] !== 'ceomobile')]).filter(g => g[1].length);
@@ -309,7 +314,7 @@ export default class TrinityApp extends Logic {
   go(page, extra) {
     const s = this.state, x = extra || {}, same = page === s.page && (!x.projectId || x.projectId === s.projectId);
     this.setState(Object.assign({page,menu:false,drawer:false,cmd:false,more:false,tip:-1,navDir:this.isTab(page) ? 'tab' : 'push'}, x));
-    if (!same) this.pushHistory({page, projectId:x.projectId || s.projectId});
+    if (!same || (x.jobId && x.jobId !== s.jobId)) this.pushHistory({page, projectId:x.projectId || s.projectId, jobId:x.jobId || s.jobId});
     try { window.scrollTo(0,0); } catch (e) {}
   }
   // ---- Native-style navigation: browser/phone back moves through screens and closes sheets.
@@ -326,7 +331,7 @@ export default class TrinityApp extends Logic {
     this._depth = st.depth || 0;
     if (this.overlayOpen(s)) { this._closingByBack = true; this.setState({modal:null, more:false, menu:false, ai:false, cmd:false}); return; }
     if (st.page && s.auth) {
-      this.setState({page:st.page, projectId:st.projectId || s.projectId, navDir:'back', tip:-1});
+      this.setState({page:st.page, projectId:st.projectId || s.projectId, jobId:st.jobId || s.jobId, navDir:'back', tip:-1});
       try { window.scrollTo(0,0); } catch (err) {}
     }
   }
@@ -366,6 +371,7 @@ export default class TrinityApp extends Logic {
       job:{title:'New production job',sub:'Moves Brief → Design → Approval → Production → QC → Packaging → Delivery.',submit:'Create job',fields:[{k:'t',l:'Job',ph:'e.g. Roll-up banners × 10',req:1},{k:'p',l:'Project',opts:PO},{k:'mat',l:'Materials',ph:'e.g. PET film, roll-up stands'},{k:'qty',l:'Quantity',type:'number',ph:'10'},{k:'due',l:'Deadline',ph:'e.g. Fri 25'},{k:'who',l:'Assigned to',opts:PP}]},
       trip:{title:'Schedule trip',sub:'Every trip is linked to a project.',submit:'Schedule trip',fields:[{k:'what',l:'Load',ph:'e.g. 4 gazebo tents',req:1},{k:'p',l:'Project',opts:PO},{k:'to',l:'Destination',ph:'e.g. Arusha',req:1},{k:'veh',l:'Vehicle',opts:O(['T 482 DXY','T 119 DKL','T 733 DGH'])},{k:'drv',l:'Driver',opts:O(['Amani Juma','Hassan Rajab'])},{k:'date',l:'Date & time',ph:'e.g. Fri 25 · 06:00'}]},
       doc:{title:'Upload document',sub:'Stored against a project, with permissions.',submit:'Upload',fields:[{k:'file',l:'File',type:'file'},{k:'n',l:'File name',ph:'e.g. Signed contract.pdf',req:1},{k:'type',l:'Type',opts:O(['Contract','Proposal','Quotation','Invoice','Receipt','Design','Brief','Report','Client approval','Purchase'])},{k:'p',l:'Project',opts:PO}]},
+      srq:{title:'Request from store',sub:'The storekeeper issues it and charges it to the project.',submit:'Send to store',fields:[{k:'sku',l:'Item',opts:this.state.stock.map(i => ({v:i.sku,l:i.n + ' · ' + i.q + ' ' + i.u + ' in store'}))},{k:'q',l:'Quantity',type:'number',ph:'1',req:1},{k:'p',l:'For project',opts:[{v:'',l:'General use'}].concat(PO)},{k:'purpose',l:'Purpose',ph:'e.g. Sample prints for client'}]},
       meet:{title:'Schedule meeting',sub:'Participants get a reminder. Actions become tasks.',submit:'Schedule',fields:[{k:'n',l:'Title',ph:'e.g. Production review',req:1},{k:'d',l:'Day',opts:O(['Mon 21','Tue 22','Wed 23','Thu 24','Fri 25','Sat 26'])},{k:'t',l:'Time',ph:'e.g. 10:00'},{k:'k',l:'Type',opts:[{v:'meet',l:'Internal meeting'},{v:'client',l:'Client meeting'},{v:'proj',l:'Project'}]}]},
       proc:{title:'Purchase request',sub:'Request → Quotation → Approved → PO → Delivered.',submit:'Submit purchase request',fields:[{k:'t',l:'Item',ph:'e.g. Vinyl rolls × 10',req:1},{k:'p',l:'Project',opts:PO},{k:'v',l:'Estimated cost (TZS M)',type:'number',ph:'1.5'}]}
     };
@@ -389,14 +395,15 @@ export default class TrinityApp extends Logic {
     if (m.act === 'req') { const amt = +f.amt || 0; const id = this.nextId('REQ', s.reqs); const who = f.who || this.me().k; this.setState(x => ({reqs:[{id,who,amt,cat:f.cat,purpose:f.purpose,p:f.p,need:f.need||'This week',step:1,st:'pending',log:[this.now()]}, ...x.reqs], reqSel:id})); this.toast(id + ' submitted · waiting for Project Manager'); this.log('banknote','amber',this.av(who).first + ' requested ' + this.fmtT(amt), P.name + ' · ' + id); }
     if (m.act === 'lead') { this.setState(x => ({leads:[{id:'L'+Date.now(),c:f.c,t:f.t,v:+f.v||0,s:0,src:f.src}, ...x.leads]})); this.toast('Lead added · ' + f.c); this.log('users','blue','New lead · ' + f.c, f.t); }
     if (m.act === 'project') { const id = this.nextId('PRJ', s.projects); const val = +f.val || 0; this.setState(x => ({projects:[{id,name:f.name,client:f.client,pm:f.pm,st:'on',prog:0,val,bud:+(val*0.7).toFixed(1),spent:0,stage:2,due:f.due||'TBC',team:[f.pm]}, ...x.projects]})); this.toast('Project ' + id + ' created'); this.log('folder','purple','Project created · ' + f.client, f.name); setTimeout(() => this.go('project',{projectId:id}), 50); }
-    if (m.act === 'issue') { const q = Math.max(0, +f.q || 0); this.setState(x => ({stock:x.stock.map(i => i.sku === f.sku ? Object.assign({}, i, {q:Math.max(0, i.q - q)}) : i)})); this.toast('Issued ' + q + ' ' + f.u + ' of ' + f.n + ' to ' + P.client); this.log('package','dark','Store issued ' + q + ' ' + f.u + ' · ' + f.n, P.name + ' · ' + this.av(f.who).first); }
-    if (m.act === 'receive') { const q = Math.max(0, +f.q || 0); this.setState(x => ({stock:x.stock.map(i => i.sku === f.sku ? Object.assign({}, i, {q:i.q + q}) : i)})); this.toast('Received ' + q + ' ' + f.u + ' · ' + f.n); this.log('package','green','Stock received · ' + f.n, q + ' ' + f.u + (f.sup ? ' from ' + f.sup : '')); }
+    if (m.act === 'issue') { const q = Math.max(0, +f.q || 0); this.setState(this.stockChange([{sku:f.sku, qty:-q, type:'issue'}], 'Direct issue · ' + this.av(f.who).n, f.p, '')); this.toast('Issued ' + q + ' ' + f.u + ' of ' + f.n + ' to ' + P.client); this.log('package','dark','Store issued ' + q + ' ' + f.u + ' · ' + f.n, P.name + ' · ' + this.av(f.who).first); }
+    if (m.act === 'receive') { const q = Math.max(0, +f.q || 0); this.setState(this.stockChange([{sku:f.sku, qty:q, type:'receipt'}], 'Received' + (f.sup ? ' · ' + f.sup : ''), '', '')); this.toast('Received ' + q + ' ' + f.u + ' · ' + f.n); this.log('package','green','Stock received · ' + f.n, q + ' ' + f.u + (f.sup ? ' from ' + f.sup : '')); }
     if (m.act === 'invoice') { const id = this.nextId('INV', s.invoices); this.setState(x => ({invoices:[{id,c:P.client,p:f.p,v:+f.v||0,st:'draft',due:f.due||'—'}, ...x.invoices]})); this.toast('Invoice ' + id + ' saved as draft'); }
     if (m.act === 'proc') { const id = this.nextId('PR', s.proc); this.setState(x => ({proc:[{id,t:f.t,p:f.p,v:+f.v||0,s:0,sup:'—'}, ...x.proc]})); this.toast('Purchase request ' + id + ' submitted'); }
     if (m.act === 'proposal') { const id = this.nextId('PRO', s.proposals); this.setState(x => ({proposals:[{id,c:f.c,t:f.t,v:+f.v||0,s:0,own:f.own,valid:f.valid||'30 days'}, ...x.proposals]})); this.toast('Proposal ' + id + ' saved as draft'); this.log('clipboard','purple','Proposal drafted · ' + f.c, f.t); }
     if (m.act === 'job') { const id = this.nextId('JOB', s.jobs); this.setState(x => ({jobs:[{id,t:f.t,p:f.p,mat:f.mat||'—',qty:+f.qty||1,s:0,due:f.due||'TBC',who:f.who,cost:0,waste:0}, ...x.jobs]})); this.toast('Production job ' + id + ' created'); this.log('printer','purple','Production job created · ' + f.t, P.client); }
     if (m.act === 'trip') { const id = this.nextId('TRP', s.trips); this.setState(x => ({trips:[{id,what:f.what,p:f.p,to:f.to,veh:f.veh,drv:f.drv,s:0,date:f.date||'TBC'}, ...x.trips]})); this.toast('Trip ' + id + ' scheduled · ' + f.to); this.log('truck','dark','Trip scheduled to ' + f.to, f.what + ' · ' + f.veh); }
     if (m.act === 'doc') { const fl = f._file || {}; this.setState(x => ({docs:[{id:Date.now(),n:f.n,type:f.type,p:f.p,by:this.me().k,d:'Today',sz:fl.size ? this.fmtSize(fl.size) : '—',url:fl.url || '',path:fl.path || '',mime:fl.mime || ''}, ...x.docs]})); this.toast('Uploaded · ' + f.n); this.log('paperclip','blue','Document uploaded · ' + f.type, f.n); }
+    if (m.act === 'srq') { this.newRequisition(f); this.setState({modal:null}); return; }
     if (m.act === 'meet') { this.setState(x => ({events:[...x.events, {id:Date.now(),d:f.d,t:f.t||'09:00',n:f.n,k:f.k}]})); this.toast('Meeting scheduled · ' + f.d + ' ' + (f.t || '09:00')); this.notify({ic:'calendar',t:'Meeting scheduled · ' + f.n,s:f.d + ' ' + (f.t || '09:00'),go:'calendar'}); }
     this.setState({modal:null});
   }
@@ -447,4 +454,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals });
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals }, storeMethods);

@@ -29,10 +29,26 @@ The end-to-end suite (`e2e/`) builds the app on demo data and drives Chromium th
 | Finance | Rose Temba, Finance Officer | My queue |
 | Reception | Aisha Mbwana, Front Office | Front desk |
 | Store | Fatma Hassan, Storekeeper | My store |
+| Printing | Juma Ally, Print Production Lead | Print floor |
 
 Modules: Command Center dashboard, Monday Briefing (decisions become tasks, staff post updates and presentations), Calendar, Notifications, CRM, Sales & Proposals, Finance & Invoices, Projects (15-stage workflow), Tasks board, Production, Procurement, Store & Inventory, Logistics, Requests & Floats (PM → Operations → Finance → Management → Payment), Staff & Reports, Meeting rooms, Documents, Reports (CSV export), Settings, the Field capture app and the Mobile apps preview.
 
 Also: Ctrl K command palette, the Trinity Intelligence assistant (rule-based answers from the live data), and a bottom tab bar with a "More" sheet below 700px.
+
+### Store, printing and purchasing
+
+Every production job carries its **material list** (e.g. the Serengeti truck wrap: 3 rolls of cast vinyl, 1 roll of gloss laminate). The flow, as it runs in the app:
+
+1. **Printing requests materials** — *Print floor* or the job page → *Request materials from store*. A store requisition (`SRQ-…`) goes to the storekeeper's queue and notifications.
+2. **The store issues what's on the shelf** — *Store requisitions* → *Issue from store*. Stock goes down, each line is written to the **stock ledger**, and the cost is charged to the job and to the client's **project budget**. Anything not in stock stays outstanding (*Part issued*).
+3. **Shortfalls go to purchasing** — *Raise purchase request* creates a `PR-…` per short item, sized to cover the shortfall and bring stock back to its minimum, linked to the requisition. Management is notified.
+4. **Purchasing** — Request → Quotation → Approved → PO issued → Delivered. A delivered order waits at the store.
+5. **Receiving** — *Receive into store* posts a goods-received note (`GRN-…`) to the ledger, raises stock, and tells the storekeeper and the requester that the requisition can now be completed.
+6. **Printing starts** — a job cannot move from *Client approval* to *Production* until its requisition is fully issued.
+7. **After the job** — unused material is returned from the job page (stock and costs are credited back, never more than was issued); wastage is recorded per job.
+8. **Stock counts** — *Stock ledger* → *Stock count*: enter what is on the shelf and a reason; only the difference is posted.
+
+The ledger can be filtered, searched and exported, and *Reports* adds *Stock movements* and *Materials by project*. The end-to-end test `e2e/store-printing.spec.js` plays this whole scenario through the screens.
 
 ### The phone app
 
@@ -50,7 +66,7 @@ Tablets and computers keep the full desktop layout.
 ### How the main flows connect
 
 - **Money requests** go Requested → Project Manager → Operations → Finance → Management → Payment. Whoever is the approver at a step sees Approve/Reject (staff have an *Approvals* page; Management can approve any step). Each approval notifies the next person. Finance pays, which opens the person's float; reconciling closes it.
-- **Procurement → store:** a purchase marked *Delivered* waits at the store; *Receive into store* adds it to stock. *Reorder* on a low item creates the purchase request with the right item and quantity.
+- **Procurement → store:** a purchase marked *Delivered* waits at the store; *Receive into store* adds it to stock and the ledger. *Reorder* on a low item creates the purchase request with the right item and quantity. See *Store, printing and purchasing* above.
 - **Sales:** a won lead or an accepted proposal opens a pre-filled new project.
 - **Field app and staff portal** show the signed-in person's own tasks from the Tasks board; completing work there updates the board. Daily reports are per person. *Photo* uses the phone camera and files the picture under Documents.
 - **Reminders** (staff reports, approvals, questions) go to that person's notifications only.
@@ -67,7 +83,7 @@ The app is connected to the Supabase project `mvjodqspewbjyroygsre` through [`.e
 
 1. **Create the tables.** In the Supabase dashboard open *SQL Editor → New query*, paste [`supabase/migrations/20261021000000_trinity_mark_360.sql`](supabase/migrations/20261021000000_trinity_mark_360.sql) and click *Run*. It creates `profiles` and `app_records`, the access rules, live updates and the private `documents` storage bucket. Running it again is safe.
 2. **Add people.** *Authentication → Users → Add user* (email and password, tick *Auto confirm*). Each new user gets a profile in the Staff portal.
-3. **Give each person their portal.** In *Table Editor → profiles* set `role` (`ceo` for Management, `staff`, `finance`, `reception` or `store`), plus `full_name`, `title` and `person_key` (initials used in the records, e.g. `DK`, `GM`, `RT`, `AM`, `FH`). Or in SQL:
+3. **Give each person their portal.** In *Table Editor → profiles* set `role` (`ceo` for Management, `staff`, `finance`, `reception`, `store` or `production` for the printing department), plus `full_name`, `title` and `person_key` (initials used in the records, e.g. `DK`, `GM`, `RT`, `AM`, `FH`). Or in SQL:
    ```sql
    update public.profiles p set role = 'ceo', full_name = 'Daniel K.', title = 'Managing Director', person_key = 'DK'
    from auth.users u where u.id = p.user_id and u.email = 'daniel.k@trinitymark.co.tz';
@@ -96,12 +112,15 @@ src/
   logic/
     TrinityApp.js       state, sign-in, actions (approve, pay, create, move…) and the assistant
     sync.js             saves changes to Supabase and applies live updates
+    store.js            requisitions, issuing, shortfalls, receiving, returns, stock counts
     constants.js        icons, people, roles, mobile tabs, chart data
     seed.js             demo data
     view/*.js           turn state into the values each screen renders
   components/           desktop shell: sidebar, top bar, modal, command palette, assistant, toasts
   mobile/               phone app: sign-in, header, tab bar, bottom sheets, pull to refresh, install
-  pages/                one component per page
+  pages/                one component per page (generated from the design)
+  pages/custom/         hand-written pages: store requisitions, stock ledger, job page, print floor
+  ui/kit.jsx            building blocks for the hand-written pages
   styles/
 scripts/
   dc-to-jsx.mjs         regenerates components/pages from the design file
