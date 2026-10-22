@@ -43,8 +43,36 @@ export function createFakeSupabase({ users = {}, profiles = {} } = {}) {
     return q;
   }
 
+  // Account administration, as the database functions behave (admin check included).
+  const me = () => session && session.user.id;
+  const isAdmin = () => !!(tables.profiles.get(me()) || {}).is_admin;
+  const deny = { data: null, error: { message: 'Only an administrator can manage accounts' } };
+  const rpcs = {
+    admin_list_users: () => ({ data: [...tables.profiles.entries()].map(([id, p]) => ({ user_id: id, email: Object.keys(users).find(e => users[e].id === id), full_name: p.full_name, title: p.title || '', role: p.role, person_key: p.person_key, is_admin: !!p.is_admin, is_demo: !!p.is_demo, last_sign_in_at: null })), error: null }),
+    admin_create_user: a => {
+      if (users[a.p_email]) return { data: null, error: { message: 'An account with ' + a.p_email + ' already exists' } };
+      const id = 'u' + (Object.keys(users).length + 1);
+      users[a.p_email] = { id, password: a.p_password };
+      tables.profiles.set(id, { role: a.p_role, full_name: a.p_full_name, title: a.p_title, person_key: a.p_person_key.toUpperCase(), is_admin: a.p_is_admin, is_demo: false });
+      return { data: id, error: null };
+    },
+    admin_update_user: a => { Object.assign(tables.profiles.get(a.p_user), { role: a.p_role, is_admin: a.p_is_admin }); return { data: null, error: null }; },
+    admin_set_password: a => { const e = Object.keys(users).find(k => users[k].id === a.p_user); users[e].password = a.p_password; return { data: null, error: null }; },
+    admin_delete_user: a => { const e = Object.keys(users).find(k => users[k].id === a.p_user); delete users[e]; tables.profiles.delete(a.p_user); return { data: null, error: null }; },
+    admin_remove_demo: () => {
+      let n = 0;
+      for (const [id, p] of [...tables.profiles]) if (p.is_demo && id !== me()) { tables.profiles.delete(id); delete users[Object.keys(users).find(k => users[k].id === id)]; n++; }
+      const rows = tables.app_records.size;
+      tables.app_records.clear();
+      tables.app_records.set('_meta|workspace', { collection: '_meta', id: 'workspace', position: 0, data: { mode: 'live' } });
+      return { data: { users_removed: n, records_removed: rows }, error: null };
+    }
+  };
+
   return {
     tables,
+    users,
+    async rpc(name, args) { return isAdmin() ? rpcs[name](args || {}) : deny; },
     from: query,
     auth: {
       async getSession() { return { data: { session } }; },

@@ -113,6 +113,19 @@ Then sign in to the app as Daniel to load the starting data, and continue from s
 5. **Password reset links:** in *Authentication → URL Configuration* set *Site URL* to the live address (e.g. your Vercel URL).
 6. **Optional — Google / Microsoft sign-in:** enable the provider under *Authentication → Providers*. Until then those buttons explain that they are not switched on.
 
+### Accounts, administrator and PIN
+
+**The database is set up** (project TRINITY, `mvjodqspewbjyroygsre`): tables, access rules, live updates, document storage and the account functions in `supabase/migrations/`.
+
+| Account | Portal | Notes |
+|---|---|---|
+| `admin@trinitymark.co.tz` | Management + **administrator** | Creates and removes accounts |
+| `daniel.k@`, `grace.m@`, `rose.t@`, `reception@`, `store@`, `print@trinitymark.co.tz` | Management, Staff, Finance, Reception, Store, Printing | **Demo** accounts (one shared demo password) |
+
+- **Users & access** (administrators only, under *System*): create accounts with a starting password and portal, change a person's portal, make or remove administrators, reset passwords, delete accounts. Every action is checked in the database, not just in the app.
+- **Remove demo accounts and data** — one tap (with a confirmation) deletes the six demo accounts and every demo record (projects, stock, requests…), leaving an empty workspace for real data. Accounts you created stay. Add stock items from *Stock ledger → New stock item*.
+- **PIN unlock** — after signing in with a password, people can set a 4–6 digit PIN on that device. Reopening the app (or coming back after 5 minutes away) asks for the PIN; five wrong PINs sign them out. Only a salted hash is kept, in that browser. Turn it off from the account menu.
+
 ### How it works
 
 - Sign-in uses Supabase Auth. Management can open any portal; everyone else stays in their own.

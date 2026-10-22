@@ -18,6 +18,7 @@ test('sign-in validates the password and opens the chosen portal', async ({ page
     await btn(page, portal).click();
     await page.locator('input[type=password]').fill('demo1234');
     await page.locator('input[type=password]').press('Enter');
+    await page.getByRole('button', { name: 'Not now' }).click();
     await expect(page.getByText(landing).first()).toBeVisible();
     await page.locator('header div[style*="cursor: pointer"]').last().click();
     await page.getByText('Sign out', { exact: true }).click();
@@ -35,6 +36,7 @@ test('"Remember me" off ends the session when the browser closes', async ({ page
   await page.getByText('Remember me').click();
   await page.locator('input[type=password]').fill('demo1234');
   await btn(page, 'SIGN IN').click();
+  await page.getByRole('button', { name: 'Not now' }).click();
   await expect(page.getByText('COMPANY COMMAND CENTER')).toBeVisible();
   await page.reload();
   await expect(page.getByText('COMPANY COMMAND CENTER')).toBeVisible();

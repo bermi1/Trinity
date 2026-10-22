@@ -60,6 +60,7 @@ export function storeVals(s) {
       .map(m => { const it = this.item(m.sku); return Object.assign({ id: m.id, d: m.d, n: it.n, sku: m.sku, qty: (m.qty > 0 ? '+' : '') + m.qty + ' ' + it.u, up: m.qty > 0, ref: m.ref, client: m.p ? this.proj(m.p).client : '—', by: this.av(m.by).n, v: fmtT(Math.abs(m.v)) }, pill(MOVE_TYPE[m.type])); }),
     items: s.stock.map(i => ({ v: i.sku, l: i.n + ' · ' + i.q + ' ' + i.u, q: i.q, u: i.u })),
     canCount: keeper,
+    newItem: () => this.openModal('item'),
     adjust: (sku, counted, reason) => this.adjustStock(sku, +counted, reason),
     csv: () => this.downloadCsv('stock-ledger.csv', [['Date', 'Item', 'SKU', 'Movement', 'Quantity', 'Reference', 'Project', 'By', 'Value (TZS)']].concat(s.movements.map(m => [m.d, this.item(m.sku).n, m.sku, MOVE_TYPE[m.type][0], m.qty, m.ref, m.p ? this.proj(m.p).name : '', this.av(m.by).n, m.v])))
   };

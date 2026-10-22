@@ -12,6 +12,8 @@ import { supabase } from '../lib/supabase';
 import RecordSync, { applyChange } from './sync';
 import { printDocument } from '../lib/print';
 import { storeMethods } from './store';
+import { adminMethods, emptyLike } from './admin';
+import { pinFor, savePin, checkPin, clearPin, clearUnlocked, isUnlocked, isValidPin, markUnlocked, LOCK_AFTER_MS } from './pin';
 import { storeVals } from './view/storeops';
 
 const OFFLINE = 'Could not reach the server. Check your connection and try again.';
@@ -35,6 +37,7 @@ export default class TrinityApp extends Logic {
     if (supabase) Object.assign(this.state, {db:true, booting:true, auth:false, email:'', pw:''});
     // "Remember me" off: the sign-in lasts until the browser closes.
     if (!supabase && this.forgetOnClose()) this.state.auth = false;
+    if (!supabase && this.state.auth && pinFor(this.state.pinUser) && !isUnlocked()) this.state.pin = 'lock';
   }
   forgetOnClose() {
     try { return localStorage.getItem('tm360-forget') === '1' && !sessionStorage.getItem('tm360-live'); } catch (e) { return false; }
@@ -55,7 +58,7 @@ export default class TrinityApp extends Logic {
     let emb = false, er = null; try { const qp = new URLSearchParams(location.search); emb = qp.get('embed') === '1'; er = qp.get('role'); } catch (e) {}
     if (emb) { const rr = this.ROLES[er] ? er : 'ceo'; sv = {auth:true, role:rr, page:this.ROLES[rr].home, projectId:'PRJ-0231'}; }
     const data = this.seed(); Object.keys(data).forEach(k => { if (saved && saved[k] !== undefined) data[k] = saved[k]; });
-    return Object.assign({embed:emb,more:false,colSel:{tasks:1,proc:0,crm:0},mobileRole:sv.role||'ceo',docType:'all',docQ:'',propFilter:'all',prefs:sv.prefs||{push:true,email:true,sms:false,digest:true},auth:!!sv.auth,remember:sv.remember !== false,online:typeof navigator === 'undefined' ? true : navigator.onLine !== false,navDir:'tab',role:sv.role||'ceo',loginRole:sv.role||'ceo',mTab:'home',page:sv.page||'dashboard',projectId:sv.projectId||'PRJ-0231',jobId:sv.jobId||'JOB-0313',email:'daniel.k@trinitymark.co.tz',pw:'demo1234',loginErr:'',range:'12W',tip:-1,menu:false,drawer:false,w:typeof window!=='undefined'?window.innerWidth:1440,reqSel:'REQ-0418',reqFilter:'me',taskFilter:'all',projFilter:'all',stockQ:'',leadQ:'',modal:null,form:{},modalErr:'',cmd:false,cmdQ:'',ai:false,aiQ:'',aiBusy:false,aiMsgs:[{r:'ai',t:'Habari. Ask me about projects, money, stock or staff — I read the live Trinity Mark 360 data.'}],toasts:[],fieldTab:'home',newAct:{d:'',a:'',o:'SK',dl:''}}, data); })();
+    return Object.assign({embed:emb,more:false,colSel:{tasks:1,proc:0,crm:0},mobileRole:sv.role||'ceo',docType:'all',docQ:'',propFilter:'all',prefs:sv.prefs||{push:true,email:true,sms:false,digest:true},auth:!!sv.auth,pinUser:sv.pinUser||'',remember:sv.remember !== false,online:typeof navigator === 'undefined' ? true : navigator.onLine !== false,navDir:'tab',role:sv.role||'ceo',loginRole:sv.role||'ceo',mTab:'home',page:sv.page||'dashboard',projectId:sv.projectId||'PRJ-0231',jobId:sv.jobId||'JOB-0313',email:'daniel.k@trinitymark.co.tz',pw:'demo1234',loginErr:'',range:'12W',tip:-1,menu:false,drawer:false,w:typeof window!=='undefined'?window.innerWidth:1440,reqSel:'REQ-0418',reqFilter:'me',taskFilter:'all',projFilter:'all',stockQ:'',leadQ:'',modal:null,form:{},modalErr:'',cmd:false,cmdQ:'',ai:false,aiQ:'',aiBusy:false,aiMsgs:[{r:'ai',t:'Habari. Ask me about projects, money, stock or staff — I read the live Trinity Mark 360 data.'}],toasts:[],fieldTab:'home',newAct:{d:'',a:'',o:'SK',dl:''}}, data); })();
 
   componentDidMount() {
     this._key = e => {
@@ -66,6 +69,8 @@ export default class TrinityApp extends Logic {
     window.addEventListener('keydown', this._key); window.addEventListener('resize', this._rs);
     this._prevData = {}; this.dataKeys().forEach(k => { this._prevData[k] = this.state[k]; });
     if (this.state.db) this.startDb();
+    this._vis = () => { if (document.hidden) this._hiddenAt = Date.now(); else { this.pinLockIfIdle(this._hiddenAt); this._hiddenAt = 0; } };
+    document.addEventListener('visibilitychange', this._vis);
     this._pop = e => this.onPopState(e);
     this._net = () => this.setState({online:navigator.onLine});
     window.addEventListener('popstate', this._pop); window.addEventListener('online', this._net); window.addEventListener('offline', this._net);
@@ -81,7 +86,7 @@ export default class TrinityApp extends Logic {
     } catch (e) {}
     try { this._bc = new BroadcastChannel('tm360'); this._bc.onmessage = e => { if (!e.data || typeof e.data !== 'object') return; this._remote = true; this.setState(e.data, () => { this._remote = false; Object.keys(e.data).forEach(k => { if (this._prevData) this._prevData[k] = this.state[k]; }); }); }; } catch (e) {}
   }
-  componentWillUnmount() { window.removeEventListener('popstate', this._pop); window.removeEventListener('online', this._net); window.removeEventListener('offline', this._net); if (this.sync) this.sync.unsubscribe(); if (this._authSub) this._authSub.unsubscribe(); window.removeEventListener('keydown', this._key); window.removeEventListener('resize', this._rs); try { this._bc && this._bc.close(); } catch (e) {} }
+  componentWillUnmount() { document.removeEventListener('visibilitychange', this._vis); window.removeEventListener('popstate', this._pop); window.removeEventListener('online', this._net); window.removeEventListener('offline', this._net); if (this.sync) this.sync.unsubscribe(); if (this._authSub) this._authSub.unsubscribe(); window.removeEventListener('keydown', this._key); window.removeEventListener('resize', this._rs); try { this._bc && this._bc.close(); } catch (e) {} }
   componentDidUpdate(pp, ps) {
     const s = this.state;
     const was = !!this._overlayWas, now = this.overlayOpen(s);
@@ -92,7 +97,7 @@ export default class TrinityApp extends Logic {
     }
     this._overlayWas = now;
     if (s.auth && this._afterAuth && !this._afterAuthRunning) { this._afterAuthRunning = true; const f = this._afterAuth; this._afterAuth = null; setTimeout(() => { this._afterAuthRunning = false; f(); }, 0); }
-    if (!s.embed) { try { localStorage.setItem('tm360', JSON.stringify({auth:s.auth,role:s.role,page:s.page,projectId:s.projectId,jobId:s.jobId,prefs:s.prefs,remember:s.remember})); } catch (e) {} }
+    if (!s.embed) { try { localStorage.setItem('tm360', JSON.stringify({auth:s.auth,role:s.role,page:s.page,projectId:s.projectId,jobId:s.jobId,pinUser:s.pinUser,prefs:s.prefs,remember:s.remember})); } catch (e) {} }
     const dk = this.dataKeys(), prev = this._prevData || {}, diff = {}; let n = 0;
     dk.forEach(k => { if (s[k] !== prev[k]) { diff[k] = s[k]; n++; } });
     this._prevData = {}; dk.forEach(k => { this._prevData[k] = s[k]; });
@@ -185,7 +190,7 @@ export default class TrinityApp extends Logic {
     const s = this.state;
     if (!s.email.trim() || s.pw.length < 4) { this.setState({loginErr:'Enter your email and a password of at least 4 characters.'}); return; }
     this.rememberChoice();
-    if (!s.db) { this.setState({auth:true,role:s.loginRole,page:this.ROLES[s.loginRole].home,taskFilter:s.loginRole === 'staff' ? 'mine' : 'all'}); return; }
+    if (!s.db) { const who = s.email.trim().toLowerCase(); this.setState({auth:true,role:s.loginRole,page:this.ROLES[s.loginRole].home,taskFilter:s.loginRole === 'staff' ? 'mine' : 'all',pinUser:who,pin:this.afterPasswordPin(who)}); return; }
     if (s.signingIn) return;
     this.setState({signingIn:true, loginErr:'Signing in…'});
     withTimeout(supabase.auth.signInWithPassword({email:s.email.trim(), password:s.pw})).then(({data, error}) => {
@@ -202,11 +207,13 @@ export default class TrinityApp extends Logic {
     });
   }
   signOut() {
-    if (!this.state.db) { this.setState({auth:false,menu:false}); return; }
+    clearUnlocked();
+    if (!this.state.db) { this.setState({auth:false,menu:false,pin:null}); return; }
     if (this.sync) this.sync.unsubscribe();
     this.account = null;
+    this.people = {};
     this.ROLES = ROLES;
-    supabase.auth.signOut().finally(() => this.setState({auth:false, menu:false, pw:'', signingIn:false}));
+    supabase.auth.signOut().finally(() => this.setState({auth:false, menu:false, pw:'', signingIn:false, pin:null, users:null}));
   }
   resetDemo() {
     if (this.state.db) { this.setState({menu:false}); this.toast('Reset is only available in the demo, not on the live database'); return; }
@@ -236,14 +243,20 @@ export default class TrinityApp extends Logic {
   // Loads the signed-in person's profile and all shared data, then opens their portal.
   async enter(user, wanted, fresh) {
     try {
-      const { data: prof, error } = await withTimeout(supabase.from('profiles').select('role,full_name,title,person_key').eq('user_id', user.id).maybeSingle());
+      const { data: prof, error } = await withTimeout(supabase.from('profiles').select('role,full_name,title,person_key,is_admin,is_demo').eq('user_id', user.id).maybeSingle());
       if (error) throw error;
       const acc = prof || {role:'staff'};
       const role = ROLES[acc.role] ? acc.role : 'staff';
-      this.account = {role};
+      this.account = {role, isAdmin:!!acc.is_admin, isDemo:!!acc.is_demo};
+      const { data: everyone } = await withTimeout(supabase.from('profiles').select('full_name,person_key'));
+      this.setPeople(everyone);
       this.ROLES = Object.assign({}, ROLES, {[role]:Object.assign({}, ROLES[role], {email:user.email}, acc.full_name ? {n:acc.full_name} : {}, acc.title ? {t:acc.title} : {}, acc.person_key ? {k:acc.person_key} : {})});
       const shared = await withTimeout(this.sync.load(this.seed()), 30000);
-      this.applyRemote(shared);
+      // After "Remove demo", collections with no rows start empty instead of showing demo data.
+      const live = !!shared._meta;
+      delete shared._meta;
+      if (live) { const seed = this.seed(); Object.keys(seed).forEach(k => { if (!(k in shared)) shared[k] = emptyLike(seed[k]); }); }
+      this.applyRemote(Object.assign(shared, {workspaceLive:live}));
       this.sync.unsubscribe();
       this.sync.subscribe((c, change) => { const next = applyChange(this.state[c], change); if (next !== undefined) this.applyRemote({[c]:next}); });
       const s = this.state;
@@ -251,7 +264,8 @@ export default class TrinityApp extends Logic {
       const pick = fresh ? wanted : s.role;
       const r = role === 'ceo' && ROLES[pick] ? pick : role;
       const keepPage = !fresh && r === s.role && s.page;
-      this.setState({auth:true, booting:false, signingIn:false, loginErr:'', pw:'', email:user.email, role:r, loginRole:r, page:keepPage ? s.page : this.ROLES[r].home, taskFilter:r === 'staff' ? 'mine' : 'all'});
+      const who = user.email.toLowerCase();
+      this.setState({pinUser:who, pin:fresh ? this.afterPasswordPin(who) : pinFor(who) && !isUnlocked() ? 'lock' : null, auth:true, booting:false, signingIn:false, loginErr:'', pw:'', email:user.email, role:r, loginRole:r, page:keepPage ? s.page : this.ROLES[r].home, taskFilter:r === 'staff' ? 'mine' : 'all'});
     } catch (err) {
       console.error(err);
       const missing = err && (err.code === '42P01' || err.code === 'PGRST205' || /does not exist|schema cache/i.test(err.message || ''));
@@ -259,6 +273,33 @@ export default class TrinityApp extends Logic {
       this.setState({booting:false, signingIn:false, auth:false, loginErr:missing ? 'The database is not set up yet. Run supabase/migrations in the Supabase SQL Editor.' : 'Could not load your workspace: ' + (err.message || err)});
     }
   }
+  // ---- PIN unlock
+  // After a password sign-in: ask to set a PIN unless one exists or they said "not now" on this device.
+  afterPasswordPin(who) {
+    if (pinFor(who)) { markUnlocked(); return null; }
+    try { if (localStorage.getItem('tm360-pin-skip') === who) return null; } catch (e) {}
+    return 'setup';
+  }
+  async setPin(pin, again) {
+    if (!isValidPin(pin)) return 'Use 4 to 6 digits, not all the same or in a row.';
+    if (pin !== again) return 'The two PINs don’t match.';
+    await savePin(this.state.pinUser, pin);
+    this.setState({pin:null});
+    this.toast('PIN set · use it to unlock next time');
+    return null;
+  }
+  async unlock(pin) {
+    const r = await checkPin(this.state.pinUser, pin);
+    if (r.result === 'ok') { this.setState({pin:null}); return null; }
+    if (r.result === 'wrong') return 'Wrong PIN · ' + r.left + (r.left === 1 ? ' try' : ' tries') + ' left';
+    this.signOut();
+    this.setState({loginErr:'Too many wrong PINs. Sign in with your password.'});
+    return null;
+  }
+  skipPin() { try { localStorage.setItem('tm360-pin-skip', this.state.pinUser); } catch (e) {} this.setState({pin:null}); }
+  pinLockIfIdle(hiddenAt) { if (hiddenAt && Date.now() - hiddenAt > LOCK_AFTER_MS && this.state.auth && pinFor(this.state.pinUser)) { clearUnlocked(); this.setState({pin:'lock'}); } }
+  turnOffPin() { clearPin(); try { localStorage.setItem('tm360-pin-skip', this.state.pinUser); } catch (e) {} this.setState({menu:false}); this.toast('PIN turned off on this device'); }
+
   // Applies changes that came from the database or another tab without saving them back.
   applyRemote(patch) {
     this._remote = true;
@@ -282,7 +323,7 @@ export default class TrinityApp extends Logic {
         ['People',[['staff','Staff & Reports','user'],['rooms','Meeting rooms','calendar']]],
         ['Records',[['documents','Documents','paperclip'],['reports','Reports','pie']]],
         ['Mobile',[['ceomobile','Mobile apps','phone',0,{mobileRole:'ceo'}],['field','Field capture app','camera']]],
-        ['System',[['settings','Settings','settings']]]],
+        ['System',[...(this.isAdmin() ? [['users','Users & access','shield']] : []),['settings','Settings','settings']]]],
       staff:[['My work',[['staffportal','My Day','home'],['tasks','My tasks','checkSquare',myOpen,{taskFilter:'mine'}],['requests','Approvals','banknote',s.reqs.filter(q => this.canAct(q)).length],['field','Field capture','camera'],['ceomobile','Mobile app','phone',0,{mobileRole:'staff'}]]],
         ['Company',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],['settings','Settings','settings']]]],
       finance:[['Finance',[['financeportal','My queue','wallet',finQ],['finance','Finance & Invoices','chart'],['requests','Requests & Floats','banknote'],['proposals','Proposals','clipboard'],['procurement','Procurement','cart'],['reports','Reports','pie']]],
@@ -308,7 +349,7 @@ export default class TrinityApp extends Logic {
   fmtT(n) { return 'TZS ' + Math.round(n).toLocaleString('en-US'); }
   fmtM(v) { return 'TZS ' + (+v).toFixed(1) + 'M'; }
   now() { return new Date().toTimeString().slice(0,5); }
-  av(k) { const p = this.PPL[k] || [String(k || '—'),'#6E6A7C']; return {i:k,n:p[0],c:p[1],first:p[0].split(' ')[0]}; }
+  av(k) { const p = this.PPL[k] || (this.people && this.people[k]) || [String(k || '—'),'#6E6A7C']; return {i:k,n:p[0],c:p[1],first:p[0].split(' ')[0]}; }
   proj(id) { return this.state.projects.find(p => p.id === id) || {id:'',name:'General',client:'Company'}; }
   tone(t) { return ({amber:['#FBF1DD','#8A6414'],purple:['#EFE8FA','#5A2FA8'],green:['#E6F4EC','#1F7549'],blue:['#E9EFFA','#3559A8'],dark:['#EDE8F6','#2B1459'],red:['#FBEDEE','#B23A46']})[t] || ['#F4F1FA','#2B1459']; }
   go(page, extra) {
@@ -371,6 +412,7 @@ export default class TrinityApp extends Logic {
       job:{title:'New production job',sub:'Moves Brief → Design → Approval → Production → QC → Packaging → Delivery.',submit:'Create job',fields:[{k:'t',l:'Job',ph:'e.g. Roll-up banners × 10',req:1},{k:'p',l:'Project',opts:PO},{k:'mat',l:'Materials',ph:'e.g. PET film, roll-up stands'},{k:'qty',l:'Quantity',type:'number',ph:'10'},{k:'due',l:'Deadline',ph:'e.g. Fri 25'},{k:'who',l:'Assigned to',opts:PP}]},
       trip:{title:'Schedule trip',sub:'Every trip is linked to a project.',submit:'Schedule trip',fields:[{k:'what',l:'Load',ph:'e.g. 4 gazebo tents',req:1},{k:'p',l:'Project',opts:PO},{k:'to',l:'Destination',ph:'e.g. Arusha',req:1},{k:'veh',l:'Vehicle',opts:O(['T 482 DXY','T 119 DKL','T 733 DGH'])},{k:'drv',l:'Driver',opts:O(['Amani Juma','Hassan Rajab'])},{k:'date',l:'Date & time',ph:'e.g. Fri 25 · 06:00'}]},
       doc:{title:'Upload document',sub:'Stored against a project, with permissions.',submit:'Upload',fields:[{k:'file',l:'File',type:'file'},{k:'n',l:'File name',ph:'e.g. Signed contract.pdf',req:1},{k:'type',l:'Type',opts:O(['Contract','Proposal','Quotation','Invoice','Receipt','Design','Brief','Report','Client approval','Purchase'])},{k:'p',l:'Project',opts:PO}]},
+      item:{title:'New stock item',sub:'Adds the item to the store. The opening quantity is recorded in the stock ledger.',submit:'Add item',fields:[{k:'n',l:'Item name',ph:'e.g. Vinyl 1.37m gloss',req:1},{k:'sku',l:'Code (SKU)',ph:'e.g. VNL-137G',req:1},{k:'cat',l:'Category',opts:O(['Print media','Consumables','Apparel','Display','Boards','Equipment','Stationery','Other'])},{k:'u',l:'Unit',ph:'e.g. rolls, pcs, L',req:1},{k:'q0',l:'Opening quantity',type:'number',ph:'0'},{k:'min',l:'Reorder at (minimum)',type:'number',ph:'5'},{k:'cost',l:'Unit cost (TZS)',type:'number',ph:'185000'},{k:'loc',l:'Bin / location',ph:'e.g. A-02'}]},
       srq:{title:'Request from store',sub:'The storekeeper issues it and charges it to the project.',submit:'Send to store',fields:[{k:'sku',l:'Item',opts:this.state.stock.map(i => ({v:i.sku,l:i.n + ' · ' + i.q + ' ' + i.u + ' in store'}))},{k:'q',l:'Quantity',type:'number',ph:'1',req:1},{k:'p',l:'For project',opts:[{v:'',l:'General use'}].concat(PO)},{k:'purpose',l:'Purpose',ph:'e.g. Sample prints for client'}]},
       meet:{title:'Schedule meeting',sub:'Participants get a reminder. Actions become tasks.',submit:'Schedule',fields:[{k:'n',l:'Title',ph:'e.g. Production review',req:1},{k:'d',l:'Day',opts:O(['Mon 21','Tue 22','Wed 23','Thu 24','Fri 25','Sat 26'])},{k:'t',l:'Time',ph:'e.g. 10:00'},{k:'k',l:'Type',opts:[{v:'meet',l:'Internal meeting'},{v:'client',l:'Client meeting'},{v:'proj',l:'Project'}]}]},
       proc:{title:'Purchase request',sub:'Request → Quotation → Approved → PO → Delivered.',submit:'Submit purchase request',fields:[{k:'t',l:'Item',ph:'e.g. Vinyl rolls × 10',req:1},{k:'p',l:'Project',opts:PO},{k:'v',l:'Estimated cost (TZS M)',type:'number',ph:'1.5'}]}
@@ -403,6 +445,15 @@ export default class TrinityApp extends Logic {
     if (m.act === 'job') { const id = this.nextId('JOB', s.jobs); this.setState(x => ({jobs:[{id,t:f.t,p:f.p,mat:f.mat||'—',qty:+f.qty||1,s:0,due:f.due||'TBC',who:f.who,cost:0,waste:0}, ...x.jobs]})); this.toast('Production job ' + id + ' created'); this.log('printer','purple','Production job created · ' + f.t, P.client); }
     if (m.act === 'trip') { const id = this.nextId('TRP', s.trips); this.setState(x => ({trips:[{id,what:f.what,p:f.p,to:f.to,veh:f.veh,drv:f.drv,s:0,date:f.date||'TBC'}, ...x.trips]})); this.toast('Trip ' + id + ' scheduled · ' + f.to); this.log('truck','dark','Trip scheduled to ' + f.to, f.what + ' · ' + f.veh); }
     if (m.act === 'doc') { const fl = f._file || {}; this.setState(x => ({docs:[{id:Date.now(),n:f.n,type:f.type,p:f.p,by:this.me().k,d:'Today',sz:fl.size ? this.fmtSize(fl.size) : '—',url:fl.url || '',path:fl.path || '',mime:fl.mime || ''}, ...x.docs]})); this.toast('Uploaded · ' + f.n); this.log('paperclip','blue','Document uploaded · ' + f.type, f.n); }
+    if (m.act === 'item') {
+      const sku = String(f.sku).trim().toUpperCase();
+      if (s.stock.some(i => i.sku === sku)) { this.setState({modalErr:'An item with code ' + sku + ' already exists.'}); return; }
+      const q0 = Math.max(0, Math.round(+f.q0 || 0));
+      this.setState(x => ({stock:[...x.stock, {sku, n:String(f.n).trim(), cat:f.cat, q:0, min:Math.max(0, Math.round(+f.min || 0)), u:String(f.u).trim(), loc:String(f.loc || '').trim() || '—', cost:Math.max(0, +f.cost || 0)}]}));
+      if (q0) this.setState(this.stockChange([{sku, qty:q0, type:'receipt'}], 'Opening stock', '', ''));
+      this.toast(String(f.n).trim() + ' added to the store');
+      this.setState({modal:null}); return;
+    }
     if (m.act === 'srq') { this.newRequisition(f); this.setState({modal:null}); return; }
     if (m.act === 'meet') { this.setState(x => ({events:[...x.events, {id:Date.now(),d:f.d,t:f.t||'09:00',n:f.n,k:f.k}]})); this.toast('Meeting scheduled · ' + f.d + ' ' + (f.t || '09:00')); this.notify({ic:'calendar',t:'Meeting scheduled · ' + f.n,s:f.d + ' ' + (f.t || '09:00'),go:'calendar'}); }
     this.setState({modal:null});
@@ -454,4 +505,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals }, storeMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals }, storeMethods, adminMethods);

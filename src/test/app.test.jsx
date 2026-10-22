@@ -17,6 +17,8 @@ describe('sign in', () => {
     expect(screen.getByText(/at least 4 characters/)).toBeTruthy();
     fireEvent.change(pw, { target: { value: 'demo1234' } });
     fireEvent.click(screen.getByText('SIGN IN'));
+    expect(screen.getByText('Set a PIN for quick sign-in')).toBeTruthy();
+    fireEvent.click(screen.getByText('Not now'));
     expect(screen.getByText('COMPANY COMMAND CENTER')).toBeTruthy();
   });
 
@@ -24,6 +26,7 @@ describe('sign in', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Store' }));
     fireEvent.click(screen.getByText('SIGN IN'));
+    fireEvent.click(screen.getByText('Not now'));
     expect(screen.getByText('STOREKEEPER PORTAL')).toBeTruthy();
   });
 });
@@ -153,5 +156,51 @@ describe('approval chain permissions', () => {
     }
     app.decide(app.state.reqs[0], true);
     expect(app.state.reqs[0]).toMatchObject({ step: 5, st: 'approved' });
+  });
+});
+
+describe('PIN unlock', () => {
+  const type = digits => digits.split('').forEach(d => fireEvent.click(screen.getByRole('button', { name: d })));
+
+  it('sets a PIN after signing in, then asks for it when the app is reopened', async () => {
+    const first = render(<App />);
+    fireEvent.change(document.querySelectorAll('input')[1], { target: { value: 'demo1234' } });
+    fireEvent.click(screen.getByText('SIGN IN'));
+    type('1111');
+    await act(async () => { fireEvent.click(screen.getByText('Next')); });
+    type('1111');
+    await act(async () => { fireEvent.click(screen.getByText('Save PIN')); });
+    expect(await screen.findByText('Use 4 to 6 digits, not all the same or in a row.')).toBeTruthy();
+    type('2580');
+    await act(async () => { fireEvent.click(screen.getByText('Next')); });
+    type('2580');
+    await act(async () => { fireEvent.click(screen.getByText('Save PIN')); });
+    expect(await screen.findByText('COMPANY COMMAND CENTER')).toBeTruthy();
+    first.unmount();
+
+    sessionStorage.clear();                 // the browser was closed
+    render(<App />);
+    expect(screen.getByText('Enter your PIN')).toBeTruthy();
+    type('9999');
+    await act(async () => { fireEvent.click(screen.getByText('Unlock')); });
+    expect(await screen.findByText('Wrong PIN · 4 tries left')).toBeTruthy();
+    type('2580');
+    await act(async () => { fireEvent.click(screen.getByText('Unlock')); });
+    expect(await screen.findByText('COMPANY COMMAND CENTER')).toBeTruthy();
+  });
+
+  it('five wrong PINs sign the person out', async () => {
+    const { savePin } = await import('../logic/pin');
+    await savePin('daniel.k@trinitymark.co.tz', '2580');
+    sessionStorage.clear();
+    localStorage.setItem('tm360', JSON.stringify({ auth: true, role: 'ceo', page: 'dashboard', pinUser: 'daniel.k@trinitymark.co.tz' }));
+    render(<App />);
+    for (let left = 4; left >= 0; left--) {
+      type('1357');
+      await act(async () => { fireEvent.click(screen.getByText('Unlock')); });
+      if (left) await screen.findByText('Wrong PIN · ' + left + (left === 1 ? ' try' : ' tries') + ' left');
+    }
+    expect(await screen.findByText('Too many wrong PINs. Sign in with your password.')).toBeTruthy();
+    expect(localStorage.getItem('tm360-pin')).toBeNull();
   });
 });

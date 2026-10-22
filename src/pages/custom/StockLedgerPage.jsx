@@ -16,6 +16,7 @@ export default function StockLedgerPage({ v }) {
   return (
     <>
       <PageHead kicker="Store · Ledger" title="Stock ledger" sub="Every receipt, issue, return and count, with who did it and which project it was charged to.">
+        {L.canCount ? <Btn icon={v.ic.plus} onClick={L.newItem}>New stock item</Btn> : null}
         <Btn kind="ghost" icon={v.ic.download} onClick={L.csv}>Export CSV</Btn>
       </PageHead>
       <Kpis items={L.kpis} />

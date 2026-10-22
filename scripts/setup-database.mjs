@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // One-time setup of the Trinity Mark 360 Supabase database, run from your own computer:
 //   1. creates the tables, access rules, live updates and document storage (supabase/migrations)
-//   2. creates the six staff accounts (skips any that already exist)
+//   2. creates the six demo staff accounts (skips any that already exist; remove them later
+//      in one tap from Users & access)
 //   3. gives each account its portal, name and initials
 //   4. prints the accounts and their starting passwords
 //
@@ -91,7 +92,7 @@ export async function main(env = process.env) {
       [p.email, p.name]
     );
     await db.query(
-      `update public.profiles pr set role = $2, full_name = $3, title = $4, person_key = $5 from auth.users u where u.id = pr.user_id and u.email = $1`,
+      `update public.profiles pr set role = $2, full_name = $3, title = $4, person_key = $5, is_demo = true from auth.users u where u.id = pr.user_id and u.email = $1`,
       [p.email, p.role, p.name, p.title, p.k]
     );
   }

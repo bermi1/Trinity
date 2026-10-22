@@ -16,6 +16,8 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // e2e/ holds the Playwright browser tests (npm run test:e2e).
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**', 'dist-e2e/**'],
     setupFiles: ['./src/test/setup.js']
   }
 });

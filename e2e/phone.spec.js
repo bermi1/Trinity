@@ -28,6 +28,7 @@ test('sign-in screen works like an app: show password, portal picker, remember s
   await page.getByRole('radio', { name: 'Finance' }).click();
   await pw.fill('demo1234');
   await pw.press('Enter');
+  await page.getByRole('button', { name: 'Not now' }).click();
   await expect(page.getByText('Rose Temba’s queue')).toBeVisible();
   await expect(page.locator('nav')).toContainText('Queue');
   expect(await page.evaluate(() => scrollY)).toBe(0);
@@ -199,6 +200,34 @@ test('printing on the phone: request materials, the store issues them', async ({
   await toast(page, 'Issued what is in stock · 1 item short');
   await btn(page.locator('[data-req="SRQ-0106"]'), 'Raise purchase request').click();
   await toast(page, 'PR-0213 raised for the shortfall');
+});
+
+test('PIN unlock: set a PIN after signing in, unlock with it next time', async ({ page, context }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.locator('input[autocomplete="current-password"]').fill('demo1234');
+  await btn(page, 'Sign in').click();
+  const key = d => page.getByRole('button', { name: d, exact: true });
+  for (const d of '2580') await key(d).click();
+  await btn(page, 'Next').click();
+  for (const d of '2580') await key(d).click();
+  await btn(page, 'Save PIN').click();
+  await expect(page.locator('.m-header')).toBeVisible();
+  // Reopening the app (a new browser session) asks for the PIN, not the password.
+  const again = await context.newPage();
+  await again.goto('/');
+  await expect(again.getByRole('heading', { name: 'Enter your PIN' })).toBeVisible();
+  for (const d of '1111') await again.getByRole('button', { name: d, exact: true }).click();
+  await again.getByRole('button', { name: 'Unlock' }).click();
+  await expect(again.getByRole('alert')).toHaveText('Wrong PIN · 4 tries left');
+  for (const d of '2580') await again.getByRole('button', { name: d, exact: true }).click();
+  await again.getByRole('button', { name: 'Unlock' }).click();
+  await expect(again.locator('.m-header')).toBeVisible();
+  // It can be turned off from the account sheet.
+  await again.getByRole('button', { name: /^Account/ }).click();
+  await again.getByRole('button', { name: 'Turn off PIN unlock' }).click();
+  expect(await again.evaluate(() => localStorage.getItem('tm360-pin'))).toBeNull();
 });
 
 test.describe('tablet', () => {

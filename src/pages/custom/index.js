@@ -3,10 +3,12 @@ import RequisitionsPage from './RequisitionsPage';
 import StockLedgerPage from './StockLedgerPage';
 import JobPage from './JobPage';
 import PrintFloorPage from './PrintFloorPage';
+import UsersPage from './UsersPage';
 
 export default {
   requisitions: RequisitionsPage,
   movements: StockLedgerPage,
   job: JobPage,
-  printshop: PrintFloorPage
+  printshop: PrintFloorPage,
+  users: UsersPage
 };

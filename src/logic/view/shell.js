@@ -1,5 +1,9 @@
 // Ported from the Claude Design file (design/project/Trinity Mark 360 App.dc.html).
 // Values for the app shell, login, navigation and the dashboard.
+import { pinFor } from '../pin';
+import { colorFor } from '../admin';
+
+const ROLES_LABEL = {ceo:'Management', staff:'Staff', finance:'Finance', reception:'Reception', store:'Store', production:'Printing'};
 export function renderVals() {
   const s = this.state, IC = this.IC, ST = this.ST;
   const narrow = s.w < 960, wide = s.w >= 1240;
@@ -78,6 +82,12 @@ export function renderVals() {
     resetDemo:() => this.resetDemo(),
     loginNote:s.db ? 'Sign in with your Trinity Mark account' : 'Demo workspace · any password of 4+ characters', dataBadge:s.db ? 'LIVE DATA' : 'DEMO DATA',
     page:s.page, pageKey:s.page + '|' + (s.page === 'project' ? s.projectId : s.page === 'job' ? s.jobId : ''), navDir:s.navDir || 'tab', online:s.online !== false, signingIn:!!s.signingIn, db:!!s.db,
+    isAdmin:this.isAdmin(), workspaceLive:!!s.workspaceLive, colorFor,
+    pinMenu:pinFor(s.pinUser) ? {l:'Turn off PIN unlock', on:() => this.turnOffPin()} : {l:'Set up PIN unlock', on:() => this.setState({pin:'setup', menu:false})},
+    ADM:{db:!!s.db, users:s.users || null, busy:!!s.usersBusy, me:this.state.pinUser, load:() => this.loadUsers(), create:f => this.createUser(f), update:(u, c) => this.updateUser(u, c),
+      reset:(u, pw) => this.resetPassword(u, pw), del:u => this.deleteUser(u), removeDemo:() => this.removeDemo(), live:!!s.workspaceLive,
+      roles:Object.keys(this.ROLES).map(k => ({v:k, l:ROLES_LABEL[k]}))},
+    PIN:{mode:s.pin || null, user:s.pinUser, name:R.n, set:(a, b) => this.setPin(a, b), unlock:p => this.unlock(p), skip:() => this.skipPin(), usePassword:() => this.signOut(), hasPin:!!pinFor(s.pinUser), setup:() => this.setState({pin:'setup', menu:false, more:false}), off:() => this.turnOffPin()},
     showBack:phone && !this.isTab(s.page), goSettings:() => this.go('settings'), goBack:() => this.goBack(), refresh:() => this.refresh(), haptic:ms => this.haptic(ms), remember:s.remember !== false,
     nav, is, narrow, wide, phone, notPhone:!phone, tabletNav:narrow && !phone, toastBottom:phone ? 'calc(78px + env(safe-area-inset-bottom, 0px))' : '24px', deskDisp:phone ? 'none' : 'block',
     pageTitle, mobileTabs, moreOpen:phone && !!s.more, closeMore:() => this.setState({more:false}), moreItems, portalChips,

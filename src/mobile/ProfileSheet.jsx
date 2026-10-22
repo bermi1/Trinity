@@ -21,6 +21,7 @@ export default function ProfileSheet({ v }) {
         <div className="m-list">
           <button onClick={v.goNotes}><Icon d={v.ic.bell} size={20} />Notifications{v.hasUnread ? <span className="m-count">{v.unread}</span> : null}<Icon d={v.ic.chevR} size={18} /></button>
           <button onClick={() => v.goSettings()}><Icon d={v.ic.settings} size={20} />Settings<Icon d={v.ic.chevR} size={18} /></button>
+          {v.PIN.hasPin ? <button onClick={v.PIN.off}><Icon d={v.ic.shield} size={20} />Turn off PIN unlock<Icon d={v.ic.chevR} size={18} /></button> : <button onClick={v.PIN.setup}><Icon d={v.ic.shield} size={20} />Set up PIN unlock<Icon d={v.ic.chevR} size={18} /></button>}
           {v.db ? null : <button onClick={v.resetDemo}><Icon d={v.ic.refresh} size={20} />Reset demo data<Icon d={v.ic.chevR} size={18} /></button>}
           <button className="is-danger" onClick={v.signOut}><Icon d={v.ic.logout} size={20} />Sign out</button>
         </div>
