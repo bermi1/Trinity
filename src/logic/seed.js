@@ -58,7 +58,7 @@ export function seed() {
     {id:'REQ-0425',who:'AJ',amt:450000,cat:'Fuel',purpose:'Fuel for T 119 DKL, Dar → Musoma round trip.',p:'PRJ-0231',need:'Thu 24',step:3,st:'pending',log:['07:50','08:02','08:26']},
     {id:'REQ-0426',who:'JM',amt:120000,cat:'Materials',purpose:'Adhesive and cleaning supplies for outlet installs.',p:'PRJ-0228',need:'Wed 23',step:1,st:'pending',log:['08:44']},
     {id:'REQ-0412',paidOn:dayKey(-3),who:'GM',amt:250000,cat:'Transport',purpose:'Site visits for billboard photos.',p:'PRJ-0230',need:'Mon 21',step:6,st:'paid',log:['Fri 09:10','Fri 09:40','Fri 10:05','Fri 11:20','Fri 12:00','Fri 14:30']},
-    {id:'REQ-0409',paidOn:dayKey(-5),who:'AJ',amt:600000,cat:'Fuel',purpose:'Arusha delivery run.',p:'PRJ-0226',need:'Fri 18',step:6,st:'paid',log:['Thu','Thu','Thu','Thu','Thu','Fri']},
+    {id:'REQ-0409',paidOn:dayKey(-5),who:'AJ',amt:600000,cat:'Fuel',purpose:'Arusha delivery run.',p:'PRJ-0226',need:'Fri 18',step:6,st:'paid',rec:{spent:540000,back:60000,file:null,at:dayKey(-1),st:'submitted'},log:['Thu','Thu','Thu','Thu','Thu','Fri']},
     {id:'REQ-0405',who:'SK',amt:90000,cat:'Meals',purpose:'Crew lunch — overtime.',p:'PRJ-0228',need:'Thu 17',step:2,st:'rejected',log:['Wed 18:00','Wed 18:20','Thu 08:10']}
   ],
   notes:[

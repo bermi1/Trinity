@@ -110,27 +110,41 @@ export function Reports({ R }) {
   );
 }
 
+// Record money in or out: amount, what for, who. Everything else is optional and folded away.
+const TOP_OUT = ['Suppliers & production', 'Salaries', 'Fuel & transport', 'Rent', 'Utilities', 'Office supplies'];
 function AddEntry({ R, onDone }) {
   const [f, setF] = useState({ dir: 'out', amt: '', cat: '', party: '', p: '', method: 'Bank', ref: '', at: '' });
+  const [more, setMore] = useState(false);
+  const [allCats, setAllCats] = useState(false);
   const [err, setErr] = useState('');
-  const set = (k, v) => setF(x => Object.assign({}, x, { [k]: v }));
-  const cats = f.dir === 'in' ? R.inCats : R.outCats;
+  const set = (k, v) => { setErr(''); setF(x => Object.assign({}, x, { [k]: v })); };
+  const all = f.dir === 'in' ? R.inCats : R.outCats;
+  const cats = f.dir === 'in' || allCats ? all : TOP_OUT.concat(f.cat && !TOP_OUT.includes(f.cat) ? [f.cat] : []);
+  const save = () => { const m = R.add(f); if (m) setErr(m); else onDone(); };
   return (
-    <section className="fh-card fr-add">
-      <div className="ff-chips fr-dir">{[['out', 'Money out'], ['in', 'Money in']].map(([k, l]) => <button key={k} type="button" className={f.dir === k ? 'is-on is-' + k : ''} onClick={() => setF(x => Object.assign({}, x, { dir: k, cat: '' }))}>{l}</button>)}</div>
-      <label className="fh-amt"><span>TZS</span><input inputMode="numeric" value={f.amt ? n(f.amt) : ''} onChange={e => set('amt', digits(e.target.value))} placeholder="0" aria-label="Amount" /></label>
-      <div className="ff"><span className="ff-l">What for</span><div className="ff-chips">{cats.map(c => <button key={c} type="button" className={f.cat === c ? 'is-on' : ''} onClick={() => set('cat', c)}>{c}</button>)}</div></div>
-      <div className="fh-two">
-        <label className="ff"><span className="ff-l">{f.dir === 'in' ? 'Received from' : 'Paid to'}</span><input value={f.party} onChange={e => set('party', e.target.value)} placeholder={f.dir === 'in' ? 'e.g. CRDB Bank PLC' : 'e.g. Vinyl House'} /></label>
-        <label className="ff"><span className="ff-l">Date</span><input type="date" value={f.at} onChange={e => set('at', e.target.value)} /></label>
+    <section className={'fh-card me is-' + f.dir} aria-label="Record money">
+      <div className="me-seg" role="radiogroup" aria-label="Money in or out">
+        {[['out', 'Money out'], ['in', 'Money in']].map(([k, l]) => <button key={k} type="button" role="radio" aria-checked={f.dir === k} className={f.dir === k ? 'is-on' : ''} onClick={() => { setF(x => Object.assign({}, x, { dir: k, cat: '' })); setAllCats(false); }}>{l}</button>)}
       </div>
-      <div className="ff"><span className="ff-l">Project (optional)</span><div className="ff-chips">{R.projOpts.map(p => <button key={p.v} type="button" className={f.p === p.v ? 'is-on' : ''} onClick={() => set('p', f.p === p.v ? '' : p.v)}>{p.l}</button>)}</div></div>
-      <div className="fh-two">
-        <div className="ff"><span className="ff-l">Paid by</span><div className="ff-chips">{['Bank', 'Cash', 'Mobile money', 'Cheque'].map(m => <button key={m} type="button" className={f.method === m ? 'is-on' : ''} onClick={() => set('method', m)}>{m}</button>)}</div></div>
-        <label className="ff"><span className="ff-l">Reference</span><input value={f.ref} onChange={e => set('ref', e.target.value)} placeholder="Receipt / transfer no." /></label>
+      <label className="me-amt"><span>TZS</span><input inputMode="numeric" autoFocus value={f.amt ? n(f.amt) : ''} onChange={e => set('amt', digits(e.target.value))} placeholder="0" aria-label="Amount" /></label>
+      <div className="me-cats" role="radiogroup" aria-label="What for">
+        {cats.map(c => <button key={c} type="button" role="radio" aria-checked={f.cat === c} className={f.cat === c ? 'is-on' : ''} onClick={() => set('cat', c)}>{c}</button>)}
+        {f.dir === 'out' && !allCats ? <button type="button" className="me-more" onClick={() => setAllCats(true)}>More…</button> : null}
       </div>
+      <input className="me-who" value={f.party} onChange={e => set('party', e.target.value)} placeholder={f.dir === 'in' ? 'Received from (e.g. CRDB Bank PLC)' : 'Paid to (e.g. Vinyl House)'} aria-label={f.dir === 'in' ? 'Received from' : 'Paid to'} />
+      {more ? (
+        <div className="me-extra">
+          <label><span>Date</span><input type="date" value={f.at} onChange={e => set('at', e.target.value)} /></label>
+          <label><span>Reference</span><input value={f.ref} onChange={e => set('ref', e.target.value)} placeholder="Receipt or transfer no." /></label>
+          <div className="me-row"><span>Paid by</span><div className="me-mini">{['Bank', 'Cash', 'Mobile money'].map(m => <button key={m} type="button" className={f.method === m ? 'is-on' : ''} onClick={() => set('method', m)}>{m}</button>)}</div></div>
+          <div className="me-row"><span>Project</span><div className="me-mini">{R.projOpts.map(p => <button key={p.v} type="button" className={f.p === p.v ? 'is-on' : ''} onClick={() => set('p', f.p === p.v ? '' : p.v)}>{p.l}</button>)}</div></div>
+        </div>
+      ) : <button type="button" className="me-link" onClick={() => setMore(true)}>+ Date, reference, payment method, project</button>}
       {err ? <div className="fm-err" role="alert">{err}</div> : null}
-      <div className="fh-row"><Btn kind="dark" onClick={() => { const m = R.add(f); if (m) setErr(m); else onDone(); }}>Save</Btn><Btn kind="ghost" onClick={onDone}>Cancel</Btn></div>
+      <div className="me-foot">
+        <button type="button" className="me-cancel" onClick={onDone}>Cancel</button>
+        <button type="button" className="me-save" onClick={save}>{f.dir === 'in' ? 'Save money in' : 'Save money out'}</button>
+      </div>
     </section>
   );
 }

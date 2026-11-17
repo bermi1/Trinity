@@ -40,6 +40,7 @@ export const financeMethods = {
   },
   askFloat(amt, note) {
     amt = Math.round(+amt || 0); if (amt <= 0) return 'Enter the amount';
+    if (String(note || '').trim().length < 10) return 'Describe what the float is for (at least a short sentence)';
     const f = this.fl();
     this.setFloat({ asks: [{ id: 'FA' + Date.now().toString(36), amt, note: (note || '').trim(), by: this.me().k, at: dayKey(0), st: 'open' }, ...f.asks] });
     this.remind(this.ROLES.ceo.k, 'Finance asks for float · ' + this.fmtT(amt), 'finance', 'wallet', note || 'From ' + this.me().n);

@@ -260,6 +260,7 @@ export default function RequestsPage({ v }) {
             Receipts due within 3 days of payment
           </span>
         </div>
+        <p className="fl-def">{v.floatDef}</p>
         {(v.floats || []).map((f, _i0) => (
           <Fragment key={_i0}>
             <div style={{ display: "flex", alignItems: "center", gap: "14px", padding: "12px 20px", borderBottom: "1px solid #F1EEF6", fontSize: "13px", flexWrap: "wrap" }}>
@@ -271,8 +272,9 @@ export default function RequestsPage({ v }) {
                   {f.n}
                 </b>
                 <span style={{ fontSize: "12px", color: "#6E6A7C" }}>
-                  <span>{f.role}</span>{" · open "}<span>{f.age}</span>
+                  <span>{f.role}</span>{" · oldest "}<span>{f.age}</span>
                 </span>
+                <ul className="fl-items">{(f.items || []).map(it => <li key={it.id}><button type="button" onClick={it.open}><b>{it.amt}</b> · {it.what} · {it.proj}<small>{it.purpose}{it.paid ? ' · paid ' + it.paid : ''} · {it.rec || 'Receipts accepted'}</small></button></li>)}</ul>
               </div>
               <b style={{ width: "130px" }}>
                 {f.amt}
@@ -284,7 +286,7 @@ export default function RequestsPage({ v }) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d={v.ic.receipt} />
                 </svg>
-                Reconcile
+                {f.recLabel || 'Reconcile'}
               </button>
             </div>
           </Fragment>

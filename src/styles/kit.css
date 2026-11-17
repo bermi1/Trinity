@@ -890,3 +890,40 @@
 .fr-pair i.is-in { background: #2E9B63; } .fr-pair i.is-out { background: #E07A84; }
 .fr-col.is-on .fr-pair i.is-in { background: #1F7549; } .fr-col.is-on .fr-pair i.is-out { background: #C9505C; }
 @media (max-width: 600px) { .fr-plot { grid-template-columns: 44px minmax(0, 1fr); } .fr-axis { height: 170px; } }
+/* Money in / out form: calm and focused */
+.me { max-width: 520px; gap: 14px; padding: 20px; }
+.me-seg { display: grid; grid-template-columns: 1fr 1fr; background: #F3F3F7; border-radius: 12px; padding: 4px; }
+.me-seg button { height: 38px; border: none; border-radius: 9px; background: none; font: inherit; font-size: 14px; font-weight: 600; color: #6E7180; cursor: pointer; }
+.me-seg button.is-on { background: #fff; color: #17152A; box-shadow: 0 1px 3px rgba(20,20,40,.1); }
+.me.is-out .me-seg button.is-on { color: #B23A46; } .me.is-in .me-seg button.is-on { color: #1F7549; }
+.me-amt { display: flex; align-items: baseline; gap: 10px; padding: 6px 2px 10px; border-bottom: 2px solid #ECEDF2; }
+.me-amt:focus-within { border-color: #6D3CC2; }
+.me-amt span { font-size: 15px; font-weight: 700; color: #A3A6B2; }
+.me-amt input { flex: 1; min-width: 0; border: none; outline: none; background: none; font: inherit; font-size: 34px; font-weight: 700; letter-spacing: -.02em; color: #17152A; }
+.me-cats { display: flex; flex-wrap: wrap; gap: 6px; }
+.me-cats button { height: 34px; padding: 0 12px; border: 1px solid #E6E7ED; border-radius: 17px; background: #fff; font: inherit; font-size: 13px; color: #3B3F4C; cursor: pointer; }
+.me-cats button.is-on { background: #2B1459; border-color: #2B1459; color: #fff; }
+.me-cats .me-more { border-style: dashed; color: #6E7180; }
+.me-who { height: 46px; border: 1px solid #E6E7ED; border-radius: 12px; padding: 0 14px; font: inherit; font-size: 14.5px; background: #fff; }
+.me-who:focus { outline: none; border-color: #6D3CC2; }
+.me-link { justify-self: start; border: none; background: none; padding: 0; font: inherit; font-size: 13px; font-weight: 600; color: #6D3CC2; cursor: pointer; }
+.me-extra { display: grid; gap: 10px; padding: 12px; background: #FAFAFC; border-radius: 12px; }
+.me-extra label, .me-row { display: grid; grid-template-columns: 90px minmax(0, 1fr); align-items: center; gap: 10px; font-size: 13px; color: #6E7180; }
+.me-extra input { height: 38px; border: 1px solid #E6E7ED; border-radius: 9px; padding: 0 10px; font: inherit; font-size: 13.5px; background: #fff; min-width: 0; }
+.me-mini { display: flex; flex-wrap: wrap; gap: 4px; }
+.me-mini button { height: 30px; padding: 0 10px; border: 1px solid #E6E7ED; border-radius: 8px; background: #fff; font: inherit; font-size: 12.5px; color: #3B3F4C; cursor: pointer; }
+.me-mini button.is-on { border-color: #6D3CC2; color: #5A2FA8; background: #F3EEFB; }
+.me-foot { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+.me-cancel { height: 42px; padding: 0 16px; border: none; background: none; font: inherit; font-size: 14px; font-weight: 600; color: #6E7180; cursor: pointer; }
+.me-save { height: 42px; padding: 0 20px; border: none; border-radius: 11px; background: #2B1459; color: #fff; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.me.is-in .me-save { background: #1F7549; }
+@media (max-width: 600px) { .me { padding: 16px; } .me-amt input { font-size: 30px; } .me-save { flex: 1; } }
+.fh-card textarea { width: 100%; box-sizing: border-box; border: 1px solid #E6E7ED; border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 14px; resize: vertical; background: #fff; }
+.fh-card textarea:focus { outline: none; border-color: #6D3CC2; }
+.fh-asks button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 10px 12px; border-radius: 12px; }
+.fh-asks button span { font-weight: 500; color: #4B4F5C; }
+.fh-asks button small { font-weight: 500; color: #8A8D99; }
+.fl-def { margin: 0; padding: 12px 20px; background: #F7F5FB; border-bottom: 1px solid #EEEAF4; font-size: 13px; color: #4B4F5C; line-height: 1.5; }
+.fl-items { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.fl-items button { width: 100%; text-align: left; border: none; background: #F7F7FA; border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 12.5px; color: #17152A; cursor: pointer; }
+.fl-items small { display: block; color: #6E7180; }

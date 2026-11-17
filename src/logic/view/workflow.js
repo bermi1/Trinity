@@ -114,11 +114,26 @@ export function pageVals(s, IC, ST, narrow) {
       nudge:() => { const to = ppl[Math.min(sel.step, 5)]; this.remind(to, sel.id + ' is waiting for your approval', 'requests', 'banknote', this.av(sel.who).n + ' · ' + this.fmtT(sel.amt)); this.toast('Reminder sent to ' + this.av(to).n); }
     }, pill(this.rst(sel)));
   } else V.R = {chain:[]};
-  const fl = s.staff.filter(p => p.fl > 0);
-  const AGE = {JM:'1 day',GM:'2 days',AJ:'4 days',PL:'12 days'};
-  V.floatKpis = [{l:'Float exposure', v:this.fmtT(fl.reduce((a,b) => a + b.fl, 0)), n:'across ' + fl.length + ' staff', dark:true}, {l:'Awaiting you', v:myReqCount(s), n:this.fmtT(s.reqs.filter(r => r.st === 'pending' && r.step === 4).reduce((a,b) => a + b.amt, 0)) + ' requested'}, {l:'Overdue receipts', v:String(fl.filter(p => p.k === 'PL').length), n:'oldest 12 days · Peter L.', red:true}, {l:'Paid this week', v:this.fmtT(s.reqs.filter(r => r.st === 'paid').reduce((a,b) => a + b.amt, 0)), n:s.reqs.filter(r => r.st === 'paid').length + ' requests'}].map(k => Object.assign(k, {bg:k.dark ? '#2B1459' : '#fff', lc:k.dark ? '#E2CE98' : '#6E6A7C', vc:k.dark ? '#fff' : k.red ? '#B23A46' : '#17152A', nc:k.dark ? 'rgba(255,255,255,.7)' : '#6E6A7C', bd:k.dark ? '#2B1459' : '#E8E4EF'}));
-  function myReqCount(st) { return String(st.reqs.filter(r => r.st === 'pending' && r.step === 4).length); }
-  V.floats = fl.map(p => { const a = this.av(p.k), late = p.k === 'PL'; return {n:a.n, i:a.i, c:a.c, role:p.role, amt:this.fmtT(p.fl), age:AGE[p.k] || 'today', stl:late ? 'Receipts overdue' : 'In use', stbg:late ? '#FBEDEE' : '#EFE8FA', stfg:late ? '#B23A46' : '#5A2FA8', rec:() => { this.setState(x => ({staff:x.staff.map(q => q.k === p.k ? Object.assign({}, q, {fl:0}) : q)})); this.toast('Float reconciled · ' + a.n); this.log('receipt','green','Float reconciled · ' + this.fmtT(p.fl), a.n + ' · receipts verified'); }}; });
+  // Float exposure = money paid out to staff on requests that is not yet backed by accepted receipts.
+  // It is built from the paid requests themselves, so every shilling shows what it was for.
+  const today0 = this.today(), daysSince = k => { if (!k) return 0; const [y, m, d] = k.split('-').map(Number); return Math.max(0, Math.round((new Date(today0.slice(0,4), +today0.slice(5,7) - 1, +today0.slice(8,10)) - new Date(y, m - 1, d)) / 864e5)); };
+  const open = s.reqs.filter(r => r.st === 'paid' && !(r.rec && r.rec.st === 'ok'));
+  const byWho = {};
+  open.forEach(r => { (byWho[r.who] = byWho[r.who] || []).push(r); });
+  const total = open.reduce((a, r) => a + r.amt, 0), toCheck = open.filter(r => r.rec && r.rec.st === 'submitted'), late = open.filter(r => !r.rec && daysSince(r.paidOn) > 3);
+  const weekAgo = (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0, 10); })();
+  const paidWeek = s.reqs.filter(r => r.st === 'paid' && (r.paidOn || '') >= weekAgo);
+  V.floatDef = 'Float exposure is money Finance has paid out to staff for requests that is not yet backed by receipts. It closes when the person reconciles (what they spent, plus receipt) and Finance accepts.';
+  V.floatKpis = [{l:'Float exposure', v:this.fmtT(total), n:open.length + ' paid requests · ' + Object.keys(byWho).length + ' people', dark:true}, {l:'Receipts to check', v:String(toCheck.length), n:this.fmtT(toCheck.reduce((a,b) => a + b.amt, 0)) + ' submitted'}, {l:'No receipts after 3 days', v:String(late.length), n:late.length ? this.fmtT(late.reduce((a,b) => a + b.amt, 0)) : 'All on time', red:late.length > 0}, {l:'Paid this week', v:this.fmtT(paidWeek.reduce((a,b) => a + b.amt, 0)), n:paidWeek.length + ' requests'}].map(k => Object.assign(k, {bg:k.dark ? '#2B1459' : '#fff', lc:k.dark ? '#E2CE98' : '#6E6A7C', vc:k.dark ? '#fff' : k.red ? '#B23A46' : '#17152A', nc:k.dark ? 'rgba(255,255,255,.7)' : '#6E6A7C', bd:k.dark ? '#2B1459' : '#E8E4EF'}));
+  V.floats = Object.keys(byWho).map(k => {
+    const a = this.av(k), list = byWho[k], amt = list.reduce((x, r) => x + r.amt, 0), oldest = Math.max(...list.map(r => daysSince(r.paidOn))), sub = list.filter(r => r.rec && r.rec.st === 'submitted'), isLate = list.some(r => !r.rec && daysSince(r.paidOn) > 3);
+    const p = (s.staff || []).find(x => x.k === k) || {};
+    return {n:a.n, i:a.i, c:a.c, role:p.role || '', amt:this.fmtT(amt), age:oldest ? oldest + (oldest === 1 ? ' day' : ' days') : 'today',
+      items:list.map(r => ({id:r.id, what:this.reqWhat(r), purpose:r.purpose || '', proj:r.p ? this.proj(r.p).client : 'Office', amt:this.fmtT(r.amt), paid:r.paidOn || '', rec:r.rec ? (r.rec.st === 'submitted' ? 'Receipts submitted · spent ' + this.fmtT(r.rec.spent) : '') : 'No receipts yet', open:() => this.setState({reqSel:r.id, reqFilter:'all'})})),
+      stl:sub.length ? 'Receipts to check' : isLate ? 'Receipts overdue' : 'In use', stbg:sub.length ? '#E9EFFA' : isLate ? '#FBEDEE' : '#EFE8FA', stfg:sub.length ? '#3559A8' : isLate ? '#B23A46' : '#5A2FA8',
+      recLabel:sub.length ? 'Accept receipts' : 'Ask for receipts',
+      rec:() => { if (sub.length) sub.forEach(r => this.confirmRec(r.id)); else { this.remind(k, 'Please reconcile your float: ' + this.fmtT(amt), 'requests', 'receipt', list.map(r => r.id).join(', ') + ' · add what you spent and the receipt'); this.toast('Receipt reminder sent to ' + a.n); } }};
+  }).sort((x, y) => (y.stl === 'Receipts overdue') - (x.stl === 'Receipts overdue'));
   V.floatsEmpty = V.floats.length === 0;
   V.newReq = () => this.openModal('req');
   // Floats and money totals are for Finance and Management only.

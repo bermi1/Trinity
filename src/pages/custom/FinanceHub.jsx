@@ -166,10 +166,11 @@ function FloatTab({ F }) {
 
       <section className="fh-card">
         <h3>{F.isCeo ? 'Give float to Finance' : 'Ask Management for float'}</h3>
-        {F.isCeo && L.asks.length ? <div className="fh-asks">{L.asks.map(a => <button key={a.id} type="button" onClick={() => { setAmt(String(a.raw)); setNote(a.note); }}>Finance asked {a.amt}{a.note ? ' · ' + a.note : ''}</button>)}</div> : null}
+        {F.isCeo && L.asks.length ? <div className="fh-asks">{L.asks.map(a => <button key={a.id} type="button" onClick={() => { setAmt(String(a.raw)); setNote(a.note); }}><b>Finance asks {a.amt}</b>{a.note ? <span>{a.note}</span> : null}<small>{a.at} · tap to fill in</small></button>)}</div> : null}
         <Amount value={amt} set={setAmt} label="Float amount" />
         <div className="ff-quick">{[1e6, 5e6, 10e6, 20e6].map(v => <button key={v} type="button" onClick={() => setAmt(String(v))}>{v / 1e6}M</button>)}</div>
-        <input className="ff-search" value={note} onChange={e => setNote(e.target.value)} placeholder="Note (e.g. December float)" aria-label="Float note" />
+        {F.isCeo ? <input className="ff-search" value={note} onChange={e => setNote(e.target.value)} placeholder="Note (e.g. December float)" aria-label="Float note" />
+          : <label className="ff"><span className="ff-l">What is it for?<em>*</em></span><textarea rows={3} value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. December float: Lake Zone roadshow transport and crew allowances, office running costs" aria-label="Float description" /></label>}
         <Btn kind="dark" onClick={() => run(() => (F.isCeo ? L.give(amt, note) : L.ask(amt, note)), () => { setAmt(''); setNote(''); })}>{F.isCeo ? 'Give float' : 'Send request'}</Btn>
       </section>
 

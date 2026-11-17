@@ -54,11 +54,21 @@ test('a large project request travels the whole chain: GM → Finance → Manage
   expect(r.st).toBe('paid');
   expect((await saved(page)).staff.find(p => p.k === 'GM').fl).toBe(530000);
 
-  // Reconcile the float once receipts are in.
-  const float = page.locator('div').filter({ hasText: /^GM/ }).filter({ has: page.getByRole('button', { name: 'Reconcile' }) }).last();
-  await btn(float, 'Reconcile').click();
-  await toast(page, 'Float reconciled · Grace Mrema');
-  expect((await saved(page)).staff.find(p => p.k === 'GM').fl).toBe(0);
+  // Grace reconciles: what she spent; Finance accepts the receipts.
+  await switchTo(page, 'Staff portal');
+  await side(page, 'My requests');
+  const rowBtn = page.locator('[data-req="REQ-0427"] .mr-row');
+  if ((await rowBtn.getAttribute('aria-expanded')) !== 'true') await rowBtn.click();
+  await page.getByLabel('Amount spent').fill('320000');
+  await btn(page, 'Send to Finance').click();
+  await toast(page, 'Sent to Finance to check');
+  await switchTo(page, 'Finance portal');
+  await side(page, 'Requests & Floats');
+  const float = page.locator('div').filter({ hasText: /^GM/ }).filter({ has: page.getByRole('button', { name: 'Accept receipts' }) }).last();
+  await btn(float, 'Accept receipts').click();
+  await toast(page, 'Reconciled · REQ-0427');
+  r = (await saved(page)).reqs.find(x => x.id === 'REQ-0427');
+  expect(r.rec).toMatchObject({ spent: 320000, back: 30000, st: 'ok' });
 });
 
 // Removed or redesigned in this phase: rewrite this test.
