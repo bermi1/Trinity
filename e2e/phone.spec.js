@@ -9,7 +9,7 @@ const tab = (page, label) => page.locator('nav').getByText(label, { exact: true 
 const title = page => page.locator('.m-header-title b');
 const PAGES = ['dashboard', 'briefing', 'projects', 'project', 'tasks', 'requests', 'finance', 'store', 'procurement', 'crm', 'staff', 'notifications', 'field', 'staffportal', 'financeportal', 'reception', 'storekeeper', 'rooms', 'proposals', 'production', 'logistics', 'documents', 'reports', 'calendar', 'settings', 'requisitions', 'movements', 'job', 'printshop'];
 
-test('sign-in screen works like an app: show password, portal picker, remember switch', async ({ page }) => {
+test('sign-in screen works like an app: show password, remember switch, one-tap demo portals', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
@@ -25,10 +25,8 @@ test('sign-in screen works like an app: show password, portal picker, remember s
   await pw.fill('12');
   await btn(page, 'Sign in').click();
   await expect(page.getByRole('alert')).toHaveText('Enter your email and a password of at least 4 characters.');
-  await page.getByRole('radio', { name: 'Finance' }).click();
-  await pw.fill('demo1234');
-  await pw.press('Enter');
-  await page.getByRole('button', { name: 'Not now' }).click();
+  await expect(page.getByRole('button', { name: 'Google' })).toHaveCount(0);
+  await page.getByRole('group', { name: 'Demo portals' }).getByRole('button', { name: 'Finance' }).click();
   await expect(page.getByText('Rose Temba’s queue')).toBeVisible();
   await expect(page.locator('nav')).toContainText('Queue');
   expect(await page.evaluate(() => scrollY)).toBe(0);
@@ -206,6 +204,7 @@ test('PIN unlock: set a PIN after signing in, unlock with it next time', async (
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
+  await page.locator('input[autocomplete="username"]').fill('daniel.k@trinitymark.co.tz');
   await page.locator('input[autocomplete="current-password"]').fill('demo1234');
   await btn(page, 'Sign in').click();
   const key = d => page.getByRole('button', { name: d, exact: true });

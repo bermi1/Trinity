@@ -64,10 +64,30 @@ describe('live database', () => {
     expect(await screen.findByText(/Lake Zone Roadshow II/)).toBeTruthy();
   });
 
+  it('opens a demo portal with one tap using the demo password, with no PIN prompt', async () => {
+    vi.stubEnv('VITE_DEMO_PASSWORD', 'demo-pass');
+    db.users['store@trinitymark.co.tz'] = { id: 'u4', password: 'demo-pass' };
+    db.tables.profiles.set('u4', { role: 'store', full_name: 'Fatma Hassan', title: 'Storekeeper', person_key: 'FH', is_demo: true });
+    render(<App />);
+    await screen.findByText('SIGN IN');
+    fireEvent.click(screen.getByRole('button', { name: 'Store' }));
+    expect(await screen.findByText('STOREKEEPER PORTAL')).toBeTruthy();
+    expect(screen.queryByText('Not now')).toBeNull();
+    vi.unstubAllEnvs();
+  });
+
+  it('without a demo password, a demo portal asks for the password', async () => {
+    vi.stubEnv('VITE_DEMO_PASSWORD', '');
+    render(<App />);
+    await screen.findByText('SIGN IN');
+    fireEvent.click(screen.getByRole('button', { name: 'Store' }));
+    expect(await screen.findByText('Enter the password for store@trinitymark.co.tz.')).toBeTruthy();
+    vi.unstubAllEnvs();
+  });
+
   it('keeps non-management staff in their own portal', async () => {
     render(<App />);
     await screen.findByText('SIGN IN');
-    fireEvent.click(screen.getByRole('button', { name: 'Management' }));
     signInAs('fatma@tm.co.tz', 'secret123');
     await skipPin();
     expect(await screen.findByText('STOREKEEPER PORTAL')).toBeTruthy();

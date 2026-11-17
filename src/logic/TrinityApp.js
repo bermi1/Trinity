@@ -16,6 +16,8 @@ import { adminMethods, emptyLike } from './admin';
 import { pinFor, savePin, checkPin, clearPin, clearUnlocked, isUnlocked, isValidPin, markUnlocked, LOCK_AFTER_MS } from './pin';
 import { storeVals } from './view/storeops';
 
+// Password of the demo accounts, so they open with one tap (see .env). Leave it out to require passwords.
+const demoPassword = () => import.meta.env.VITE_DEMO_PASSWORD || '';
 const OFFLINE = 'Could not reach the server. Check your connection and try again.';
 // Supabase retries network failures indefinitely; give up after a while so people get an answer.
 const withTimeout = (promise, ms = 15000) => Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error(OFFLINE)), ms))]);
@@ -48,17 +50,12 @@ export default class TrinityApp extends Logic {
       if (this.state.remember) localStorage.removeItem('tm360-forget'); else localStorage.setItem('tm360-forget', '1');
     } catch (e) {}
   }
-  signInWith(provider) {
-    if (!this.state.db) { this.signIn(); return; }
-    supabase.auth.signInWithOAuth({provider, options:{redirectTo:location.origin}}).then(({error}) => {
-      if (error) this.setState({loginErr:/not enabled|unsupported provider/i.test(error.message) ? (provider === 'google' ? 'Google' : 'Microsoft') + ' sign-in is not switched on yet. Use your email and password.' : error.message});
-    });
-  }
+
   state = (() => { let sv = {}, saved = {}; try { sv = JSON.parse(localStorage.getItem('tm360') || '{}'); saved = JSON.parse(localStorage.getItem('tm360data') || '{}'); } catch (e) {}
     let emb = false, er = null; try { const qp = new URLSearchParams(location.search); emb = qp.get('embed') === '1'; er = qp.get('role'); } catch (e) {}
     if (emb) { const rr = this.ROLES[er] ? er : 'ceo'; sv = {auth:true, role:rr, page:this.ROLES[rr].home, projectId:'PRJ-0231'}; }
     const data = this.seed(); Object.keys(data).forEach(k => { if (saved && saved[k] !== undefined) data[k] = saved[k]; });
-    return Object.assign({embed:emb,more:false,navMore:!!sv.navMore,colSel:{tasks:1,proc:0,crm:0},mobileRole:sv.role||'ceo',docType:'all',docQ:'',propFilter:'all',prefs:sv.prefs||{push:true,email:true,sms:false,digest:true},auth:!!sv.auth,pinUser:sv.pinUser||'',remember:sv.remember !== false,online:typeof navigator === 'undefined' ? true : navigator.onLine !== false,navDir:'tab',role:sv.role||'ceo',loginRole:sv.role||'ceo',mTab:'home',page:sv.page||'dashboard',projectId:sv.projectId||'PRJ-0231',jobId:sv.jobId||'JOB-0313',email:'daniel.k@trinitymark.co.tz',pw:'demo1234',loginErr:'',range:'12W',tip:-1,menu:false,drawer:false,w:typeof window!=='undefined'?window.innerWidth:1440,reqSel:'REQ-0418',reqFilter:'me',taskFilter:'all',projFilter:'all',stockQ:'',leadQ:'',modal:null,form:{},modalErr:'',cmd:false,cmdQ:'',ai:false,aiQ:'',aiBusy:false,aiMsgs:[{r:'ai',t:'Habari. Ask me about projects, money, stock or staff — I read the live Trinity Mark 360 data.'}],toasts:[],fieldTab:'home',newAct:{d:'',a:'',o:'SK',dl:''}}, data); })();
+    return Object.assign({embed:emb,more:false,navMore:!!sv.navMore,colSel:{tasks:1,proc:0,crm:0},mobileRole:sv.role||'ceo',docType:'all',docQ:'',propFilter:'all',prefs:sv.prefs||{push:true,email:true,sms:false,digest:true},auth:!!sv.auth,pinUser:sv.pinUser||'',remember:sv.remember !== false,online:typeof navigator === 'undefined' ? true : navigator.onLine !== false,navDir:'tab',role:sv.role||'ceo',loginRole:sv.role||'ceo',mTab:'home',page:sv.page||'dashboard',projectId:sv.projectId||'PRJ-0231',jobId:sv.jobId||'JOB-0313',email:'',pw:'',loginErr:'',range:'12W',tip:-1,menu:false,drawer:false,w:typeof window!=='undefined'?window.innerWidth:1440,reqSel:'REQ-0418',reqFilter:'me',taskFilter:'all',projFilter:'all',stockQ:'',leadQ:'',modal:null,form:{},modalErr:'',cmd:false,cmdQ:'',ai:false,aiQ:'',aiBusy:false,aiMsgs:[{r:'ai',t:'Habari. Ask me about projects, money, stock or staff — I read the live Trinity Mark 360 data.'}],toasts:[],fieldTab:'home',newAct:{d:'',a:'',o:'SK',dl:''}}, data); })();
 
   componentDidMount() {
     this._key = e => {
@@ -193,10 +190,23 @@ export default class TrinityApp extends Logic {
     if (!s.db) { const who = s.email.trim().toLowerCase(); this.setState({auth:true,role:s.loginRole,page:this.ROLES[s.loginRole].home,taskFilter:s.loginRole === 'staff' ? 'mine' : 'all',pinUser:who,pin:this.afterPasswordPin(who)}); return; }
     if (s.signingIn) return;
     this.setState({signingIn:true, loginErr:'Signing in…'});
-    withTimeout(supabase.auth.signInWithPassword({email:s.email.trim(), password:s.pw})).then(({data, error}) => {
-      if (error) { this.setState({signingIn:false, loginErr:error.message === 'Invalid login credentials' ? 'Wrong email or password.' : /fetch|network/i.test(error.message) || !error.status ? OFFLINE : error.message}); return; }
-      return this.enter(data.user, s.loginRole, true);
+    this.passwordSignIn(s.email.trim(), s.pw, s.loginRole, false);
+  }
+  passwordSignIn(email, pw, role, quick) {
+    withTimeout(supabase.auth.signInWithPassword({email, password:pw})).then(({data, error}) => {
+      if (error) { this.setState({signingIn:false, loginErr:error.message === 'Invalid login credentials' ? (quick ? 'This demo account is not available any more.' : 'Wrong email or password.') : /fetch|network/i.test(error.message) || !error.status ? OFFLINE : error.message}); return; }
+      return this.enter(data.user, role, true, quick);
     }).catch(err => { console.error(err); this.setState({signingIn:false, loginErr:OFFLINE}); });
+  }
+  // Demo accounts: one tap, no password and no PIN prompt.
+  quickSignIn(role) {
+    const s = this.state, R = this.ROLES[role];
+    this.rememberChoice();
+    if (!s.db) { const who = R.email.toLowerCase(); this.setState({auth:true,role,loginRole:role,email:R.email,page:R.home,taskFilter:role === 'staff' ? 'mine' : 'all',pinUser:who,pin:null}); return; }
+    if (s.signingIn) return;
+    if (!demoPassword()) { this.setState({loginRole:role, email:R.email, loginErr:'Enter the password for ' + R.email + '.'}); return; }
+    this.setState({signingIn:true, loginRole:role, loginErr:'Signing in…'});
+    this.passwordSignIn(R.email, demoPassword(), role, true);
   }
   forgotPassword() {
     const s = this.state;
@@ -241,7 +251,7 @@ export default class TrinityApp extends Logic {
     this.toast(error ? error.message : 'Password updated');
   }
   // Loads the signed-in person's profile and all shared data, then opens their portal.
-  async enter(user, wanted, fresh) {
+  async enter(user, wanted, fresh, quick) {
     try {
       const { data: prof, error } = await withTimeout(supabase.from('profiles').select('role,full_name,title,person_key,is_admin,is_demo').eq('user_id', user.id).maybeSingle());
       if (error) throw error;
@@ -265,7 +275,7 @@ export default class TrinityApp extends Logic {
       const r = role === 'ceo' && ROLES[pick] ? pick : role;
       const keepPage = !fresh && r === s.role && s.page;
       const who = user.email.toLowerCase();
-      this.setState({pinUser:who, pin:fresh ? this.afterPasswordPin(who) : pinFor(who) && !isUnlocked() ? 'lock' : null, auth:true, booting:false, signingIn:false, loginErr:'', pw:'', email:user.email, role:r, loginRole:r, page:keepPage ? s.page : this.ROLES[r].home, taskFilter:r === 'staff' ? 'mine' : 'all'});
+      this.setState({pinUser:who, pin:quick ? null : fresh ? this.afterPasswordPin(who) : pinFor(who) && !isUnlocked() ? 'lock' : null, auth:true, booting:false, signingIn:false, loginErr:'', pw:'', email:user.email, role:r, loginRole:r, page:keepPage ? s.page : this.ROLES[r].home, taskFilter:r === 'staff' ? 'mine' : 'all'});
     } catch (err) {
       console.error(err);
       const missing = err && (err.code === '42P01' || err.code === 'PGRST205' || /does not exist|schema cache/i.test(err.message || ''));

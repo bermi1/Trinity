@@ -79,18 +79,6 @@ export default function LoginScreen({ v }) {
                 Password
                 <input className="tm-f1" type="password" value={v.pw ?? ''} onChange={v.onPw} onKeyDown={v.loginKey} style={{ height: "46px", border: "1px solid #E8E4EF", borderRadius: "10px", padding: "0 14px", fontSize: "14px", outline: "none" }} />
               </label>
-              <div style={{ display: "flex", flexDirection: "column", gap: "7px", fontSize: "12.5px", fontWeight: "600" }}>
-                Sign in to portal
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                  {(v.loginRoles || []).map((lr, _i0) => (
-                    <Fragment key={_i0}>
-                      <button onClick={lr.on} style={{ height: "34px", padding: "0 13px", borderRadius: "17px", border: `1px solid ${lr.bd}`, background: lr.bg, color: lr.c, fontSize: "12.5px", fontWeight: "600" }}>
-                        {lr.l}
-                      </button>
-                    </Fragment>
-                  ))}
-                </div>
-              </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px" }}>
                 <span onClick={v.toggleRemember} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
                   <span style={{ width: "16px", height: "16px", borderRadius: "4px", background: v.rememberBg, border: `1.5px solid ${v.rememberBd}`, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -117,16 +105,17 @@ export default function LoginScreen({ v }) {
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", color: "#6E6A7C", fontSize: "12px" }}>
               <span style={{ flex: "1", height: "1px", background: "#E8E4EF" }} />
-              or continue with
+              or open a demo portal
               <span style={{ flex: "1", height: "1px", background: "#E8E4EF" }} />
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              <button className="tm-h3" onClick={v.signInGoogle} style={{ height: "44px", border: "1px solid #E8E4EF", background: "#fff", borderRadius: "10px", fontSize: "13px", fontWeight: "600" }}>
-                Google
-              </button>
-              <button className="tm-h3" onClick={v.signInMicrosoft} style={{ height: "44px", border: "1px solid #E8E4EF", background: "#fff", borderRadius: "10px", fontSize: "13px", fontWeight: "600" }}>
-                Microsoft
-              </button>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }} role="group" aria-label="Demo portals">
+              {(v.loginRoles || []).map((lr, _i0) => (
+                <Fragment key={_i0}>
+                  <button className="tm-h3" onClick={lr.on} style={{ height: "40px", border: "1px solid #E8E4EF", background: "#fff", borderRadius: "10px", fontSize: "13px", fontWeight: "600", color: "#17152A", cursor: "pointer" }}>
+                    {lr.l}
+                  </button>
+                </Fragment>
+              ))}
             </div>
             <p style={{ margin: "0", fontSize: "12px", color: "#6E6A7C", textAlign: "center" }}>
               {v.loginNote}

@@ -11,7 +11,8 @@ function signIn(role) {
 describe('sign in', () => {
   it('rejects a short password and accepts a valid one', () => {
     render(<App />);
-    const [, pw] = document.querySelectorAll('input');
+    const [email, pw] = document.querySelectorAll('input');
+    fireEvent.change(email, { target: { value: 'daniel.k@trinitymark.co.tz' } });
     fireEvent.change(pw, { target: { value: '12' } });
     fireEvent.click(screen.getByText('SIGN IN'));
     expect(screen.getByText(/at least 4 characters/)).toBeTruthy();
@@ -22,11 +23,12 @@ describe('sign in', () => {
     expect(screen.getByText('COMPANY COMMAND CENTER')).toBeTruthy();
   });
 
-  it('opens the chosen portal', () => {
+  it('opens a demo portal with one tap, without a password or PIN prompt', () => {
     render(<App />);
+    expect(screen.queryByText('Google')).toBeNull();
+    expect(screen.queryByText('Microsoft')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Store' }));
-    fireEvent.click(screen.getByText('SIGN IN'));
-    fireEvent.click(screen.getByText('Not now'));
+    expect(screen.queryByText('Not now')).toBeNull();
     expect(screen.getByText('STOREKEEPER PORTAL')).toBeTruthy();
   });
 });
@@ -164,6 +166,7 @@ describe('PIN unlock', () => {
 
   it('sets a PIN after signing in, then asks for it when the app is reopened', async () => {
     const first = render(<App />);
+    fireEvent.change(document.querySelectorAll('input')[0], { target: { value: 'daniel.k@trinitymark.co.tz' } });
     fireEvent.change(document.querySelectorAll('input')[1], { target: { value: 'demo1234' } });
     fireEvent.click(screen.getByText('SIGN IN'));
     type('1111');

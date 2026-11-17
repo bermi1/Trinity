@@ -48,15 +48,6 @@ export default function MobileLogin({ v }) {
           </div>
         </label>
 
-        <div className="m-field">
-          <span>Portal</span>
-          <div className="m-segment" role="radiogroup" aria-label="Portal">
-            {v.loginRoles.map(r => (
-              <button type="button" key={r.l} role="radio" aria-checked={r.bg === '#2B1459'} className={r.bg === '#2B1459' ? 'is-on' : ''} onClick={() => { v.haptic(6); r.on(); }}>{r.l}</button>
-            ))}
-          </div>
-        </div>
-
         <div className="m-login-row">
           <button type="button" className="m-switch-row" onClick={v.toggleRemember} role="switch" aria-checked={v.remember}>
             <span className={'m-switch' + (v.remember ? ' is-on' : '')}><i /></span>Remember me
@@ -70,9 +61,11 @@ export default function MobileLogin({ v }) {
           {busy ? <span className="m-spinner" aria-hidden="true" /> : null}{busy ? 'Signing in…' : 'Sign in'}
         </button>
 
-        <div className="m-login-alt">
-          <button type="button" onClick={v.signInGoogle}>Google</button>
-          <button type="button" onClick={v.signInMicrosoft}>Microsoft</button>
+        <p className="m-login-or">or open a demo portal</p>
+        <div className="m-login-alt m-login-demo" role="group" aria-label="Demo portals">
+          {v.loginRoles.map(r => (
+            <button type="button" key={r.l} onClick={() => { v.haptic(6); r.on(); }}>{r.l}</button>
+          ))}
         </div>
 
         {mode ? (
