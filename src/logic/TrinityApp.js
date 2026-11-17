@@ -19,7 +19,7 @@ import { todoMethods, todayVals } from './todos';
 import { deptMethods, deptVals } from './depts';
 import { crmMethods, crmVals, SOURCES } from './crm';
 import { projectMethods, projectVals } from './projectview';
-import { financeMethods, financeVals } from './finance';
+import { financeMethods, financeVals, reportMethods, reportVals } from './finance';
 
 // Password of the demo accounts, so they open with one tap (see .env). Leave it out to require passwords.
 const demoPassword = () => import.meta.env.VITE_DEMO_PASSWORD || '';
@@ -572,7 +572,7 @@ export default class TrinityApp extends Logic {
   }
   payReq(r) {
     const t = this.now();
-    this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, {step:6,st:'paid',log:[...q.log,t]}) : q), staff:x.staff.map(p => p.k === r.who ? Object.assign({}, p, {fl:p.fl + r.amt}) : p)}));
+    this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, {step:6,st:'paid',paidOn:dayKey(0),log:[...q.log,t]}) : q), staff:x.staff.map(p => p.k === r.who ? Object.assign({}, p, {fl:p.fl + r.amt}) : p)}));
     this.toast('Paid · float opened for ' + this.av(r.who).n);
     this.log('wallet','green','Float opened · ' + this.fmtT(r.amt), this.av(r.who).n + ' · receipts due in 3 days');
   }
@@ -598,4 +598,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods);

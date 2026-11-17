@@ -555,3 +555,51 @@
 .co-outbox li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: #F7F5FB; font-size: 13.5px; flex-wrap: wrap; }
 .co-outbox li > span { display: flex; flex-direction: column; min-width: 0; }
 .co-outbox small { color: #6E6A7C; font-size: 12px; }
+
+/* ---- Finance reports & cash book ---- */
+.fr-per { margin: 2px 0; }
+.fr-up { color: #1F7549; font-style: normal; font-weight: 700; }
+.fr-down { color: #B23A46; font-style: normal; font-weight: 700; }
+.fh-kpi.is-dark .fr-up, .fh-kpi.is-dark .fr-down { color: #E2CE98; }
+.fr-chart-h { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fr-legend { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #6E6A7C; font-weight: 600; }
+.fr-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-left: 8px; }
+.is-in { background: #2E9B63; } .is-out { background: #D9535F; }
+.fr-tip { min-height: 20px; font-size: 13px; }
+.fr-bars { display: flex; align-items: stretch; gap: 3px; height: 210px; padding-top: 6px; border-bottom: 1px solid #E8E4EF; }
+.fr-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 4px; border: none; background: none; padding: 0; cursor: pointer; border-radius: 6px; }
+.fr-col.is-on, .fr-col:hover { background: #F7F5FB; }
+.fr-pair { flex: 1; display: flex; align-items: flex-end; justify-content: center; gap: 2px; padding: 0 1px; }
+.fr-pair i { flex: 1 1 0; max-width: 16px; min-height: 0; border-radius: 4px 4px 0 0; }
+.fr-col small { height: 14px; font-size: 10.5px; color: #8A8599; text-align: center; white-space: nowrap; overflow: visible; }
+.fr-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; align-items: start; }
+.fr-break { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.fr-break li { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(60px, 1.2fr) auto; gap: 12px; align-items: center; font-size: 13.5px; }
+.fr-break-l { display: flex; flex-direction: column; min-width: 0; }
+.fr-break-l small { color: #6E6A7C; }
+.fr-break-bar { height: 10px; border-radius: 5px; background: #F1EEF6; overflow: hidden; }
+.fr-break-bar i { display: block; height: 100%; border-radius: 5px; }
+.fr-break-bar i.is-in { background: linear-gradient(90deg, #2E9B63, #6FC79A); } .fr-break-bar i.is-out { background: linear-gradient(90deg, #D9535F, #F09AA2); }
+.fr-break-v { white-space: nowrap; font-size: 13.5px; }
+.fr-table-wrap { overflow-x: auto; margin: 0 -4px; }
+.fr-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.fr-table th { text-align: left; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: #6E6A7C; padding: 8px 6px; border-bottom: 1px solid #E8E4EF; white-space: nowrap; }
+.fr-table td { padding: 9px 6px; border-bottom: 1px solid #F3F0F7; vertical-align: top; white-space: nowrap; }
+.fr-table td b { display: block; } .fr-table td small { display: block; color: #6E6A7C; font-size: 12px; white-space: normal; }
+.fr-table .r { text-align: right; }
+.fr-table .is-green { color: #1F7549; font-weight: 700; } .fr-table .is-red { color: #B23A46; font-weight: 700; }
+.fr-book td:nth-child(2) { white-space: normal; min-width: 180px; }
+.fr-date { font: 600 12px 'IBM Plex Mono', monospace; color: #6E6A7C; }
+.fr-bookbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fr-add { max-width: 760px; }
+.fr-dir button.is-on.is-in { background: #2E9B63; border-color: #2E9B63; }
+.fr-dir button.is-on.is-out { background: #B23A46; border-color: #B23A46; }
+@media (max-width: 600px) { .fr-break li { grid-template-columns: 1fr auto; } .fr-break-bar { grid-column: 1 / -1; order: 9; } .fr-bars { height: 170px; } }
+@media (max-width: 600px) {
+  .fh-kpis { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .fh-kpi { padding: 12px; border-radius: 14px; }
+  .fh-kpi b { font-size: 16px; }
+  .fh-kpi span { font-size: 10.5px; }
+  .fh-kpi small { font-size: 11px; }
+  .fr-per { flex-wrap: nowrap; overflow-x: auto; }
+}

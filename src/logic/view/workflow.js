@@ -134,7 +134,7 @@ export function pageVals(s, IC, ST, narrow) {
       const steps = this.CHAIN.map((l, i) => ({ l: i === 0 ? 'Sent' : i === 5 ? 'Paid' : l, skip:r.log[i] === 'Not needed', done:r.st === 'paid' || i < r.step || (r.st === 'approved' && i < 5), cur:r.st === 'pending' && i === r.step, rej:r.st === 'rejected' && i === r.step, at:r.log[i] && r.log[i] !== 'Not needed' ? r.log[i] : '' })).filter((x, i) => !x.skip && (i !== 1 || !!r.log[1]));
       const P = this.proj(r.p);
       return {id:r.id, what:this.reqWhat(r), purpose:r.purpose || '', amt:this.fmtT(r.amt), who:this.av(r.who).n, mine:r.who === me, where:r.p ? P.client + ' · ' + P.name : 'Office', need:r.need || '',
-        status:this.reqStatus(r), tone:this.reqTone(r), open:r.st === 'pending' || r.st === 'approved', steps, note:r.st === 'rejected' ? (r.reason || r.log[r.step] || '') : '',
+        status:this.moneyStatus(r), tone:this.reqTone(r), open:r.st === 'pending' || r.st === 'approved', steps, note:r.st === 'rejected' ? (r.reason || r.log[r.step] || '') : '',
         sel:s.reqSel === r.id, toggle:() => this.setState({reqSel:s.reqSel === r.id ? null : r.id}),
         nudge:r.st === 'pending' && r.who === me ? () => { const to = this.approverAt(r, r.step); this.remind(to, r.id + ' is waiting for your approval', 'requests', 'banknote', this.av(r.who).n + ' · ' + this.fmtT(r.amt)); this.toast('Reminder sent to ' + this.av(to).n); } : null};
     };

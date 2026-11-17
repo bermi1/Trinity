@@ -3,6 +3,20 @@
 // Local date as YYYY-MM-DD, `offset` days from today.
 export const dayKey = (offset = 0) => { const d = new Date(); d.setDate(d.getDate() + offset); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
+// Money in and out recorded directly by Finance (salaries, rent, suppliers, other income), over the last 70 days.
+function ledgerSeed() {
+  const L = [], add = (off, dir, amt, cat, party, p, ref) => L.push({ id: 'LG' + (L.length + 1), at: dayKey(off), dir, amt, cat, party, p: p || '', method: dir === 'in' ? 'Bank' : (amt < 500000 ? 'Cash' : 'Bank'), ref: ref || '', by: 'RT' });
+  [-62, -32, -2].forEach(o => { add(o, 'out', 18400000, 'Salaries', 'Staff payroll'); add(o + 1, 'out', 2600000, 'Statutory (NSSF, PAYE)', 'TRA / NSSF'); add(o, 'out', 3200000, 'Rent', 'Mikocheni office landlord'); });
+  [-58, -28].forEach(o => { add(o, 'out', 410000, 'Utilities', 'TANESCO'); add(o + 2, 'out', 280000, 'Utilities', 'DAWASA'); add(o + 3, 'out', 650000, 'Internet & phone', 'Vodacom Business'); });
+  const sup = [[-66, 7800000, 'PRJ-0231', 'Chapa Supplies'], [-54, 4300000, 'PRJ-0228', 'Vinyl House'], [-47, 9600000, 'PRJ-0233', 'Kariakoo Carpentry'], [-39, 3100000, 'PRJ-0226', 'Kivuko T-shirts Ltd'], [-30, 5400000, 'PRJ-0230', 'Outdoor Sites Co'], [-21, 6800000, 'PRJ-0231', 'Lake Zone Sound'], [-12, 2950000, 'PRJ-0228', 'Vinyl House'], [-6, 4100000, 'PRJ-0233', 'Kariakoo Carpentry'], [-1, 1750000, 'PRJ-0235', 'Serena Events']];
+  sup.forEach(([o, a, p, who]) => add(o, 'out', a, 'Suppliers & production', who, p));
+  for (let o = -68; o <= 0; o += 4) add(o, 'out', 180000 + ((o * 37) % 5) * 45000 + 90000, 'Fuel & transport', 'Puma / Oryx', o % 8 === 0 ? 'PRJ-0231' : '');
+  [-60, -45, -25, -9].forEach(o => add(o, 'out', 350000, 'Office supplies', 'Mlimani Stationers'));
+  [[-50, 22000000, 'Kilimo Bank', 'PRJ-0230'], [-35, 31500000, 'Mlimani Bank', 'PRJ-0233'], [-18, 15800000, 'Pwani Beverages', 'PRJ-0228'], [-8, 12600000, 'Kivuko Foods', 'PRJ-0226'], [-4, 9400000, 'Nyota Insurance', 'PRJ-0224']].forEach(([o, a, c, p]) => add(o, 'in', a, 'Client payment', c, p, 'CRDB'));
+  add(-26, 'in', 1200000, 'Other income', 'Equipment hire · Safari Mobile');
+  return L;
+}
+
 export function seed() {
   return {
   projects:[
@@ -43,8 +57,8 @@ export function seed() {
     {id:'REQ-0423',who:'GM',amt:180000,cat:'Permits',purpose:'Municipal venue permit fees · Musoma.',p:'PRJ-0231',need:'Thu 24',step:4,st:'pending',log:['Mon 11:02','Mon 12:15','Mon 14:40','08:31']},
     {id:'REQ-0425',who:'AJ',amt:450000,cat:'Fuel',purpose:'Fuel for T 119 DKL, Dar → Musoma round trip.',p:'PRJ-0231',need:'Thu 24',step:3,st:'pending',log:['07:50','08:02','08:26']},
     {id:'REQ-0426',who:'JM',amt:120000,cat:'Materials',purpose:'Adhesive and cleaning supplies for outlet installs.',p:'PRJ-0228',need:'Wed 23',step:1,st:'pending',log:['08:44']},
-    {id:'REQ-0412',who:'GM',amt:250000,cat:'Transport',purpose:'Site visits for billboard photos.',p:'PRJ-0230',need:'Mon 21',step:6,st:'paid',log:['Fri 09:10','Fri 09:40','Fri 10:05','Fri 11:20','Fri 12:00','Fri 14:30']},
-    {id:'REQ-0409',who:'AJ',amt:600000,cat:'Fuel',purpose:'Arusha delivery run.',p:'PRJ-0226',need:'Fri 18',step:6,st:'paid',log:['Thu','Thu','Thu','Thu','Thu','Fri']},
+    {id:'REQ-0412',paidOn:dayKey(-3),who:'GM',amt:250000,cat:'Transport',purpose:'Site visits for billboard photos.',p:'PRJ-0230',need:'Mon 21',step:6,st:'paid',log:['Fri 09:10','Fri 09:40','Fri 10:05','Fri 11:20','Fri 12:00','Fri 14:30']},
+    {id:'REQ-0409',paidOn:dayKey(-5),who:'AJ',amt:600000,cat:'Fuel',purpose:'Arusha delivery run.',p:'PRJ-0226',need:'Fri 18',step:6,st:'paid',log:['Thu','Thu','Thu','Thu','Thu','Fri']},
     {id:'REQ-0405',who:'SK',amt:90000,cat:'Meals',purpose:'Crew lunch — overtime.',p:'PRJ-0228',need:'Thu 17',step:2,st:'rejected',log:['Wed 18:00','Wed 18:20','Thu 08:10']}
   ],
   notes:[
@@ -116,11 +130,11 @@ export function seed() {
     {id:'INV-0192',c:'Pwani Beverages',p:'PRJ-0228',v:24.0,st:'sent',due:'30 Sep'},
     {id:'INV-0196',c:'Mlimani Bank',p:'PRJ-0233',v:63.0,st:'sent',due:'05 Oct'},
     {id:'INV-0197',c:'Safari Mobile',p:'PRJ-0235',v:58.2,st:'sent',due:'12 Oct'},
-    {id:'INV-0195',c:'Serengeti Telecom',p:'PRJ-0231',v:84.0,st:'paid',due:'Paid 15 Sep'},
+    {id:'INV-0195',c:'Serengeti Telecom',p:'PRJ-0231',v:84.0,st:'paid',due:'Paid',payments:[{id:'PY0',amt:84000000,ref:'CRDB TT 87001',at:dayKey(-40),rec:'RT',ok:'DK'}]},
     {id:'INV-0198',c:'Nyota Insurance',p:'PRJ-0224',v:18.0,st:'draft',due:'—'},
     {id:'INV-0199',c:'Serengeti Telecom',tin:'100-146-304',vrn:'10-0066-45-E',p:'PRJ-0231',title:'Lake Zone Roadshow · Phase 2 activation',po:'PO-55821',poDate:'2026-11-02',vendor:'V-2219',signer:'ED',at:'2026-11-12',due:'30 days',by:'RT',admin:15,vat:18,st:'partial',v:19.1337,
       lines:[{item:'Brand ambassadors',n:12,rate:60000,days:6,events:1},{item:'Roadshow truck with sound system',n:1,rate:850000,days:6,events:1},{item:'Gazebos 3×3 branded',n:4,rate:120000,days:6,events:1},{item:'Event supervisor',n:2,rate:150000,days:6,events:1}],
-      signed:{by:'DK',name:'Daniel K.',at:'2026-11-12'},payments:[{id:'PY1',amt:6000000,ref:'CRDB TT 88213',at:'2026-11-14',rec:'RT',ok:'DK'},{id:'PY2',amt:4000000,ref:'CRDB TT 88907',at:'2026-11-16',rec:'RT',ok:null}]}
+      signed:{by:'DK',name:'Daniel K.',at:'2026-11-12'},payments:[{id:'PY1',amt:6000000,ref:'CRDB TT 88213',at:dayKey(-3),rec:'RT',ok:'DK'},{id:'PY2',amt:4000000,ref:'CRDB TT 88907',at:dayKey(-1),rec:'RT',ok:null}]}
   ],
   activity:[
     {time:'08:42',ic:'banknote',tone:'amber',t:'John M. requested TZS 300,000 for crew transport',s:'Lake Zone Roadshow · REQ-0418'},
@@ -159,6 +173,7 @@ export function seed() {
   reportsSub:44, reportsToday:{}, reportText:'', fieldReq:{amt:'',purpose:'',p:'PRJ-0231',cat:'Team'},
   // Company-wide setup: requests up to smallLimit (TZS) need only the PM and Finance; `off` hides sections.
   outbox:[],
+  ledger:ledgerSeed(),
   company:{notify:{wa:true,sms:false,email:false,events:{clients:true,approvals:true,designs:true,payments:true,tasks:false}},phones:{DK:'+255 754 000 101',GN:'+255 754 000 102',NL:'+255 754 000 103',RS:'+255 754 000 104',MM:'+255 754 000 105',RT:'+255 754 000 106'},smallLimit:200000, off:['ceomobile'], managers:{}, csTarget:500},
   // Daily to-do: what each person did today and plans to do.
   todos:[

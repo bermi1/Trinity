@@ -71,7 +71,7 @@ export function projectVals(s) {
 
   // Money requests: your own, or all of them for the PM, Operations, Finance and the top.
   const reqs = (s.reqs || []).filter(r => r.p === P.id && (can.allReqs || r.who === me));
-  V.reqs = reqs.map(r => ({ id: r.id, what: this.reqWhat(r), who: this.av(r.who).n, amt: this.fmtT(r.amt), status: this.reqStatus(r), tone: this.reqTone(r),
+  V.reqs = reqs.map(r => ({ id: r.id, what: this.reqWhat(r), who: this.av(r.who).n, amt: this.fmtT(r.amt), status: this.moneyStatus(r), tone: this.reqTone(r),
     open: () => this.go('requests', { reqSel: r.id, reqFilter: 'all' }) }));
   V.reqsTitle = can.allReqs ? 'Money requests' : 'Your requests on this project';
   V.reqMoney = () => this.openModal('reqProject', { p: P.id });
@@ -91,7 +91,7 @@ export function projectVals(s) {
     if (b.st === 'done') ev.push({ at: '', who: this.managerOf('creative'), t: 'Design approved · ' + b.t, s: 'Sent to GM, Management and Client Service', tone: 'green' });
   });
   tasks.filter(t => t.st === 'done').forEach(t => ev.push({ at: t.doneOn || '', who: t.who, t: 'Task done', s: t.t, tone: 'green' }));
-  reqs.forEach(r => ev.push({ at: '', who: r.who, t: 'Money request · ' + this.fmtT(r.amt), s: this.reqStatus(r), tone: 'amber' }));
+  reqs.forEach(r => ev.push({ at: '', who: r.who, t: 'Money request · ' + this.fmtT(r.amt), s: this.moneyStatus(r), tone: 'amber' }));
   (P.notes || []).forEach(n => ev.push({ at: n.at, who: n.by, t: 'Note', s: n.t, tone: 'dark', note: true }));
   V.feed = ev.sort((a, b) => (b.at || '').localeCompare(a.at || '')).slice(0, 30).map(e => Object.assign({}, e, { w: face(e.who) }));
   V.addNote = t => {
@@ -115,7 +115,7 @@ export function projectVals(s) {
 const WAIT = ['Sent', 'Project Manager', 'General Manager', 'Finance', 'Management', 'Finance to pay'];
 export const projectMethods = {
   // A request's status in plain words.
-  reqStatus(r) {
+  moneyStatus(r) {
     if (r.st === 'rejected') return 'Rejected';
     if (r.st === 'paid') return 'Paid';
     if (r.st === 'approved' || r.step >= 5) return 'Approved · Finance to pay';

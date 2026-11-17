@@ -230,3 +230,110 @@ export function financeVals(s) {
   }
   return { FH: F };
 }
+
+// ---- Reports: every shilling in and out, by day, week, month and year.
+const pad = n => String(n).padStart(2, '0');
+const key = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parse = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export function periodRange(p, now = new Date()) {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (p === 'today') return { from: key(d), to: key(d), label: 'Today', unit: 'day' };
+  if (p === 'week') { const m = new Date(d); m.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const e = new Date(m); e.setDate(m.getDate() + 6); return { from: key(m), to: key(e), label: 'This week', unit: 'day' }; }
+  if (p === 'lastmonth') { const a = new Date(d.getFullYear(), d.getMonth() - 1, 1), b = new Date(d.getFullYear(), d.getMonth(), 0); return { from: key(a), to: key(b), label: MON[a.getMonth()] + ' ' + a.getFullYear(), unit: 'day' }; }
+  if (p === 'year') return { from: d.getFullYear() + '-01-01', to: d.getFullYear() + '-12-31', label: String(d.getFullYear()), unit: 'month' };
+  const a = new Date(d.getFullYear(), d.getMonth(), 1), b = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return { from: key(a), to: key(b), label: MON[a.getMonth()] + ' ' + a.getFullYear(), unit: 'day' };
+}
+function prevRange(r) {
+  const a = parse(r.from), b = parse(r.to), days = Math.round((b - a) / 864e5) + 1;
+  if (r.unit === 'month') return { from: (a.getFullYear() - 1) + '-01-01', to: (a.getFullYear() - 1) + '-12-31' };
+  const pb = new Date(a); pb.setDate(a.getDate() - 1); const pa = new Date(pb); pa.setDate(pb.getDate() - days + 1);
+  return { from: key(pa), to: key(pb) };
+}
+
+export const reportMethods = {
+  // All money in and out as one list: confirmed invoice payments, paid requests and Finance's own entries.
+  cashEntries() {
+    const s = this.state, out = [];
+    (s.invoices || []).forEach(i => (i.payments || []).filter(p => p.ok && /^\d{4}-/.test(p.at || '')).forEach(p => out.push({ id: p.id, at: p.at, dir: 'in', amt: p.amt, cat: 'Client payment', party: i.c, p: i.p || '', ref: i.id + (p.ref ? ' · ' + p.ref : ''), src: 'invoice' })));
+    (s.reqs || []).filter(r => r.st === 'paid' && r.paidOn).forEach(r => out.push({ id: r.id, at: r.paidOn, dir: 'out', amt: r.amt, cat: 'Staff requests · ' + (r.cat || 'Other'), party: this.av(r.who).n, p: r.p || '', ref: r.id, src: 'request' }));
+    (s.ledger || []).forEach(l => out.push(Object.assign({ src: 'ledger' }, l)));
+    return out.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+  },
+  addEntry(f) {
+    const amt = Math.round(+f.amt || 0); if (amt <= 0) return 'Enter the amount';
+    if (!f.cat) return 'Choose what it is for';
+    const e = { id: 'LG' + Date.now().toString(36), at: f.at || dayKey(0), dir: f.dir === 'in' ? 'in' : 'out', amt, cat: f.cat, party: (f.party || '').trim(), p: f.p || '', method: f.method || 'Bank', ref: (f.ref || '').trim(), by: this.me().k };
+    this.setState(x => ({ ledger: [e, ...(x.ledger || [])] }));
+    this.toast((e.dir === 'in' ? 'Money in' : 'Money out') + ' recorded · ' + this.fmtT(amt));
+    this.log(e.dir === 'in' ? 'trendUp' : 'wallet', e.dir === 'in' ? 'green' : 'amber', (e.dir === 'in' ? 'Money in · ' : 'Money out · ') + e.cat, this.fmtT(amt));
+    return '';
+  },
+  exportCash(rows, label) {
+    const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const csv = [['Date', 'In/Out', 'Category', 'Paid to / from', 'Project', 'Reference', 'Amount (TZS)'].map(q).join(',')]
+      .concat(rows.map(e => [e.at, e.dir === 'in' ? 'In' : 'Out', e.cat, e.party, e.p ? this.proj(e.p).name : '', e.ref, (e.dir === 'in' ? 1 : -1) * e.amt].map(q).join(','))).join('\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'Trinity cash book · ' + label + '.csv'; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+};
+
+export const IN_CATS = ['Client payment', 'Other income', 'Loan / capital'];
+export const OUT_CATS = ['Suppliers & production', 'Salaries', 'Statutory (NSSF, PAYE)', 'Rent', 'Utilities', 'Internet & phone', 'Fuel & transport', 'Office supplies', 'Tax (VAT, WHT)', 'Bank charges', 'Other'];
+
+export function reportVals(s) {
+  if (!this.canInvoice()) return { REP: null };
+  const per = s.repPeriod || 'month', R = periodRange(per), P = prevRange(R), all = this.cashEntries();
+  const inR = e => e.at >= R.from && e.at <= R.to, inP = e => e.at >= P.from && e.at <= P.to;
+  const rows = all.filter(inR), prev = all.filter(inP);
+  const sum = (l, d) => l.filter(e => e.dir === d).reduce((a, e) => a + e.amt, 0);
+  const tin = sum(rows, 'in'), tout = sum(rows, 'out'), pin = sum(prev, 'in'), pout = sum(prev, 'out');
+  const delta = (a, b) => (b ? Math.round((a - b) / b * 100) : null);
+  // Buckets for the chart: days (week, month) or months (year).
+  const buckets = [];
+  if (R.unit === 'month') { for (let m = 0; m < 12; m++) buckets.push({ k: R.from.slice(0, 4) + '-' + pad(m + 1), l: MON[m] }); }
+  else { const a = parse(R.from), b = parse(R.to); for (let d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) buckets.push({ k: key(d), l: per === 'week' ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] : String(d.getDate()) }); }
+  const bk = e => (R.unit === 'month' ? e.at.slice(0, 7) : e.at);
+  const chart = buckets.map(b => { const l = rows.filter(e => bk(e) === b.k); return { l: b.l, k: b.k, in: sum(l, 'in'), out: sum(l, 'out') }; });
+  const max = Math.max(1, ...chart.map(c => Math.max(c.in, c.out)));
+  const group = (l, d, f) => { const m = {}; l.filter(e => e.dir === d).forEach(e => { const k = f(e); m[k] = (m[k] || 0) + e.amt; }); return Object.keys(m).map(k => ({ l: k, v: m[k] })).sort((a, b) => b.v - a.v); };
+  const outCat = group(rows, 'out', e => e.cat.replace(/^Staff requests · .*/, 'Staff requests (floats)')), inCli = group(rows, 'in', e => e.party || e.cat);
+  // Projects: what each brought in and cost, all time.
+  const projects = (s.projects || []).map(p => {
+    const inv = (s.invoices || []).filter(i => i.p === p.id), invoiced = inv.reduce((a, i) => a + invTotals(i).total, 0);
+    const got = all.filter(e => e.p === p.id && e.dir === 'in').reduce((a, e) => a + e.amt, 0), spent = all.filter(e => e.p === p.id && e.dir === 'out').reduce((a, e) => a + e.amt, 0);
+    return { id: p.id, n: p.name, c: p.client, value: Math.round((p.val || 0) * 1e6), invoiced, got, spent, profit: got - spent };
+  }).filter(p => p.invoiced || p.got || p.spent).sort((a, b) => b.value - a.value);
+  // How long clients have owed us.
+  const today = parse(dayKey(0)), ageOf = i => { if (i.at) return Math.round((today - parse(i.at)) / 864e5); const m = /(\d+) days late/.exec(i.due || ''); return m ? 30 + +m[1] : 10; };
+  const aging = [['0–30 days', 0, 30], ['31–60 days', 31, 60], ['61–90 days', 61, 90], ['Over 90 days', 91, 1e9]].map(([l, a, b]) => {
+    const list = (s.invoices || []).filter(i => i.st !== 'paid' && i.st !== 'draft' && ageOf(i) >= a && ageOf(i) <= b);
+    return { l, n: list.length, v: list.reduce((x, i) => x + invTotals(i).total - (i.payments || []).filter(p => p.ok).reduce((y, p) => y + p.amt, 0), 0) };
+  });
+  let run = 0;
+  const book = rows.slice().reverse().map(e => { run += (e.dir === 'in' ? 1 : -1) * e.amt; return Object.assign({}, e, { run, proj: e.p && this.proj(e.p).client !== e.party ? this.proj(e.p).client : '' }); }).reverse();
+  const f = this.fmtT.bind(this);
+  return {
+    REP: {
+      per, label: R.label, setPer: k => this.setState({ repPeriod: k }),
+      periods: [['today', 'Today'], ['week', 'This week'], ['month', 'This month'], ['lastmonth', 'Last month'], ['year', 'This year']],
+      kpis: [
+        { l: 'Money in', v: f(tin), d: delta(tin, pin), good: true, tone: 'green' },
+        { l: 'Money out', v: f(tout), d: delta(tout, pout), good: false, tone: 'red' },
+        { l: 'Net cash', v: (tin - tout < 0 ? '−' : '') + f(Math.abs(tin - tout)), tone: tin - tout < 0 ? 'red' : 'dark' },
+        { l: 'Daily average spend', v: f(tout / Math.max(1, Math.min(Math.round((parse(R.to) - parse(R.from)) / 864e5) + 1, Math.round((parse(dayKey(0)) - parse(R.from)) / 864e5) + 1))), tone: 'gold' }
+      ],
+      chart: chart.map(c => Object.assign(c, { hi: Math.round(c.in / max * 100), ho: Math.round(c.out / max * 100), tin: f(c.in), tout: f(c.out) })), maxT: f(max), showEvery: chart.length > 16 ? 5 : 1,
+      outCat: outCat.map(x => Object.assign(x, { t: f(x.v), pct: tout ? Math.round(x.v / tout * 100) : 0 })),
+      inCli: inCli.slice(0, 8).map(x => Object.assign(x, { t: f(x.v), pct: tin ? Math.round(x.v / tin * 100) : 0 })),
+      projects: projects.map(p => ({ id: p.id, n: p.n, c: p.c, value: f(p.value), invoiced: f(p.invoiced), got: f(p.got), spent: f(p.spent), profit: (p.profit < 0 ? '−' : '') + f(Math.abs(p.profit)), neg: p.profit < 0, margin: p.got ? Math.round(p.profit / p.got * 100) + '%' : '—' })),
+      aging: aging.map(a => Object.assign(a, { t: f(a.v) })), agingMax: Math.max(1, ...aging.map(a => a.v)),
+      book: book.slice(0, 200).map(e => ({ id: e.id, at: e.at, dir: e.dir, cat: e.cat, party: e.party, proj: e.proj, ref: e.ref, amt: f(e.amt), run: (e.run < 0 ? '−' : '') + f(Math.abs(e.run)) })),
+      bookCount: book.length,
+      export: () => this.exportCash(rows, R.label), add: e => this.addEntry(e),
+      inCats: IN_CATS, outCats: OUT_CATS, projOpts: (s.projects || []).filter(p => p.st !== 'done').map(p => ({ v: p.id, l: p.client }))
+    }
+  };
+}

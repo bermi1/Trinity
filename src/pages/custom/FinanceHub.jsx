@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PageHead, Btn, Pill, Empty } from '../../ui/kit';
+import { Reports, CashBook, CashChart, Periods } from './FinanceReports';
 
 const ST = { draft: ['Draft', '#F1EEF6', '#6E6A7C'], sent: ['Sent', '#E9EFFA', '#3559A8'], partial: ['Part paid', '#FBF1DD', '#8A6414'], overdue: ['Overdue', '#FBEDEE', '#B23A46'], paid: ['Paid', '#E6F4EC', '#1F7549'] };
 const n = v => Math.round(+v || 0).toLocaleString('en-US');
@@ -206,12 +207,12 @@ function FloatTab({ F }) {
 
 // Finance: the overview, invoices (create, sign, send, payments) and the float ledger.
 export default function FinanceHub({ v }) {
-  const F = v.FH;
-  const tabs = [['overview', 'Overview'], ['invoices', 'Invoices'], ...(F.float ? [['float', 'Float']] : [])];
+  const F = v.FH, R = v.REP;
+  const tabs = [['overview', 'Overview'], ...(R ? [['cash', 'Cash book'], ['reports', 'Reports']] : []), ['invoices', 'Invoices'], ...(F.float ? [['float', 'Float']] : [])];
   const list = F.invoices.filter(i => (F.filter === 'open' ? i.st !== 'paid' : F.filter === 'paid' ? i.st === 'paid' : F.filter === 'sign' ? i.needsSign : true));
   return (
     <>
-      <PageHead kicker="Finance" title={F.float ? 'Finance' : 'Invoices'} sub="Who owes us, what came in, and where the float is going.">
+      <PageHead kicker="Finance" title="Finance" sub="Money in and out every day, who owes us, invoices and the float, in one place.">
         {F.canInvoice ? <Btn kind="dark" onClick={F.newInvoice}>New invoice</Btn> : null}
       </PageHead>
       <div className="rc-smart fh-tabs" role="tablist">{tabs.map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={F.tab === k} className={F.tab === k ? 'is-on' : ''} onClick={() => F.setTab(k)}><span>{l}</span></button>)}</div>
@@ -219,6 +220,7 @@ export default function FinanceHub({ v }) {
       {F.tab === 'overview' ? (
         <>
           <Kpis items={F.kpis} />
+          {R ? <><Periods R={R} /><CashChart R={R} /></> : null}
           <section className="fh-card">
             <h3>Needs attention</h3>
             {F.attention.length ? <ul className="fh-att">{F.attention.map((a, i) => <li key={i}><span><b>{a.t}</b><small>{a.s}</small></span><Btn kind="ghost" onClick={a.on}>{a.act}</Btn></li>)}</ul> : <Empty>All clear.</Empty>}
@@ -226,6 +228,8 @@ export default function FinanceHub({ v }) {
         </>
       ) : null}
 
+      {F.tab === 'cash' && R ? <CashBook R={R} canAdd={F.moneyTop} /> : null}
+      {F.tab === 'reports' && R ? <Reports R={R} /> : null}
       {F.tab === 'invoices' ? (
         <section className="fh-card">
           <div className="k-chips fh-filter">{[['open', 'Open'], ['sign', 'To sign'], ['paid', 'Paid'], ['all', 'All']].map(([k, l]) => <button key={k} type="button" className={F.filter === k ? 'is-on' : ''} onClick={() => F.setFilter(k)}>{l}</button>)}</div>
