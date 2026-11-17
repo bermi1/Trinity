@@ -1,7 +1,9 @@
 // Generated from the Claude Design file by scripts/dc-to-jsx.mjs.
 import { Fragment } from 'react';
+import MyRequests from './custom/MyRequests';
 
 export default function RequestsPage({ v }) {
+  if (v.MR) return <MyRequests M={v.MR} />;
   return (
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "16px", flexWrap: "wrap" }}>
@@ -10,7 +12,7 @@ export default function RequestsPage({ v }) {
             MONEY
           </span>
           <h1 style={{ margin: "0", fontSize: "clamp(22px,2.4vw,28px)", fontWeight: "700", letterSpacing: "-.02em" }}>
-            Requests & floats
+            {v.showFloats ? 'Requests & floats' : 'Approvals'}
           </h1>
         </div>
         <button className="tm-h9" onClick={v.newReq} style={{ height: "40px", padding: "0 16px", border: "none", background: "#6D3CC2", color: "#fff", borderRadius: "10px", display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: "600" }}>
@@ -240,6 +242,7 @@ export default function RequestsPage({ v }) {
           </>
         ) : null}
       </div>
+      {v.showFloats ? (
       <div style={{ background: "#fff", border: "1px solid #E8E4EF", borderRadius: "14px", overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #E8E4EF" }}>
           <h3 style={{ margin: "0", fontSize: "15px", fontWeight: "700" }}>
@@ -286,6 +289,7 @@ export default function RequestsPage({ v }) {
           </>
         ) : null}
       </div>
+      ) : null}
     </>
   );
 }

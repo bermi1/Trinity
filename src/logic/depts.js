@@ -4,8 +4,10 @@
 import { DEPTS, OLD_DEPT } from './constants';
 import { dayKey } from './seed';
 
-export const BRIEF = { todo: 'New', prog: 'In design', review: 'With client', done: 'Approved' };
-const BRIEF_NEXT = { todo: ['prog', 'Start design'], prog: ['review', 'Send to client'], review: ['done', 'Client approved'] };
+// Design briefs: New → In design (designer uploads) → With Creative Manager → Approved.
+// Approved designs go to the GM, Management and the Client Service person who sent the brief.
+export const BRIEF = { todo: 'New', prog: 'In design', review: 'With Creative Manager', done: 'Approved' };
+const BRIEF_NEXT = { todo: ['prog', 'Start design'], prog: ['review', 'Send to Creative Manager'], review: ['done', 'Approve design'] };
 
 export const deptMethods = {
   // A person's department: from the staff list, or from the portal their key belongs to.
@@ -52,12 +54,89 @@ export const deptMethods = {
   },
   moveBrief(id) {
     const b = (this.state.tasks || []).find(t => t.id === id); if (!b || !BRIEF_NEXT[b.st]) return;
-    const [st] = BRIEF_NEXT[b.st];
-    this.setState(x => ({ tasks: x.tasks.map(t => (t.id === id ? Object.assign({}, t, { st }) : t)) }));
-    // Client Service hears when artwork goes to the client and when it is approved.
-    if (b.from && st !== 'prog') this.remind(b.from, (st === 'review' ? 'Artwork ready for the client: ' : 'Client approved: ') + b.t, 'dept', 'clipboard', 'From ' + this.me().n);
+    const [st] = BRIEF_NEXT[b.st], cm = this.managerOf('creative'), me = this.me().k;
+    if (st === 'review' && !(b.files || []).length) { this.toast('Upload the design first'); return; }
+    if (st === 'done' && !(this.isManagerOf('creative') || this.isTop())) { this.toast('Only the Creative Manager approves designs'); return; }
+    this.setState(x => ({ tasks: x.tasks.map(t => (t.id === id ? Object.assign({}, t, { st, ret: st === 'review' ? '' : t.ret }) : t)) }));
+    if (st === 'review' && cm && cm !== me) this.remind(cm, 'Design to approve: ' + b.t, 'dept', 'clipboard', 'From ' + this.me().n + ' · ' + (b.files || []).length + ' file(s)');
+    if (st === 'done') {
+      [this.ROLES.gm.k, this.ROLES.ceo.k, b.from, b.who].filter((k, i, a) => k && k !== me && a.indexOf(k) === i)
+        .forEach(k => this.remind(k, 'Design approved: ' + b.t, 'project', 'clipboard', (this.proj(b.p).client || '') + ' · approved by ' + this.me().n));
+    }
     this.toast(b.t + ' · ' + BRIEF[st]);
+    this.log('clipboard', st === 'done' ? 'green' : 'purple', 'Design · ' + BRIEF[st], b.t);
   },
+  // A designer (or the Creative Manager) uploads design files to a brief.
+  async addDesign(id, file) {
+    const b = (this.state.tasks || []).find(t => t.id === id); if (!b) return '';
+    try {
+      const info = await this.storeFile(file), me = this.me().k;
+      const item = Object.assign({ by: me, at: dayKey(0) }, info);
+      this.setState(x => ({ tasks: x.tasks.map(t => (t.id === id ? Object.assign({}, t, { files: [...(t.files || []), item], st: t.st === 'todo' ? 'prog' : t.st }) : t)) }));
+      this.toast('Design uploaded · ' + file.name);
+      return '';
+    } catch (e) { return 'Upload failed · ' + (e.message || e); }
+  },
+  // The Creative Manager sends a design back with a comment.
+  returnBrief(id, note) {
+    const b = (this.state.tasks || []).find(t => t.id === id); if (!b) return;
+    this.setState(x => ({ tasks: x.tasks.map(t => (t.id === id ? Object.assign({}, t, { st: 'prog', ret: note || 'Please revise' }) : t)) }));
+    if (b.who !== this.me().k) this.remind(b.who, 'Design returned: ' + b.t, 'dept', 'clipboard', note || 'Please revise');
+    this.toast('Returned to ' + this.av(b.who).n);
+  },
+  // One design brief as the pages show it, with what the person looking may do with it.
+  briefRow(b) {
+    const me = this.me().k, P = this.proj(b.p), cm = this.isManagerOf('creative') || this.isTop();
+    const mineB = b.who === me, n = BRIEF_NEXT[b.st];
+    const canNext = n && (b.st === 'review' ? cm : mineB || cm);
+    return { id: b.id, t: b.t, client: P.client || '', proj: P.name || '', place: b.place, note: b.note, due: b.due, st: b.st, stl: BRIEF[b.st], who: this.av(b.who).n, whoK: b.who, from: this.av(b.from).n,
+      ret: b.st === 'prog' ? b.ret || '' : '',
+      files: (b.files || []).map((f, i) => ({ i, name: f.name, by: this.av(f.by).n, at: f.at, img: /^image\//.test(f.mime || '') && f.url ? f.url : '', open: () => this.openDoc({ n: f.name, url: f.url, path: f.path }) })),
+      canUpload: b.st !== 'done' && (mineB || cm), upload: f => this.addDesign(b.id, f),
+      next: canNext ? n[1] : '', move: () => this.moveBrief(b.id),
+      canReturn: b.st === 'review' && cm, giveBack: note => this.returnBrief(b.id, note),
+      assign: k => this.assignBrief(b.id, k) };
+  },
+  // What a person may see of projects. Management, the GM and Finance see every project; the
+  // Operations Manager and Client Service Manager see all projects; everyone else sees only the
+  // projects they work on (PM, team, a task or a design brief on it, or the client lead they own).
+  involvedIn(p, k) {
+    k = k || this.me().k;
+    return p.pm === k || (p.team || []).includes(k) || (this.state.tasks || []).some(t => t.p === p.id && (t.who === k || t.from === k)) ||
+      (this.state.leads || []).some(l => l.job === p.id && l.owner === k);
+  },
+  seesAllProjects() {
+    const role = this.state.role || 'ceo';
+    return ['ceo', 'gm', 'finance'].includes(role) || this.isManagerOf('operations') || this.isManagerOf('clientservice') || (role === 'creative' && this.isManagerOf('creative'));
+  },
+  visibleProjects() {
+    const all = this.state.projects || [];
+    if (this.seesAllProjects()) {
+      if ((this.state.role || 'ceo') === 'creative') return all.filter(p => (this.state.tasks || []).some(t => t.kind === 'brief' && t.p === p.id) || this.involvedIn(p));
+      return all;
+    }
+    return all.filter(p => this.involvedIn(p));
+  },
+  // Which parts of a project a person sees: each department sees what it adds.
+  projectParts(p) {
+    const role = this.state.role || 'ceo', me = this.me().k, top = ['ceo', 'gm'].includes(role), fin = role === 'finance';
+    const isPM = p.pm === me, ops = this.isManagerOf('operations') || isPM;
+    const dept = this.myDept();
+    return {
+      client: top || dept === 'clientservice',
+      creative: top || dept === 'clientservice' || dept === 'creative',
+      delivery: true,
+      budget: top || fin || ops,
+      money: top || fin,
+      allTasks: top || ops,
+      allReqs: top || fin || ops,
+      canPM: top || this.isManagerOf('operations'),
+      canAdvance: top || ops,
+      canTask: top || ops || this.assignable().length > 1,
+      canBrief: top || dept === 'clientservice'
+    };
+  },
+
   assignBrief(id, who) {
     const b = (this.state.tasks || []).find(t => t.id === id); if (!b || b.who === who) return;
     this.setState(x => ({ tasks: x.tasks.map(t => (t.id === id ? Object.assign({}, t, { who }) : t)) }));
@@ -88,36 +167,35 @@ export function deptVals(s) {
       assign: () => this.openModal('task', { who: k }), remind: () => { this.remind(k, 'Please add today’s to-do: what you did and what you plan', 'today', 'checkSquare'); this.toast('Reminder sent to ' + a.n); } };
   }) : [];
   const myTasks = s.tasks.filter(t => t.who === me && t.st !== 'done' && t.kind !== 'brief').slice(0, 6).map(t => ({ id: t.id, t: t.t, due: t.due, client: proj(t.p).client || '', done: () => this.setState(x => ({ tasks: x.tasks.map(y => (y.id === t.id ? Object.assign({}, y, { st: 'done' }) : y)) })) }));
-  const briefRow = b => ({ id: b.id, t: b.t, client: proj(b.p).client || '', proj: proj(b.p).name || '', place: b.place, note: b.note, due: b.due, st: b.st, stl: BRIEF[b.st], who: this.av(b.who).n, whoK: b.who, from: this.av(b.from).n,
-    next: BRIEF_NEXT[b.st] ? BRIEF_NEXT[b.st][1] : '', move: () => this.moveBrief(b.id), assign: k => this.assignBrief(b.id, k) });
+  const briefRow = b => this.briefRow(b);
   const briefs = s.tasks.filter(t => t.kind === 'brief');
   const V = { has: true, dept, label: D.l, isMgr, mgrName: this.av(this.managerOf(dept)).n, first: this.me().n.split(' ')[0], team, myTasks,
     newTask: () => this.openModal('task'), canAssign: isMgr };
 
   if (dept === 'clientservice') {
-    const won = s.leads.filter(l => l.s === 4).reduce((a, b) => a + b.v, 0), target = +((s.company || {}).csTarget) || 0;
+    const st = l => this.leadStage(l), won = s.leads.filter(l => st(l) === 5).reduce((a, b) => a + (b.v || 0), 0), target = +((s.company || {}).csTarget) || 0;
     const clients = {};
     s.projects.forEach(p => { const c = clients[p.client] || (clients[p.client] = { n: p.client, projects: 0, active: 0, leads: 0 }); c.projects++; if (p.st !== 'done') c.active++; });
-    s.leads.forEach(l => { const c = clients[l.c] || (clients[l.c] = { n: l.c, projects: 0, active: 0, leads: 0 }); if (l.s < 4) c.leads++; });
+    s.leads.forEach(l => { const c = clients[l.c] || (clients[l.c] = { n: l.c, projects: 0, active: 0, leads: 0 }); if (st(l) < 5) c.leads++; });
     V.kpis = [
       { l: 'Target this month', v: fmtM(target), n: target ? Math.round(won / target * 100) + '% achieved' : 'set by Management' },
-      { l: 'Won', v: fmtM(won) }, { l: 'Open leads', v: String(s.leads.filter(l => l.s < 4).length) },
-      { l: 'Proposals with clients', v: String(s.proposals.filter(p => p.s >= 3 && p.s < 6 && !p.rej).length) }
+      { l: 'Won', v: fmtM(won) }, { l: 'Open leads', v: String(s.leads.filter(l => st(l) < 5).length) },
+      { l: 'Proposals with clients', v: String(s.leads.filter(l => st(l) === 3 || st(l) === 4).length) }
     ];
     V.targetPct = target ? Math.min(100, Math.round(won / target * 100)) : 0;
     V.clients = Object.values(clients).sort((a, b) => b.active - a.active || a.n.localeCompare(b.n)).slice(0, 12);
     V.followUps = [
       ...s.projects.filter(p => p.st === 'risk' || p.st === 'late').map(p => ({ t: p.client + ' · ' + p.name, s: (p.st === 'late' ? 'Delayed' : 'At risk') + ' · due ' + p.due, go: () => this.go('project', { projectId: p.id }) })),
-      ...s.proposals.filter(p => (p.s === 3 || p.s === 4) && !p.rej).map(p => ({ t: p.c + ' · ' + p.t, s: 'Proposal with the client · follow up', go: () => this.go('proposals') }))
+      ...s.leads.filter(l => st(l) < 5 && (st(l) >= 3 || l.next === 'Today')).map(l => ({ t: l.c + ' · ' + l.t, s: (st(l) >= 3 ? 'Proposal with the client' : 'Follow up today') + ' · ' + this.av(l.owner).n, go: () => this.setState({ page: 'clients', leadSel: l.id }) }))
     ].slice(0, 8);
     V.briefs = briefs.filter(b => b.st !== 'done').map(briefRow);
-    V.actions = { lead: () => this.openModal('lead'), project: () => this.openModal('project'), brief: () => this.openModal('brief'), proposals: () => this.go('proposals') };
+    V.actions = { lead: () => this.openModal('work'), project: () => this.openModal('project'), brief: () => this.openModal('brief'), proposals: () => this.go('clients') };
   }
   if (dept === 'creative') {
     const mine = isMgr ? briefs : briefs.filter(b => b.who === me);
     V.kpis = Object.keys(BRIEF).map(k => ({ l: BRIEF[k], v: String(mine.filter(b => b.st === k).length) }));
     V.briefs = mine.filter(b => b.st !== 'done').map(briefRow).concat(mine.filter(b => b.st === 'done').slice(0, 3).map(briefRow));
-    V.designers = this.teamOf('creative').map(k => ({ v: k, l: this.av(k).n }));
+    V.designers = this.teamOf('creative').map(k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c }; });
   }
   if (dept === 'operations') {
     const live = s.projects.filter(p => p.st !== 'done' && [3, 4].includes(this.stageOf(p)));

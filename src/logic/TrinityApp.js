@@ -17,6 +17,8 @@ import { pinFor, savePin, checkPin, clearPin, clearUnlocked, isUnlocked, isValid
 import { storeVals } from './view/storeops';
 import { todoMethods, todayVals } from './todos';
 import { deptMethods, deptVals } from './depts';
+import { crmMethods, crmVals, SOURCES } from './crm';
+import { projectMethods, projectVals } from './projectview';
 
 // Password of the demo accounts, so they open with one tap (see .env). Leave it out to require passwords.
 const demoPassword = () => import.meta.env.VITE_DEMO_PASSWORD || '';
@@ -327,29 +329,29 @@ export default class TrinityApp extends Logic {
     const s = this.state, R = this.ROLES[role];
     const unread = this.myNotes(s).filter(n => !n.read).length, myReq = s.reqs.filter(q => q.st === 'pending' && q.step === 4).length, openTasks = s.tasks.filter(t => t.st !== 'done').length;
     const srqN = s.requisitions.filter(q => q.st === 'pending' || q.st === 'partial').length, waitN = s.jobs.filter(j => j.s < 7 && !this.materialsReady(j)).length;
-    const lowN = s.stock.filter(i => i.q < i.min).length, finQ = s.reqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === R.k && t.st !== 'done').length;
+    const lowN = s.stock.filter(i => i.q < i.min).length, finQ = s.reqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === this.me().k && t.st !== 'done' && t.kind !== 'brief').length;
     // Each portal shows only what that person uses every day; everything else waits under "More".
     const mob = ['ceomobile','Mobile app','phone',0,{mobileRole:role}];
     const company = [['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']];
     const N = {
-      ceo:[['Every day',[['dashboard','Dashboard','grid'],['today','Daily to-do','checkSquare'],['briefing','Monday Briefing','presentation'],['requests','Approvals','banknote',myReq],['projects','Projects','folder'],['tasks','Tasks','checkSquare',openTasks],['crm','CRM','users'],['finance','Finance & Invoices','chart'],['reports','Reports','pie']]],
+      ceo:[['Every day',[['dashboard','Dashboard','grid'],['today','My work','checkSquare',myOpen],['briefing','Monday Briefing','presentation'],['requests','Approvals','banknote',myReq],['projects','Projects','folder'],['clients','Clients & leads','users'],['finance','Finance & Invoices','chart'],['reports','Reports','pie']]],
         ['More',[['calendar','Calendar','calendar'],['notifications','Notifications','bell',unread],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['procurement','Procurement','cart'],['store','Store & Inventory','package'],['requisitions','Store requisitions','clipboard',srqN],['movements','Stock ledger','receipt'],['logistics','Logistics','truck'],['staff','Staff & Reports','user'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['ceomobile','Mobile apps','phone',0,{mobileRole:'ceo'}],['field','Field capture app','camera'],...(this.canSetup() ? [['company','Company setup','settings']] : []),...(this.isAdmin() ? [['users','Users & access','shield']] : []),['settings','Settings','settings']], true]],
-      staff:[['My work',[['staffportal','My Day','home'],['today','Daily to-do','clipboard'],['tasks','My tasks','checkSquare',myOpen,{taskFilter:'mine'}],['requests','My requests','banknote'],['field','Field capture','camera']]],
+      staff:[['My work',[['staffportal','My Day','home'],['today','My work','checkSquare',myOpen],['requests','My requests','banknote'],['field','Field capture','camera']]],
         ['More',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
-      finance:[['Finance',[['financeportal','My queue','wallet',finQ],['today','Daily to-do','checkSquare'],['finance','Finance & Invoices','chart'],['requests','Requests & Floats','banknote'],['reports','Reports','pie']]],
+      finance:[['Finance',[['financeportal','My queue','wallet',finQ],['today','My work','checkSquare',myOpen],['finance','Finance & Invoices','chart'],['requests','Requests & Floats','banknote'],['reports','Reports','pie']]],
         ['More',[['proposals','Proposals','clipboard'],['procurement','Procurement','cart'],...company], true]],
-      reception:[['Front office',[['reception','Front desk','message'],['today','Daily to-do','checkSquare'],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['crm','Client enquiries','users']]],
+      reception:[['Front office',[['reception','Front desk','message'],['today','My work','checkSquare',myOpen],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['clients','Client enquiries','users']]],
         ['More',[['staff','Staff directory','user'],['briefing','Monday Briefing','presentation'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
-      store:[['Store',[['storekeeper','My store','home',lowN],['today','Daily to-do','checkSquare'],['requisitions','Requisitions','clipboard',srqN],['store','Inventory','package'],['movements','Stock ledger','receipt'],['procurement','Procurement','cart']]],
+      store:[['Store',[['storekeeper','My store','home',lowN],['today','My work','checkSquare',myOpen],['requisitions','Requisitions','clipboard',srqN],['store','Inventory','package'],['movements','Stock ledger','receipt'],['procurement','Procurement','cart']]],
         ['More',[['production','Production','printer'],['logistics','Logistics','truck'],...company], true]],
-      production:[['Printing',[['printshop','Print floor','printer',waitN],['today','Daily to-do','checkSquare'],['production','Production jobs','checkSquare'],['requisitions','Store requisitions','clipboard']]],
+      production:[['Printing',[['printshop','Print floor','printer',waitN],['today','My work','checkSquare',myOpen],['production','Production jobs','checkSquare'],['requisitions','Store requisitions','clipboard']]],
         ['More',[['store','Inventory','package'],['procurement','Procurement','cart'],...company], true]]
     };
     // Department portals: their dashboard first, then what that department works with.
     const myReqs = ['requests','My requests','banknote'], deptMore = [['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['rooms','Meeting rooms','calendar'],['settings','Settings','settings']];
-    N.clientservice = [['Client Service',[['dept','Client Service','home'],['today','Daily to-do','checkSquare'],['crm','Clients & leads','users'],['proposals','Proposals','clipboard'],['projects','Projects','folder'],['tasks','Tasks','checkSquare',myOpen,{taskFilter:'mine'}],myReqs]],['More',deptMore,true]];
-    N.creative = [['Creative',[['dept','Creative','home'],['today','Daily to-do','checkSquare'],['tasks','Tasks','checkSquare',myOpen,{taskFilter:'mine'}],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
-    N.operations = [['Operations',[['dept','Operations','home'],['today','Daily to-do','checkSquare'],['projects','Projects','folder'],['tasks','Tasks','checkSquare',myOpen,{taskFilter:'mine'}],myReqs]],['More',[['field','Field capture app','camera'], ...deptMore],true]];
+    N.clientservice = [['Client Service',[['dept','Client Service','home'],['today','My work','checkSquare',myOpen],['clients','Clients & leads','users'],['proposals','Proposals','clipboard'],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
+    N.creative = [['Creative',[['dept','Creative','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
+    N.operations = [['Operations',[['dept','Operations','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',[['field','Field capture app','camera'], ...deptMore],true]];
     // The General Manager sees what Management sees, without company setup and accounts.
     N.gm = N.ceo.map(([t, items, more]) => [t, items.filter(i => !['company','users','field','ceomobile'].includes(i[0])).map(i => (i[0] === 'requests' ? ['requests','Approvals','banknote',s.reqs.filter(q => q.st === 'pending' && q.step === 2).length] : i)), more]);
     let G = N[role] || N.ceo;
@@ -376,6 +378,9 @@ export default class TrinityApp extends Logic {
     const home = (this.ROLES[role] || ROLES.ceo).home;
     if (!page || PARKED.includes(page) || (this.state && this.isOff(page))) return home;
     if (page === 'dashboard' && !['ceo','gm','finance'].includes(role)) return home;
+    if (page === 'crm') return 'clients';
+    // Tasks and the daily to-do are one page: My work.
+    if (page === 'tasks') return 'today';
     return page;
   }
   go(page, extra) {
@@ -430,6 +435,8 @@ export default class TrinityApp extends Logic {
     const defs = {
       task:{title:'New task',sub:'Every task is linked to a project, an owner and a deadline. The person is notified.',submit:'Create task',fields:[{k:'t',l:'Task',ph:'e.g. Print 500 flyers',req:1},{k:'p',l:'Project',opts:PO},{k:'who',l:'Assign to',opts:this.assignable().map(k => ({v:k, l:this.av(k).n}))},{k:'due',l:'Deadline',ph:'e.g. Fri 25'},{k:'pri',l:'Priority',opts:[{v:'high',l:'High'},{v:'med',l:'Medium'},{v:'low',l:'Low'}]}]},
       req:{title:'Request money',sub:'Choose the kind of request.',submit:'Continue',fields:[{k:'type',l:'Type of request',opts:[{v:'project',l:'Project request'},{v:'internal',l:'Internal office request'},{v:'emergency',l:'Emergency request'},...((this.state.role || 'ceo') === 'ceo' ? [{v:'management',l:'Management request'}] : [])]}]},
+      work:{title:'New work',sub:'Record work that came in and choose who in Client Service follows it up. They are notified.',submit:'Create lead',fields:[{k:'c',l:'Client',ph:'Company name',req:1},{k:'t',l:'What do they need?',ph:'e.g. Roadshow in 6 regions',req:1},{k:'owner',l:'Follow-up by',opts:(this.isTop() || this.isManagerOf('clientservice') ? this.teamOf('clientservice') : [this.me().k]).map(k => ({v:k,l:this.av(k).n}))},{k:'src',l:'Came in by',opts:O(SOURCES)},{k:'v',l:'Estimated value (TZS M)',type:'number',ph:'e.g. 80'},{k:'contact',l:'Contact person',ph:'Name and phone'},{k:'note',l:'Notes',ph:'What was asked, deadlines, budget'}]},
+      customer:{title:'Add customer',sub:'Clients we have worked with. TIN and VRN are used on invoices.',submit:'Add customer',fields:[{k:'n',l:'Company',ph:'e.g. CRDB Bank PLC',req:1},{k:'contact',l:'Contact person',ph:'Name · title'},{k:'phone',l:'Phone',ph:'+255 7xx xxx xxx'},{k:'email',l:'Email',ph:'name@company.co.tz'},{k:'tin',l:'TIN',ph:'100-000-000'},{k:'city',l:'City',ph:'Dar es Salaam'},{k:'owner',l:'Account owner',opts:this.teamOf('clientservice').map(k => ({v:k,l:this.av(k).n}))}]},
       brief:{title:'Send brief to Creative',sub:'The Creative lead receives it and assigns a designer. You are told when artwork goes to the client.',submit:'Send brief',fields:[{k:'t',l:'What is needed',ph:'e.g. Stage backdrop and 3 roll-up banners',req:1},{k:'p',l:'Project',opts:PO},{k:'place',l:'For',opts:O(['Indoor event','Outdoor event','Print','Digital'])},{k:'note',l:'Brief memo',ph:'Theme, sizes, client wishes, deadlines'},{k:'due',l:'Needed by',ph:'e.g. Fri 21'}]},
       reqProject:{title:'Project request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'amt',l:'Amount (TZS)',type:'number',ph:'300000',req:1},{k:'cat',l:'Category',opts:O(['Team','Operations','Supplies'])},{k:'p',l:'Project',opts:PO},{k:'purpose',l:'Purpose',ph:'What is the money for?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'}]},
       reqInternal:{title:'Internal office request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'title',l:'Title',ph:'e.g. Office internet, May',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'150000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for and why?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'}]},
@@ -467,6 +474,8 @@ export default class TrinityApp extends Logic {
     const P = this.proj(f.p);
     if (m.act === 'task') this.createTask(f);
     if (m.act === 'brief') this.createBrief(f);
+    if (m.act === 'work') this.newWork(f);
+    if (m.act === 'customer') this.addCustomer(f);
     if (m.act === 'req') { const next = {project:'reqProject', internal:'reqInternal', emergency:'reqEmergency', management:'reqMgmt'}[f.type] || 'reqProject'; const keep = Object.assign({who:f.who}, f.p ? {p:f.p} : {}); this.setState({modal:null}); setTimeout(() => this.openModal(next, keep), 0); return; }
     if (/^req(Project|Internal|Emergency|Mgmt)$/.test(m.act)) this.createRequest(Object.assign({}, f, {type:{reqProject:'project', reqInternal:'internal', reqEmergency:'emergency', reqMgmt:'management'}[m.act]}));
     if (m.act === 'lead') { this.setState(x => ({leads:[{id:'L'+Date.now(),c:f.c,t:f.t,v:+f.v||0,s:0,src:f.src}, ...x.leads]})); this.toast('Lead added · ' + f.c); this.log('users','blue','New lead · ' + f.c, f.t); }
@@ -573,4 +582,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals }, storeMethods, adminMethods, todoMethods, deptMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods);

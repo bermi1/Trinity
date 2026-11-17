@@ -18,24 +18,24 @@ export function seed() {
   tasks:[
     // Design briefs from Client Service to Creative (kind 'brief').
     {id:'B1',kind:'brief',t:'Stage backdrop and 3 roll-up banners',p:'PRJ-0235',who:'RS',from:'NL',place:'Indoor event',note:'Gala dinner, gold and black theme. Backdrop 6 m wide.',due:'Fri 21',st:'todo',pri:'high'},
-    {id:'B2',kind:'brief',t:'Truck wrap artwork · 22 trucks',p:'PRJ-0231',who:'DS',from:'NL',place:'Outdoor event',note:'Use the new logo lock-up; client wants two options.',due:'Mon 24',st:'prog',pri:'med'},
-    {id:'B3',kind:'brief',t:'Outlet wall branding layouts',p:'PRJ-0228',who:'DS',from:'KM',place:'Outdoor event',note:'8 outlets, measurements in the site photos.',due:'Wed 19',st:'review',pri:'med'},
-    {id:'T1',t:'Load display units + gazebo for Mwanza',p:'PRJ-0231',who:'AJ',due:'Today 14:00',st:'prog',pri:'high'},
-    {id:'T2',t:'Confirm venue permits · Musoma & Bukoba',p:'PRJ-0231',who:'GM',due:'Today 17:00',st:'todo',pri:'high'},
-    {id:'T3',t:'Crew briefing pack + brand guidelines',p:'PRJ-0231',who:'SK',due:'Wed 23',st:'review',pri:'med'},
-    {id:'T4',t:'Print 2,000 Swahili flyers',p:'PRJ-0231',who:'JA',due:'Thu 24',st:'todo',pri:'med'},
-    {id:'T5',t:'Install wall branding · outlets 4–8',p:'PRJ-0228',who:'JM',due:'Wed 23',st:'prog',pri:'high'},
-    {id:'T6',t:'Order 2 extra vinyl rolls',p:'PRJ-0228',who:'FH',due:'Today',st:'todo',pri:'high'},
-    {id:'T7',t:'Get 2 supplier quotes for stand print',p:'PRJ-0233',who:'NL',due:'Today 14:00',st:'prog',pri:'high'},
-    {id:'T8',t:'Stand carpentry sign-off',p:'PRJ-0233',who:'MM',due:'Thu 24',st:'todo',pri:'med'},
+    {id:'B2',kind:'brief',t:'Truck wrap artwork · 22 trucks',p:'PRJ-0231',who:'DS',from:'NL',place:'Outdoor event',note:'Use the new logo lock-up; client wants two options.',due:'Mon 24',st:'prog',pri:'med',files:[{name:'Truck wrap · option A.svg',url:'/mockups/truck.svg',mime:'image/svg+xml',by:'DS',at:'2026-11-16'}]},
+    {id:'B3',kind:'brief',t:'Outlet wall branding layouts',p:'PRJ-0228',who:'DS',from:'KM',place:'Outdoor event',note:'8 outlets, measurements in the site photos.',due:'Wed 19',st:'review',pri:'med',files:[{name:'Outlet wall · layout.svg',url:'/mockups/stand.svg',mime:'image/svg+xml',by:'DS',at:'2026-11-15'},{name:'Roll-up 85x200.svg',url:'/mockups/rollup.svg',mime:'image/svg+xml',by:'DS',at:'2026-11-15'}]},
+    {id:'T1',by:'MM',t:'Load display units + gazebo for Mwanza',p:'PRJ-0231',who:'AJ',due:'Today 14:00',st:'prog',pri:'high'},
+    {id:'T2',by:'MM',t:'Confirm venue permits · Musoma & Bukoba',p:'PRJ-0231',who:'GM',due:'Today 17:00',st:'todo',pri:'high'},
+    {id:'T3',by:'MM',t:'Crew briefing pack + brand guidelines',p:'PRJ-0231',who:'SK',due:'Wed 23',st:'review',pri:'med'},
+    {id:'T4',by:'MM',t:'Print 2,000 Swahili flyers',p:'PRJ-0231',who:'JA',due:'Thu 24',st:'todo',pri:'med'},
+    {id:'T5',by:'SK',t:'Install wall branding · outlets 4–8',p:'PRJ-0228',who:'JM',due:'Wed 23',st:'prog',pri:'high'},
+    {id:'T6',by:'MM',t:'Order 2 extra vinyl rolls',p:'PRJ-0228',who:'FH',due:'Today',st:'todo',pri:'high'},
+    {id:'T7',by:'GN',t:'Get 2 supplier quotes for stand print',p:'PRJ-0233',who:'NL',due:'Today 14:00',st:'prog',pri:'high'},
+    {id:'T8',by:'GN',t:'Stand carpentry sign-off',p:'PRJ-0233',who:'MM',due:'Thu 24',st:'todo',pri:'med'},
     {id:'T9',t:'QC 400 branded T-shirts',p:'PRJ-0226',who:'MM',due:'Tue 22',st:'done',pri:'med'},
-    {id:'T10',t:'Venue walkthrough · Serena ballroom',p:'PRJ-0235',who:'NL',due:'Fri 25',st:'todo',pri:'low'},
-    {id:'T11',t:'Billboard site photos · 6 sites',p:'PRJ-0230',who:'GM',due:'Fri 25',st:'review',pri:'med'},
-      {id:'T12',t:'Final artwork approval from client',p:'PRJ-0224',who:'RS',due:'Mon 28',st:'prog',pri:'low'},
+    {id:'T10',by:'DK',t:'Venue walkthrough · Serena ballroom',p:'PRJ-0235',who:'NL',due:'Fri 25',st:'todo',pri:'low'},
+    {id:'T11',by:'MM',t:'Billboard site photos · 6 sites',p:'PRJ-0230',who:'GM',due:'Fri 25',st:'review',pri:'med'},
+      {id:'T12',by:'NL',t:'Final artwork approval from client',p:'PRJ-0224',who:'RS',due:'Mon 28',st:'prog',pri:'low'},
     {id:'T13',t:'Collect roll-ups from store · SIN-0932',p:'PRJ-0231',who:'JM',due:'Today 07:30',st:'done',pri:'med'},
-    {id:'T14',t:'Install wall branding · Kariakoo outlet 4 of 8',p:'PRJ-0228',who:'JM',due:'Today 08:00',st:'prog',pri:'high'},
-    {id:'T15',t:'Check printing production · print floor',p:'PRJ-0233',who:'JM',due:'Today 10:00',st:'todo',pri:'med'},
-    {id:'T16',t:'Deliver banners · Mikocheni',p:'PRJ-0226',who:'JM',due:'Today 14:00',st:'todo',pri:'med'}
+    {id:'T14',by:'SK',t:'Install wall branding · Kariakoo outlet 4 of 8',p:'PRJ-0228',who:'JM',due:'Today 08:00',st:'prog',pri:'high'},
+    {id:'T15',by:'MM',t:'Check printing production · print floor',p:'PRJ-0233',who:'JM',due:'Today 10:00',st:'todo',pri:'med'},
+    {id:'T16',by:'SK',t:'Deliver banners · Mikocheni',p:'PRJ-0226',who:'JM',due:'Today 14:00',st:'todo',pri:'med'}
   ],
   reqs:[
     {id:'REQ-0418',who:'JM',amt:300000,cat:'Transport',purpose:'Bajaji and daladala fares for a 6-person install crew, Mwanza activations Tue–Thu. The company van is on the Musoma run.',p:'PRJ-0231',need:'Today 12:00',step:4,st:'pending',log:['07:12','07:40','08:05','08:38']},
@@ -81,15 +81,27 @@ export function seed() {
     {id:'PR-0212',t:'Spray adhesive × 24',p:'PRJ-0228',v:0.43,s:0,sup:'—',sku:'ADH-SPR',qty:24},
     {id:'PR-0206',t:'Polo shirts × 300',p:'PRJ-0235',v:3.9,s:1,sup:'Mavazi Wear'}
   ],
+  // Leads: New → Contacted → Meeting → Proposal sent → Negotiation → Won / Lost (sv:2 = these stages).
   leads:[
-    {id:'L1',c:'Safari Mobile',t:'Road show · 6 regions',v:185,s:0,src:'Website'},
-    {id:'L2',c:'Serena Hotels',t:'Lobby & signage refresh',v:38,s:0,src:'Referral'},
-    {id:'L3',c:'Nyota Insurance',t:'AGM 2026 production',v:64,s:1,src:'Existing client'},
-    {id:'L4',c:'Zawadi Telecom',t:'Christmas activations',v:96,s:1,src:'Tender'},
-    {id:'L5',c:'Kilimo Bank',t:'Branch rebrand · 18 branches',v:240,s:2,src:'Existing client'},
-    {id:'L6',c:'Tumaini Beverages',t:'Sampling campaign',v:78,s:2,src:'Website'},
-    {id:'L7',c:'Bahari Logistics',t:'Fleet wrap · 22 trucks',v:55,s:3,src:'Existing client'},
-    {id:'L8',c:'Mlimani Bank',t:'Expo stand 2026',v:126,s:4,src:'Tender'}
+    {id:'L1',sv:2,c:'Safari Mobile',t:'Road show · 6 regions',v:185,s:0,src:'Email to Management',owner:'KM',next:'Today',at:dayKey(0),hist:[{s:0,by:'DK',at:dayKey(0),note:'Received by email, assigned to Khadija'}]},
+    {id:'L2',sv:2,c:'Serena Hotels',t:'Lobby & signage refresh',v:38,s:1,src:'Referral',owner:'KM',next:'Fri',at:dayKey(-2),hist:[{s:0,by:'NL',at:dayKey(-4)},{s:1,by:'KM',at:dayKey(-2),note:'Called the marketing manager'}]},
+    {id:'L3',sv:2,c:'Nyota Insurance',t:'AGM 2026 production',v:64,s:2,src:'Existing client',owner:'NL',next:'Thu',at:dayKey(-1),hist:[{s:1,by:'NL',at:dayKey(-6)},{s:2,by:'NL',at:dayKey(-1),note:'Site visit at the venue'}]},
+    {id:'L4',sv:2,c:'Zawadi Telecom',t:'Christmas activations · 4 regions',v:96,s:3,src:'Tender',owner:'NL',next:'Mon',at:dayKey(-9),proposal:{name:'Zawadi Christmas proposal.pdf',size:842000,by:'NL',at:dayKey(-9)},hist:[{s:1,by:'NL',at:dayKey(-15)},{s:2,by:'NL',at:dayKey(-12)},{s:3,by:'NL',at:dayKey(-9),note:'Proposal emailed to procurement'}]},
+    {id:'L5',sv:2,c:'Kilimo Bank',t:'Branch rebrand · 18 branches',v:240,s:4,src:'Existing client',owner:'NL',next:'Tomorrow',at:dayKey(-1),proposal:{name:'Kilimo Bank rebrand proposal.pdf',size:1240000,by:'NL',at:dayKey(-5)},hist:[{s:3,by:'NL',at:dayKey(-5)},{s:4,by:'NL',at:dayKey(-1),note:'Client asked for a 5% discount'}]},
+    {id:'L6',sv:2,c:'Tumaini Beverages',t:'Sampling campaign · 3 cities',v:78,s:3,src:'Phone call',owner:'KM',next:'Wed',at:dayKey(-3),proposal:{name:'Tumaini sampling proposal.pdf',size:610000,by:'KM',at:dayKey(-3)},hist:[{s:3,by:'KM',at:dayKey(-3)}]},
+    {id:'L7',sv:2,c:'Bahari Logistics',t:'Fleet wrap · 22 trucks',v:55,s:5,src:'Existing client',owner:'NL',at:dayKey(-7),hist:[{s:5,by:'NL',at:dayKey(-7),note:'PO received'}]},
+    {id:'L8',sv:2,c:'Coastal Cement',t:'Dealer signage · 40 outlets',v:72,s:6,src:'Tender',owner:'KM',lost:'Chose a competitor',at:dayKey(-10),hist:[{s:6,by:'KM',at:dayKey(-10),note:'Lower price from another agency'}]}
+  ],
+  // Customers we work with (the directory).
+  customers:[
+    {id:'C1',n:'Serengeti Telecom',contact:'Asha Mollel · Brand Manager',phone:'+255 754 210 334',email:'asha.mollel@serengeti.co.tz',tin:'102-334-871',city:'Dar es Salaam',owner:'NL'},
+    {id:'C2',n:'Pwani Beverages',contact:'Hamisi Juma · Trade Marketing',phone:'+255 713 448 120',email:'hamisi@pwanibev.co.tz',tin:'117-902-445',city:'Dar es Salaam',owner:'KM'},
+    {id:'C3',n:'Mlimani Bank',contact:'Rehema Kweka · Marketing',phone:'+255 767 300 912',email:'r.kweka@mlimanibank.co.tz',tin:'100-221-118',city:'Dar es Salaam',owner:'NL'},
+    {id:'C4',n:'Kivuko Foods',contact:'Joseph Mrema · Sales Director',phone:'+255 715 662 004',email:'joseph@kivuko.co.tz',tin:'131-558-290',city:'Arusha',owner:'KM'},
+    {id:'C5',n:'Safari Mobile',contact:'Fatuma Said · Head of Brand',phone:'+255 744 118 650',email:'fatuma.said@safarimobile.co.tz',tin:'109-776-321',city:'Dar es Salaam',owner:'NL'},
+    {id:'C6',n:'Bahari Logistics',contact:'Peter Massawe · Operations',phone:'+255 682 905 770',email:'pmassawe@bahari.co.tz',tin:'124-310-667',city:'Dar es Salaam',owner:'NL'},
+    {id:'C7',n:'Kilimo Bank',contact:'Grace Lyimo · Procurement',phone:'+255 754 880 213',email:'procurement@kilimobank.co.tz',tin:'100-912-504',city:'Dodoma',owner:'NL'},
+    {id:'C8',n:'Nyota Insurance',contact:'David Mushi · Corporate Affairs',phone:'+255 716 540 228',email:'dmushi@nyota.co.tz',tin:'118-445-902',city:'Dar es Salaam',owner:'NL'}
   ],
   staff:[
     {k:'SK',role:'Project Manager',dept:'operations',rep:true,fl:0},{k:'MM',role:'Operations Manager',dept:'operations',rep:true,fl:0},{k:'NL',role:'Client Service Manager',dept:'clientservice',rep:true,fl:0},{k:'RT',role:'Finance Officer',dept:'finance',rep:true,fl:0},

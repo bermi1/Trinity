@@ -1,32 +1,9 @@
+import BriefItem from '../../components/BriefItem';
 import { PageHead, Card, Btn, Avatar, Kpis, Pill, Empty } from '../../ui/kit';
 
-const BRIEF_PILL = { todo: ['#FBF1DD', '#8A6414'], prog: ['#EFE8FA', '#5A2FA8'], review: ['#E9EFFA', '#3559A8'], done: ['#E6F4EC', '#1F7549'] };
-
-function Briefs({ list, designers, canAssign, from }) {
+function Briefs({ list, designers, from }) {
   if (!list.length) return <Empty>No open briefs.</Empty>;
-  return (
-    <ul className="dp-briefs">
-      {list.map(b => (
-        <li key={b.id} data-brief={b.id}>
-          <div className="dp-brief-main">
-            <b>{b.t}</b>
-            <span className="k-sub">{[b.client, b.place, 'due ' + b.due].filter(Boolean).join(' · ')}</span>
-            {b.note ? <span className="dp-note">{b.note}</span> : null}
-            <span className="k-sub">{from ? 'From ' + b.from + ' · ' : ''}{canAssign ? null : 'With ' + b.who}</span>
-          </div>
-          <div className="dp-brief-side">
-            <Pill l={b.stl} bg={BRIEF_PILL[b.st][0]} fg={BRIEF_PILL[b.st][1]} />
-            {canAssign && designers ? (
-              <select className="k-select" value={b.whoK} onChange={e => b.assign(e.target.value)} aria-label={'Designer for ' + b.t}>
-                {designers.map(d => <option key={d.v} value={d.v}>{d.l}</option>)}
-              </select>
-            ) : null}
-            {b.next && designers ? <Btn kind="dark" onClick={b.move}>{b.next}</Btn> : null}
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
+  return <ul className="dp-briefs bi-list">{list.map(b => <BriefItem key={b.id} b={b} designers={designers} showFrom={from} />)}</ul>;
 }
 
 function Team({ D }) {
@@ -111,7 +88,7 @@ export default function DeptPage({ v }) {
 
       {D.dept === 'creative' ? (
         <Card title={D.isMgr ? 'Brief inbox' : 'My briefs'} aside={<span className="k-sub">From Client Service</span>}>
-          <Briefs list={D.briefs} designers={D.designers} canAssign={D.isMgr} from />
+          <Briefs list={D.briefs} designers={D.isMgr ? D.designers : null} from />
         </Card>
       ) : null}
 

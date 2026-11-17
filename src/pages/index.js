@@ -2,7 +2,7 @@
 import DashboardPage from './DashboardPage';
 import BriefingPage from './BriefingPage';
 import ProjectsPage from './ProjectsPage';
-import ProjectDetailPage from './ProjectDetailPage';
+import ProjectView from './custom/ProjectView';
 import TasksPage from './TasksPage';
 import RequestsPage from './RequestsPage';
 import FinancePage from './FinancePage';
@@ -30,7 +30,7 @@ export default {
   dashboard: DashboardPage,
   briefing: BriefingPage,
   projects: ProjectsPage,
-  project: ProjectDetailPage,
+  project: ProjectView,
   tasks: TasksPage,
   requests: RequestsPage,
   finance: FinancePage,

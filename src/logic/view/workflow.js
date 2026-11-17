@@ -1,3 +1,4 @@
+import { DEPTS } from '../constants';
 // Ported from the Claude Design file (design/project/Trinity Mark 360 App.dc.html).
 // Values for the briefing, projects, tasks and money requests pages.
 export function pageVals(s, IC, ST, narrow) {
@@ -36,8 +37,11 @@ export function pageVals(s, IC, ST, narrow) {
 
   // Projects
   const pf = s.projFilter;
-  V.projChips = [['all','All'],['on','On track'],['risk','At risk'],['late','Delayed'],['done','Completed']].map(([k,l]) => ({l:l + ' · ' + (k === 'all' ? s.projects.length : s.projects.filter(p => p.st === k).length), on:() => this.setState({projFilter:k}), bg:pf === k ? '#2B1459' : '#fff', c:pf === k ? '#fff' : '#17152A', bd:pf === k ? '#2B1459' : '#E8E4EF'}));
-  V.projRows = s.projects.filter(p => pf === 'all' || p.st === pf).map(p => { const pm = this.av(p.pm), u = p.bud ? p.spent / p.bud : 0; return Object.assign({id:p.id, name:p.name, client:p.client, pmName:pm.n, pmC:pm.c, pmI:pm.i, prog:p.prog + '%', progW:p.prog + '%', progC:ST[p.st].c, used:Math.round(u*100) + '%', usedC:u > 1 ? '#B23A46' : u > .85 ? '#8A6414' : '#17152A', val:this.fmtM(p.val), due:p.due, on:() => this.go('project',{projectId:p.id})}, pill([ST[p.st].l, ST[p.st].bg, ST[p.st].fg])); });
+  // Each person sees only the projects they may see; money columns only for those who handle money.
+  const vis = this.visibleProjects(), seeMoney = ['ceo','gm','finance'].includes(s.role || 'ceo') || this.isManagerOf('operations');
+  V.projMoney = seeMoney;
+  V.projChips = [['all','All'],['on','On track'],['risk','At risk'],['late','Delayed'],['done','Completed']].map(([k,l]) => ({l:l + ' · ' + (k === 'all' ? vis.length : vis.filter(p => p.st === k).length), on:() => this.setState({projFilter:k}), bg:pf === k ? '#2B1459' : '#fff', c:pf === k ? '#fff' : '#17152A', bd:pf === k ? '#2B1459' : '#E8E4EF'}));
+  V.projRows = vis.filter(p => pf === 'all' || p.st === pf).map(p => { const pm = this.av(p.pm), u = p.bud ? p.spent / p.bud : 0; return Object.assign({id:p.id, name:p.name, client:p.client, pmName:pm.n, pmC:pm.c, pmI:pm.i, prog:p.prog + '%', progW:p.prog + '%', progC:ST[p.st].c, used:Math.round(u*100) + '%', usedC:u > 1 ? '#B23A46' : u > .85 ? '#8A6414' : '#17152A', val:this.fmtM(p.val), due:p.due, on:() => this.go('project',{projectId:p.id})}, pill([ST[p.st].l, ST[p.st].bg, ST[p.st].fg])); });
   V.projEmpty = V.projRows.length === 0;
   V.newProject = () => this.openModal('project');
 
@@ -61,7 +65,7 @@ export function pageVals(s, IC, ST, narrow) {
     }, pill([ST[P.st].l, ST[P.st].bg, ST[P.st].fg]));
   } else V.P = {stages:[], tasks:[], reqs:[], team:[]};
   // Staff, Reception and Printing see projects without money figures.
-  if (['staff','reception','production','creative'].includes(s.role || 'ceo')) {
+  if (!seeMoney) {
     const hide = {val:'—', margin:'—', spent:'—', bud:'—', remaining:'—', over:false, overBy:'—', spentW:'0%', usedPct:'—', profit:'—', invoiced:'—', budLine:'—'};
     V.P = Object.assign({}, V.P, hide, {reqs:(V.P.reqs || []).filter(r => r.who === this.av(this.me().k).n)});
     V.projRows = V.projRows.map(r => Object.assign({}, r, {val:'—', used:'—'}));
@@ -117,5 +121,25 @@ export function pageVals(s, IC, ST, narrow) {
   V.floats = fl.map(p => { const a = this.av(p.k), late = p.k === 'PL'; return {n:a.n, i:a.i, c:a.c, role:p.role, amt:this.fmtT(p.fl), age:AGE[p.k] || 'today', stl:late ? 'Receipts overdue' : 'In use', stbg:late ? '#FBEDEE' : '#EFE8FA', stfg:late ? '#B23A46' : '#5A2FA8', rec:() => { this.setState(x => ({staff:x.staff.map(q => q.k === p.k ? Object.assign({}, q, {fl:0}) : q)})); this.toast('Float reconciled · ' + a.n); this.log('receipt','green','Float reconciled · ' + this.fmtT(p.fl), a.n + ' · receipts verified'); }}; });
   V.floatsEmpty = V.floats.length === 0;
   V.newReq = () => this.openModal('req');
+  // Floats and money totals are for Finance and Management only.
+  V.showFloats = ['ceo','finance'].includes(role);
+  if (!V.showFloats) { V.floatKpis = []; V.floats = []; V.floatsEmpty = false; }
+  // Everyone else gets "My requests": what they asked for, where it is, and what happened.
+  // A department manager also sees the requests of their own team.
+  if (ownOnly) {
+    const me = this.me().k, dept = this.myDept(), mgr = dept && this.isManagerOf(dept), team = mgr ? this.teamOf(dept) : [me];
+    const scope = mgr && s.myReqScope === 'team' ? 'team' : 'mine';
+    const list = s.reqs.filter(r => (scope === 'team' ? team.includes(r.who) : r.who === me));
+    const row = r => {
+      const steps = this.CHAIN.map((l, i) => ({ l: i === 0 ? 'Sent' : i === 5 ? 'Paid' : l, skip:r.log[i] === 'Not needed', done:r.st === 'paid' || i < r.step || (r.st === 'approved' && i < 5), cur:r.st === 'pending' && i === r.step, rej:r.st === 'rejected' && i === r.step, at:r.log[i] && r.log[i] !== 'Not needed' ? r.log[i] : '' })).filter((x, i) => !x.skip && (i !== 1 || !!r.log[1]));
+      const P = this.proj(r.p);
+      return {id:r.id, what:this.reqWhat(r), purpose:r.purpose || '', amt:this.fmtT(r.amt), who:this.av(r.who).n, mine:r.who === me, where:r.p ? P.client + ' · ' + P.name : 'Office', need:r.need || '',
+        status:this.reqStatus(r), tone:this.reqTone(r), open:r.st === 'pending' || r.st === 'approved', steps, note:r.st === 'rejected' ? (r.reason || r.log[r.step] || '') : '',
+        sel:s.reqSel === r.id, toggle:() => this.setState({reqSel:s.reqSel === r.id ? null : r.id}),
+        nudge:r.st === 'pending' && r.who === me ? () => { const to = this.approverAt(r, r.step); this.remind(to, r.id + ' is waiting for your approval', 'requests', 'banknote', this.av(r.who).n + ' · ' + this.fmtT(r.amt)); this.toast('Reminder sent to ' + this.av(to).n); } : null};
+    };
+    V.MR = {open:list.filter(r => r.st === 'pending' || r.st === 'approved').map(row), done:list.filter(r => r.st === 'paid' || r.st === 'rejected').map(row),
+      mgr, scope, deptL:mgr ? (DEPTS[dept] || {}).l || 'My team' : '', setScope:k => this.setState({myReqScope:k, reqSel:null}), newReq:() => this.openModal('req')};
+  }
   return Object.assign(V, this.pageVals2(s, IC, ST, narrow));
 }

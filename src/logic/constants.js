@@ -62,10 +62,10 @@ export const ROLES = {
 export const TABS = {
   ceo:[['dashboard','Home','home'],['requests','Approvals','banknote'],['projects','Projects','folder'],['notifications','Alerts','bell']],
   gm:[['dashboard','Home','home'],['requests','Approvals','banknote'],['projects','Projects','folder'],['notifications','Alerts','bell']],
-  clientservice:[['dept','Home','home'],['crm','Clients','users'],['today','To-do','clipboard'],['notifications','Alerts','bell']],
-  creative:[['dept','Home','home'],['today','To-do','clipboard'],['tasks','Tasks','checkSquare',0,{taskFilter:'mine'}],['notifications','Alerts','bell']],
-  operations:[['dept','Home','home'],['projects','Projects','folder'],['today','To-do','clipboard'],['notifications','Alerts','bell']],
-  staff:[['staffportal','My Day','home'],['today','To-do','clipboard'],['tasks','Tasks','checkSquare',0,{taskFilter:'mine'}],['notifications','Alerts','bell']],
+  clientservice:[['dept','Home','home'],['clients','Clients','users'],['today','My work','checkSquare'],['notifications','Alerts','bell']],
+  creative:[['dept','Home','home'],['today','My work','checkSquare'],['requests','Requests','banknote'],['notifications','Alerts','bell']],
+  operations:[['dept','Home','home'],['projects','Projects','folder'],['today','My work','checkSquare'],['notifications','Alerts','bell']],
+  staff:[['staffportal','My Day','home'],['today','My work','checkSquare'],['requests','Requests','banknote'],['notifications','Alerts','bell']],
   finance:[['financeportal','Queue','wallet'],['requests','Requests','banknote'],['finance','Finance','chart'],['notifications','Alerts','bell']],
   reception:[['reception','Desk','message'],['rooms','Rooms','calendar'],['calendar','Calendar','calendar'],['notifications','Alerts','bell']],
   store:[['storekeeper','Store','home'],['requisitions','Requests','clipboard'],['store','Inventory','package'],['notifications','Alerts','bell']],
@@ -85,7 +85,7 @@ export const REQ_TYPES = {
   management:{l:'Management request', skip:[1,2,4]}
 };
 // Parked for now: hidden from every menu, search and portal list until the company is ready for them.
-export const PARKED = ['logistics','production','store','requisitions','movements','storekeeper','reports','documents','procurement'];
+export const PARKED = ['logistics','production','store','requisitions','movements','storekeeper','reports','documents','procurement','proposals'];
 export const HIDDEN_ROLES = ['store'];
 // Departments: who leads each (Company setup can change it) and the portal of its people.
 export const DEPTS = {
