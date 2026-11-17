@@ -1,5 +1,8 @@
 // Ported from the Claude Design file (design/project/Trinity Mark 360 App.dc.html).
 // Demo data. Every key here is saved to the browser and synced across tabs.
+// Local date as YYYY-MM-DD, `offset` days from today.
+export const dayKey = (offset = 0) => { const d = new Date(); d.setDate(d.getDate() + offset); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+
 export function seed() {
   return {
   projects:[
@@ -131,6 +134,19 @@ export function seed() {
     {id:'MV-0201',d:'Wed 16 · 15:10',sku:'PET-ROLL',type:'receipt',qty:6,ref:'GRN-0396 · Chapa Supplies',p:'',by:'FH',v:1260000}
   ],
   reportsSub:44, reportsToday:{}, reportText:'', fieldReq:{amt:'',purpose:'',p:'PRJ-0231',cat:'Transport'},
+  // Company-wide setup: requests up to smallLimit (TZS) need only the PM and Finance; `off` hides sections.
+  company:{smallLimit:200000, off:['ceomobile']},
+  // Daily to-do: what each person did today and plans to do.
+  todos:[
+    {id:'TD-1',k:'GM',t:'Delivered branded tents to Mwanza site',st:'done',d:dayKey(0),doneOn:dayKey(0)},
+    {id:'TD-2',k:'GM',t:'Set up 4 gazebos for the roadshow',st:'todo',d:dayKey(0)},
+    {id:'TD-3',k:'GM',t:'Send site photos to Sarah',st:'todo',d:dayKey(-1)},
+    {id:'TD-4',k:'SK',t:'Confirmed truck wrap artwork with client',st:'done',d:dayKey(0),doneOn:dayKey(0)},
+    {id:'TD-5',k:'SK',t:'Approve roadshow budget changes',st:'todo',d:dayKey(0)},
+    {id:'TD-6',k:'JA',t:'Printed 24 roll-up banners',st:'done',d:dayKey(0),doneOn:dayKey(0)},
+    {id:'TD-7',k:'JA',t:'Laminate truck wrap panels',st:'todo',d:dayKey(0)},
+    {id:'TD-8',k:'FH',t:'Issued vinyl and laminate for JOB-0313',st:'done',d:dayKey(0),doneOn:dayKey(0)}
+  ],
   proposals:[
     {id:'PRO-0152',c:'Zawadi Telecom',t:'Christmas activations · 4 regions',v:96,s:0,own:'NL',valid:'30 Oct'},
     {id:'PRO-0150',c:'Nyota Insurance',t:'AGM 2026 production',v:64,s:1,own:'NL',valid:'22 Oct'},

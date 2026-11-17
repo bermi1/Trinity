@@ -102,12 +102,12 @@ export default function ProjectDetailPage({ v }) {
           ) : null}
         </div>
         <div style={{ overflowX: "auto", paddingBottom: "10px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(15,minmax(58px,1fr))", gap: "4px", minWidth: "880px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${(v.P.stages || []).length || 1},minmax(64px,1fr))`, gap: "6px" }}>
             {(v.P.stages || []).map((g, _i0) => (
               <Fragment key={_i0}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "7px" }}>
                   <span style={{ height: "6px", borderRadius: "3px", background: g.col, transition: "background .3s" }} />
-                  <span style={{ fontSize: "10.5px", lineHeight: "1.25", color: g.c, fontWeight: g.fw }}>
+                  <span style={{ fontSize: "12.5px", lineHeight: "1.25", color: g.c, fontWeight: g.fw }}>
                     {g.l}
                   </span>
                 </div>

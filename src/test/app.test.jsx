@@ -148,9 +148,29 @@ describe('approval chain permissions', () => {
     expect(app.canPay()).toBe(true);
   });
 
+  it('small requests need only the Project Manager and Finance; the skipped steps show as not needed', () => {
+    const app = new TrinityApp();
+    app.setState({ reqs: [{ id: 'REQ-8', who: 'GM', p: 'PRJ-0231', amt: 150000, step: 1, st: 'pending', log: ['09:00'] }] });
+    app.decide(app.state.reqs[0], true);
+    expect(app.state.reqs[0].step).toBe(3);
+    expect(app.state.notes[0].to).toBe('RT');
+    app.decide(app.state.reqs[0], true);
+    expect(app.state.reqs[0]).toMatchObject({ step: 5, st: 'approved' });
+    expect(app.state.reqs[0].log.filter(t => t === 'Not needed')).toHaveLength(2);
+    expect(app.state.reqs[0].log[2]).toBe('Not needed');
+    expect(app.state.reqs[0].log[4]).toBe('Not needed');
+  });
+
+  it('the limit is set by the company; 0 sends every request through all steps', () => {
+    const app = new TrinityApp();
+    app.setState({ company: { smallLimit: 0, off: [] }, reqs: [{ id: 'REQ-7', who: 'GM', p: 'PRJ-0231', amt: 5000, step: 1, st: 'pending', log: [] }] });
+    app.decide(app.state.reqs[0], true);
+    expect(app.state.reqs[0].step).toBe(2);
+  });
+
   it('moves one step per approval and notifies the next approver', () => {
     const app = new TrinityApp();
-    app.setState({ reqs: [{ id: 'REQ-9', who: 'GM', p: 'PRJ-0231', amt: 1000, step: 1, st: 'pending', log: [] }] });
+    app.setState({ reqs: [{ id: 'REQ-9', who: 'GM', p: 'PRJ-0231', amt: 900000, step: 1, st: 'pending', log: [] }] });
     for (const [step, to] of [[2, 'MM'], [3, 'RT'], [4, 'DK']]) {
       app.decide(app.state.reqs[0], true);
       expect(app.state.reqs[0].step).toBe(step);

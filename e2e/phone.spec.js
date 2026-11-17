@@ -39,7 +39,7 @@ test('tabs, back button and the phone’s back gesture move between screens', as
 
   await tab(page, 'Projects');
   await page.getByText('Lake Zone Roadshow').first().click();
-  await expect(page.getByText(/Stage 9 of 15/)).toBeVisible();
+  await expect(page.getByText(/Stage 3 of 5/)).toBeVisible();
   await expect(page.locator('main.m-screen')).toHaveClass(/is-push/);
   await page.getByRole('button', { name: 'Back' }).click();
   await expect(title(page)).toHaveText('Projects');

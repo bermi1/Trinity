@@ -11,12 +11,12 @@ export function overlayVals(s, IC) {
   V.modalSubmit = () => this.submitModal();
   V.modalKey = e => { if (e.key === 'Enter') this.submitModal(); };
   V.stop = e => e.stopPropagation();
-  const pg = [['dashboard','Dashboard','grid'],['briefing','Monday Briefing','presentation'],['projects','Projects','folder'],['tasks','Tasks','checkSquare'],['requests','Requests & Floats','banknote'],['finance','Finance','chart'],['store','Store & Inventory','package'],['procurement','Procurement','cart'],['crm','CRM & Sales','users'],['staff','Staff & Reports','user'],['notifications','Notifications','bell'],['field','Field capture app','camera'],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['logistics','Logistics','truck'],['documents','Documents','paperclip'],['reports','Reports','pie'],['calendar','Calendar','calendar'],['settings','Settings','settings'],['ceomobile','Mobile apps','phone']];
+  const pg = [['today','Daily to-do','checkSquare'],['dashboard','Dashboard','grid'],['briefing','Monday Briefing','presentation'],['projects','Projects','folder'],['tasks','Tasks','checkSquare'],['requests','Requests & Floats','banknote'],['finance','Finance','chart'],['store','Store & Inventory','package'],['procurement','Procurement','cart'],['crm','CRM & Sales','users'],['staff','Staff & Reports','user'],['notifications','Notifications','bell'],['field','Field capture app','camera'],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['logistics','Logistics','truck'],['documents','Documents','paperclip'],['reports','Reports','pie'],['calendar','Calendar','calendar'],['settings','Settings','settings'],['ceomobile','Mobile apps','phone']];
   const acts = [['Create project','folder','project'],['Add task','checkSquare','task'],['Request money','banknote','req'],['Create invoice','fileText','invoice'],['Purchase request','cart','proc'],['New lead','users','lead'],['Create proposal','clipboard','proposal'],['Schedule meeting','calendar','meet'],['Schedule trip','truck','trip'],['New production job','printer','job']];
   let items = [
     ...acts.map(([l,ic,a]) => ({l, s:'Action', ic:IC[ic], run:() => this.openModal(a)})),
     {l:'Ask Trinity Intelligence', s:'AI assistant', ic:IC.sparkle, run:() => this.setState({cmd:false, ai:true})},
-    ...pg.map(([k,l,ic]) => ({l:'Go to ' + l, s:'Page', ic:IC[ic], run:() => this.go(k)})),
+    ...pg.filter(([k]) => !this.isOff(k)).map(([k,l,ic]) => ({l:'Go to ' + l, s:'Page', ic:IC[ic], run:() => this.go(k)})),
     ...s.projects.map(p => ({l:p.client + ' · ' + p.name, s:p.id, ic:IC.folder, run:() => this.go('project',{projectId:p.id})})),
     ...s.stock.map(i => ({l:i.n, s:'Stock · ' + i.q + ' ' + i.u, ic:IC.package, run:() => this.go('store',{stockQ:i.n})}))
   ];

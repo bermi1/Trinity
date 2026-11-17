@@ -33,10 +33,10 @@ test('store: search, issue (cannot exceed stock), receive and reorder', async ({
   expect((await saved(page)).proc[0]).toMatchObject({ id: 'PR-0213', sku: 'VNL-137G', qty: 17, s: 0 });
 });
 
-test('procurement to stock: request → quote → approve → PO → delivered → received raises stock', async ({ page }) => {
+test('procurement to stock: request → approve → delivered → received raises stock', async ({ page }) => {
   await openAs(page, 'ceo', 'procurement');
   const card = page.locator('div[style*="border-radius: 11px"]').filter({ hasText: 'PR-0212' });
-  for (const step of ['Get quotes', 'Approve', 'Issue PO', 'Mark delivered']) await btn(card, step).click();
+  for (const step of ['Approve', 'Mark delivered']) await btn(card, step).click();
   await toast(page, 'PR-0212 delivered · waiting at the store to be received');
   const before = await qty(page, 'ADH-SPR');
 

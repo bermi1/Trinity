@@ -10,10 +10,10 @@ const switchTo = async (page, portal) => {
   await page.getByText(portal, { exact: true }).click();
 };
 
-test('a money request travels the whole chain: staff → finance → management → paid float → reconciled', async ({ page }) => {
+test('a large money request travels the whole chain: staff → finance → management → paid float → reconciled', async ({ page }) => {
   await openAs(page, 'staff', 'staffportal');
   await btn(page, 'Request money').click();
-  await fillModal(page, { 'Amount (TZS)': '120000', Purpose: 'Taxi to Mlimani site' });
+  await fillModal(page, { 'Amount (TZS)': '350000', Purpose: 'Taxi to Mlimani site' });
   await modal(page).locator('button').last().click();
   await toast(page, 'REQ-0427 submitted · waiting for Project Manager');
   let r = (await saved(page)).reqs.find(x => x.id === 'REQ-0427');
@@ -49,10 +49,10 @@ test('a money request travels the whole chain: staff → finance → management 
   await btn(page, /^Approved ·/).click();
   await page.getByText('REQ-0427').first().click();
   await btn(page, 'Mark paid · open float').click();
-  await toast(page, 'Paid via M-Pesa · float opened for Grace Mrema');
+  await toast(page, 'Paid · float opened for Grace Mrema');
   r = (await saved(page)).reqs.find(x => x.id === 'REQ-0427');
   expect(r.st).toBe('paid');
-  expect((await saved(page)).staff.find(p => p.k === 'GM').fl).toBe(300000);
+  expect((await saved(page)).staff.find(p => p.k === 'GM').fl).toBe(530000);
 
   // Reconcile the float once receipts are in.
   const float = page.locator('div').filter({ hasText: /^GM/ }).filter({ has: page.getByRole('button', { name: 'Reconcile' }) }).last();

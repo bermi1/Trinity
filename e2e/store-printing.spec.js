@@ -53,7 +53,7 @@ test('scenario: printing requests materials → store issues → shortfall bough
   await switchTo(page, 'Management · Command Center');
   await side(page, 'Procurement');
   const pr = page.locator('div[style*="border-radius: 11px"]').filter({ hasText: 'PR-0213' });
-  for (const step of ['Get quotes', 'Approve', 'Issue PO', 'Mark delivered']) await btn(pr, step).click();
+  for (const step of ['Approve', 'Mark delivered']) await btn(pr, step).click();
   await toast(page, 'PR-0213 delivered · waiting at the store to be received');
 
   // 6. The storekeeper receives it; stock goes up and the waiting requisition is flagged.

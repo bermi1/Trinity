@@ -2,7 +2,7 @@
 // State lives here; the view modules turn it into the flat values the
 // components render (see src/logic/view).
 import Logic from './Logic';
-import { IC, PPL, ROLES, TABS, ST, STAGES, CHAIN, CH } from './constants';
+import { IC, PPL, ROLES, TABS, ST, STAGES, OLD_STAGE, CHAIN, CH } from './constants';
 import { seed } from './seed';
 import { renderVals } from './view/shell';
 import { pageVals } from './view/workflow';
@@ -15,6 +15,7 @@ import { storeMethods } from './store';
 import { adminMethods, emptyLike } from './admin';
 import { pinFor, savePin, checkPin, clearPin, clearUnlocked, isUnlocked, isValidPin, markUnlocked, LOCK_AFTER_MS } from './pin';
 import { storeVals } from './view/storeops';
+import { todoMethods, todayVals } from './todos';
 
 // Password of the demo accounts, so they open with one tap (see .env). Leave it out to require passwords.
 const demoPassword = () => import.meta.env.VITE_DEMO_PASSWORD || '';
@@ -329,21 +330,22 @@ export default class TrinityApp extends Logic {
     const mob = ['ceomobile','Mobile app','phone',0,{mobileRole:role}];
     const company = [['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']];
     const N = {
-      ceo:[['Every day',[['dashboard','Dashboard','grid'],['briefing','Monday Briefing','presentation'],['requests','Approvals','banknote',myReq],['projects','Projects','folder'],['tasks','Tasks','checkSquare',openTasks],['crm','CRM','users'],['finance','Finance & Invoices','chart'],['reports','Reports','pie']]],
-        ['More',[['calendar','Calendar','calendar'],['notifications','Notifications','bell',unread],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['procurement','Procurement','cart'],['store','Store & Inventory','package'],['requisitions','Store requisitions','clipboard',srqN],['movements','Stock ledger','receipt'],['logistics','Logistics','truck'],['staff','Staff & Reports','user'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['ceomobile','Mobile apps','phone',0,{mobileRole:'ceo'}],['field','Field capture app','camera'],...(this.isAdmin() ? [['users','Users & access','shield']] : []),['settings','Settings','settings']], true]],
-      staff:[['My work',[['staffportal','My Day','home'],['tasks','My tasks','checkSquare',myOpen,{taskFilter:'mine'}],['requests','Approvals','banknote',s.reqs.filter(q => this.canAct(q)).length],['field','Field capture','camera']]],
+      ceo:[['Every day',[['dashboard','Dashboard','grid'],['today','Daily to-do','checkSquare'],['briefing','Monday Briefing','presentation'],['requests','Approvals','banknote',myReq],['projects','Projects','folder'],['tasks','Tasks','checkSquare',openTasks],['crm','CRM','users'],['finance','Finance & Invoices','chart'],['reports','Reports','pie']]],
+        ['More',[['calendar','Calendar','calendar'],['notifications','Notifications','bell',unread],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['procurement','Procurement','cart'],['store','Store & Inventory','package'],['requisitions','Store requisitions','clipboard',srqN],['movements','Stock ledger','receipt'],['logistics','Logistics','truck'],['staff','Staff & Reports','user'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['ceomobile','Mobile apps','phone',0,{mobileRole:'ceo'}],['field','Field capture app','camera'],...(this.canSetup() ? [['company','Company setup','settings']] : []),...(this.isAdmin() ? [['users','Users & access','shield']] : []),['settings','Settings','settings']], true]],
+      staff:[['My work',[['staffportal','My Day','home'],['today','Daily to-do','clipboard'],['tasks','My tasks','checkSquare',myOpen,{taskFilter:'mine'}],['requests','Approvals','banknote',s.reqs.filter(q => this.canAct(q)).length],['field','Field capture','camera']]],
         ['More',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
-      finance:[['Finance',[['financeportal','My queue','wallet',finQ],['finance','Finance & Invoices','chart'],['requests','Requests & Floats','banknote'],['reports','Reports','pie']]],
+      finance:[['Finance',[['financeportal','My queue','wallet',finQ],['today','Daily to-do','checkSquare'],['finance','Finance & Invoices','chart'],['requests','Requests & Floats','banknote'],['reports','Reports','pie']]],
         ['More',[['proposals','Proposals','clipboard'],['procurement','Procurement','cart'],...company], true]],
-      reception:[['Front office',[['reception','Front desk','message'],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['crm','Client enquiries','users']]],
+      reception:[['Front office',[['reception','Front desk','message'],['today','Daily to-do','checkSquare'],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['crm','Client enquiries','users']]],
         ['More',[['staff','Staff directory','user'],['briefing','Monday Briefing','presentation'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
-      store:[['Store',[['storekeeper','My store','home',lowN],['requisitions','Requisitions','clipboard',srqN],['store','Inventory','package'],['movements','Stock ledger','receipt'],['procurement','Procurement','cart']]],
+      store:[['Store',[['storekeeper','My store','home',lowN],['today','Daily to-do','checkSquare'],['requisitions','Requisitions','clipboard',srqN],['store','Inventory','package'],['movements','Stock ledger','receipt'],['procurement','Procurement','cart']]],
         ['More',[['production','Production','printer'],['logistics','Logistics','truck'],...company], true]],
-      production:[['Printing',[['printshop','Print floor','printer',waitN],['production','Production jobs','checkSquare'],['requisitions','Store requisitions','clipboard']]],
+      production:[['Printing',[['printshop','Print floor','printer',waitN],['today','Daily to-do','checkSquare'],['production','Production jobs','checkSquare'],['requisitions','Store requisitions','clipboard']]],
         ['More',[['store','Inventory','package'],['procurement','Procurement','cart'],...company], true]]
     };
     let G = N[role] || N.ceo;
-    if (s.embed) G = G.map(([t, items, more]) => [t, items.filter(i => i[0] !== 'ceomobile'), more]).filter(g => g[1].length);
+    // Sections the administrator switched off are hidden everywhere.
+    G = G.map(([t, items, more]) => [t, items.filter(i => !this.isOff(i[0]) && !(s.embed && i[0] === 'ceomobile')), more]).filter(g => g[1].length);
     return G;
   }
   navFor(role) { const out = []; this.navGroups(role).forEach(g => g[1].forEach(i => out.push(i))); return out; }
@@ -409,7 +411,7 @@ export default class TrinityApp extends Logic {
     const O = a => a.map(x => ({v:x,l:x}));
     const defs = {
       task:{title:'New task',sub:'Every task is linked to a project, an owner and a deadline.',submit:'Create task',fields:[{k:'t',l:'Task',ph:'e.g. Print 500 flyers',req:1},{k:'p',l:'Project',opts:PO},{k:'who',l:'Assign to',opts:PP},{k:'due',l:'Deadline',ph:'e.g. Fri 25'},{k:'pri',l:'Priority',opts:[{v:'high',l:'High'},{v:'med',l:'Medium'},{v:'low',l:'Low'}]}]},
-      req:{title:'Request money',sub:'Routes to PM → Operations → Finance → Management → Payment.',submit:'Submit request',fields:[{k:'amt',l:'Amount (TZS)',type:'number',ph:'300000',req:1},{k:'cat',l:'Category',opts:O(['Transport','Fuel','Materials','Permits','Meals','Supplier deposit'])},{k:'p',l:'Project',opts:PO},{k:'purpose',l:'Purpose',ph:'What is the money for?',req:1},{k:'need',l:'Needed by',ph:'e.g. Today 16:00'}]},
+      req:{title:'Request money',sub:this.smallLimit() ? 'Up to ' + this.fmtT(this.smallLimit()) + ': Project Manager → Finance. Larger: PM → Operations → Finance → Management.' : 'Routes to PM → Operations → Finance → Management → Payment.',submit:'Submit request',fields:[{k:'amt',l:'Amount (TZS)',type:'number',ph:'300000',req:1},{k:'cat',l:'Category',opts:O(['Transport','Fuel','Materials','Permits','Meals','Supplier deposit'])},{k:'p',l:'Project',opts:PO},{k:'purpose',l:'Purpose',ph:'What is the money for?',req:1},{k:'need',l:'Needed by',ph:'e.g. Today 16:00'}]},
       lead:{title:'New lead',sub:'Leads move Lead → Qualified → Proposal → Negotiation → Won.',submit:'Add lead',fields:[{k:'c',l:'Client',ph:'Company name',req:1},{k:'t',l:'Opportunity',ph:'e.g. Product launch event',req:1},{k:'v',l:'Estimated value (TZS M)',type:'number',ph:'80'},{k:'src',l:'Source',opts:O(['Website','Referral','Tender','Existing client','Walk-in'])}]},
       project:{title:'New project',sub:'Creates the project record, workflow and budget shell.',submit:'Create project',fields:[{k:'client',l:'Client',ph:'Client name',req:1},{k:'name',l:'Project name',ph:'e.g. Brand activation',req:1},{k:'pm',l:'Project manager',opts:PP},{k:'val',l:'Contract value (TZS M)',type:'number',ph:'120'},{k:'due',l:'Deadline',ph:'e.g. 30 Oct'}]},
       issue:{title:'Issue stock',sub:'',submit:'Issue from store',fields:[{k:'q',l:'Quantity',type:'number',ph:'1',req:1},{k:'p',l:'For project',opts:PO},{k:'who',l:'Collected by',opts:PP}]},
@@ -422,7 +424,7 @@ export default class TrinityApp extends Logic {
       item:{title:'New stock item',sub:'Adds the item to the store. The opening quantity is recorded in the stock ledger.',submit:'Add item',fields:[{k:'n',l:'Item name',ph:'e.g. Vinyl 1.37m gloss',req:1},{k:'sku',l:'Code (SKU)',ph:'e.g. VNL-137G',req:1},{k:'cat',l:'Category',opts:O(['Print media','Consumables','Apparel','Display','Boards','Equipment','Stationery','Other'])},{k:'u',l:'Unit',ph:'e.g. rolls, pcs, L',req:1},{k:'q0',l:'Opening quantity',type:'number',ph:'0'},{k:'min',l:'Reorder at (minimum)',type:'number',ph:'5'},{k:'cost',l:'Unit cost (TZS)',type:'number',ph:'185000'},{k:'loc',l:'Bin / location',ph:'e.g. A-02'}]},
       srq:{title:'Request from store',sub:'The storekeeper issues it and charges it to the project.',submit:'Send to store',fields:[{k:'sku',l:'Item',opts:this.state.stock.map(i => ({v:i.sku,l:i.n + ' · ' + i.q + ' ' + i.u + ' in store'}))},{k:'q',l:'Quantity',type:'number',ph:'1',req:1},{k:'p',l:'For project',opts:[{v:'',l:'General use'}].concat(PO)},{k:'purpose',l:'Purpose',ph:'e.g. Sample prints for client'}]},
       meet:{title:'Schedule meeting',sub:'Participants get a reminder. Actions become tasks.',submit:'Schedule',fields:[{k:'n',l:'Title',ph:'e.g. Production review',req:1},{k:'d',l:'Day',opts:O(['Mon 21','Tue 22','Wed 23','Thu 24','Fri 25','Sat 26'])},{k:'t',l:'Time',ph:'e.g. 10:00'},{k:'k',l:'Type',opts:[{v:'meet',l:'Internal meeting'},{v:'client',l:'Client meeting'},{v:'proj',l:'Project'}]}]},
-      proc:{title:'Purchase request',sub:'Request → Quotation → Approved → PO → Delivered.',submit:'Submit purchase request',fields:[{k:'t',l:'Item',ph:'e.g. Vinyl rolls × 10',req:1},{k:'p',l:'Project',opts:PO},{k:'v',l:'Estimated cost (TZS M)',type:'number',ph:'1.5'}]}
+      proc:{title:'Purchase request',sub:'Request → Approved → Delivered. The store then receives it.',submit:'Submit purchase request',fields:[{k:'t',l:'Item',ph:'e.g. Vinyl rolls × 10',req:1},{k:'p',l:'Project',opts:PO},{k:'v',l:'Estimated cost (TZS M)',type:'number',ph:'1.5'}]}
     };
     const m = Object.assign({act}, defs[act], preset && preset._meta ? preset._meta : {});
     const form = {}; m.fields.forEach(f => { form[f.k] = f.opts ? f.opts[0].v : ''; });
@@ -443,7 +445,7 @@ export default class TrinityApp extends Logic {
     if (m.act === 'task') { this.setState(x => ({tasks:[{id:'T'+Date.now(),t:f.t,p:f.p,who:f.who,due:f.due||'This week',st:'todo',pri:f.pri}, ...x.tasks]})); this.toast('Task created and assigned to ' + this.av(f.who).n); this.log('checkSquare','purple','Task created · ' + f.t, P.client + ' · assigned to ' + this.av(f.who).first); }
     if (m.act === 'req') { const amt = +f.amt || 0; const id = this.nextId('REQ', s.reqs); const who = f.who || this.me().k; this.setState(x => ({reqs:[{id,who,amt,cat:f.cat,purpose:f.purpose,p:f.p,need:f.need||'This week',step:1,st:'pending',log:[this.now()]}, ...x.reqs], reqSel:id})); this.toast(id + ' submitted · waiting for Project Manager'); this.log('banknote','amber',this.av(who).first + ' requested ' + this.fmtT(amt), P.name + ' · ' + id); }
     if (m.act === 'lead') { this.setState(x => ({leads:[{id:'L'+Date.now(),c:f.c,t:f.t,v:+f.v||0,s:0,src:f.src}, ...x.leads]})); this.toast('Lead added · ' + f.c); this.log('users','blue','New lead · ' + f.c, f.t); }
-    if (m.act === 'project') { const id = this.nextId('PRJ', s.projects); const val = +f.val || 0; this.setState(x => ({projects:[{id,name:f.name,client:f.client,pm:f.pm,st:'on',prog:0,val,bud:+(val*0.7).toFixed(1),spent:0,stage:2,due:f.due||'TBC',team:[f.pm]}, ...x.projects]})); this.toast('Project ' + id + ' created'); this.log('folder','purple','Project created · ' + f.client, f.name); setTimeout(() => this.go('project',{projectId:id}), 50); }
+    if (m.act === 'project') { const id = this.nextId('PRJ', s.projects); const val = +f.val || 0; this.setState(x => ({projects:[{id,name:f.name,client:f.client,pm:f.pm,st:'on',prog:0,val,bud:+(val*0.7).toFixed(1),spent:0,stage:1,sv:2,due:f.due||'TBC',team:[f.pm]}, ...x.projects]})); this.toast('Project ' + id + ' created'); this.log('folder','purple','Project created · ' + f.client, f.name); setTimeout(() => this.go('project',{projectId:id}), 50); }
     if (m.act === 'issue') { const q = Math.max(0, +f.q || 0); this.setState(this.stockChange([{sku:f.sku, qty:-q, type:'issue'}], 'Direct issue · ' + this.av(f.who).n, f.p, '')); this.toast('Issued ' + q + ' ' + f.u + ' of ' + f.n + ' to ' + P.client); this.log('package','dark','Store issued ' + q + ' ' + f.u + ' · ' + f.n, P.name + ' · ' + this.av(f.who).first); }
     if (m.act === 'receive') { const q = Math.max(0, +f.q || 0); this.setState(this.stockChange([{sku:f.sku, qty:q, type:'receipt'}], 'Received' + (f.sup ? ' · ' + f.sup : ''), '', '')); this.toast('Received ' + q + ' ' + f.u + ' · ' + f.n); this.log('package','green','Stock received · ' + f.n, q + ' ' + f.u + (f.sup ? ' from ' + f.sup : '')); }
     if (m.act === 'invoice') { const id = this.nextId('INV', s.invoices); this.setState(x => ({invoices:[{id,c:P.client,p:f.p,v:+f.v||0,st:'draft',due:f.due||'—'}, ...x.invoices]})); this.toast('Invoice ' + id + ' saved as draft'); }
@@ -474,20 +476,29 @@ export default class TrinityApp extends Logic {
     return role === 'ceo' || (role === 'finance' && r.step === 3) || (r.step > 0 && r.step < 3 && this.me().k === this.approverAt(r, r.step));
   }
   canPay() { const role = this.state.role || 'ceo'; return role === 'ceo' || role === 'finance'; }
+  // Requests up to this amount need only the Project Manager and Finance (0 = every request takes all steps).
+  // Project stage 1–5 (older projects stored 1–15).
+  stageOf(p) { const n = +p.stage || 1; return p.sv === 2 ? Math.min(Math.max(n, 1), STAGES.length) : OLD_STAGE[Math.min(n, 15)]; }
+  smallLimit() { const c = this.state.company || {}; return c.smallLimit == null ? 200000 : +c.smallLimit || 0; }
+  isSmall(r) { const lim = this.smallLimit(); return lim > 0 && r.amt <= lim; }
   decide(r, ok) {
-    const t = this.now(), last = r.step >= 4;
-    const patch = ok ? (last ? {step:5, st:'approved'} : {step:r.step + 1}) : {st:'rejected'};
-    this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, patch, {log:[...q.log, t]}) : q)}));
-    const next = ok ? (last ? 'RT' : this.approverAt(r, r.step + 1)) : r.who;
+    const t = this.now(), skip = [];
+    let n = r.step + 1;
+    // Small requests skip Operations (step 2) and Management (step 4); the history shows them as not needed.
+    if (ok && this.isSmall(r)) { if (n === 2) { skip.push(2); n = 3; } else if (n === 4) { skip.push(4); n = 5; } }
+    const last = n >= 5;
+    const patch = ok ? (last ? {step:5, st:'approved'} : {step:n}) : {st:'rejected'};
+    this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, patch, {log:[...q.log, t, ...(ok ? skip.map(() => 'Not needed') : [])]}) : q)}));
+    const next = ok ? (last ? 'RT' : this.approverAt(r, n)) : r.who;
     if (ok) this.remind(next, last ? r.id + ' is approved · ready to pay' : r.id + ' needs your approval', 'requests', 'banknote', this.av(r.who).n + ' · ' + this.fmtT(r.amt));
     else this.remind(r.who, r.id + ' was not approved', 'requests', 'x', 'Rejected by ' + this.me().n);
-    this.toast(ok ? r.id + (last ? ' approved · sent to Finance for payment' : (r.step === 3 ? ' verified' : ' approved') + ' · sent to ' + this.CHAIN[r.step + 1]) : r.id + ' rejected · ' + this.av(r.who).first + ' notified');
+    this.toast(ok ? r.id + (last ? ' approved · sent to Finance for payment' : (r.step === 3 ? ' verified' : ' approved') + ' · sent to ' + this.CHAIN[n]) : r.id + ' rejected · ' + this.av(r.who).first + ' notified');
     this.log(ok ? 'check' : 'x', ok ? 'green' : 'red', this.me().n + (ok ? ' approved ' : ' rejected ') + this.fmtT(r.amt), this.proj(r.p).name + ' · ' + r.id);
   }
   payReq(r) {
     const t = this.now();
     this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, {step:6,st:'paid',log:[...q.log,t]}) : q), staff:x.staff.map(p => p.k === r.who ? Object.assign({}, p, {fl:p.fl + r.amt}) : p)}));
-    this.toast('Paid via M-Pesa · float opened for ' + this.av(r.who).n);
+    this.toast('Paid · float opened for ' + this.av(r.who).n);
     this.log('wallet','green','Float opened · ' + this.fmtT(r.amt), this.av(r.who).n + ' · receipts due in 3 days');
   }
   answer(q) {
@@ -512,4 +523,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals }, storeMethods, adminMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals }, storeMethods, adminMethods, todoMethods);

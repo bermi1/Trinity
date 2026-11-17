@@ -19,7 +19,7 @@ export function renderVals() {
     count:more ? items.reduce((a, i) => a + (+i[3] || 0), 0) : 0, items:items.map(([k,l,ic,b,ex]) => { const a = k === navPage; return {l, ic:IC[ic], go:() => this.go(k, ex), bg:a ? 'rgba(255,255,255,.11)' : 'transparent', c:a ? '#fff' : 'rgba(255,255,255,.7)', icc:a ? '#E2CE98' : 'rgba(255,255,255,.55)', fw:a ? 700 : 500, b:b || '', hb:!!b}; })}));
   const phone = s.w < 700;
   const flatNav = []; G.forEach(g => g[1].forEach(i => flatNav.push(i)));
-  const tabDefs = this.TABS[role] || this.TABS.ceo;
+  const tabDefs = (this.TABS[role] || this.TABS.ceo).filter(t => !this.isOff(t[0]));
   const BADGE = {notifications:unread, requests:role === 'ceo' ? myReq.length : 0, financeportal:finQ, storekeeper:lowN, tasks:myOpen};
   const curNav = flatNav.find(i => i[0] === navPage);
   const pageTitle = s.page === 'job' ? ((s.jobs.find(j => j.id === s.jobId) || {}).id || 'Production job') : s.page === 'project' ? this.proj(s.projectId).client : curNav ? curNav[1] : 'Trinity Mark 360';
@@ -67,8 +67,8 @@ export function renderVals() {
   ].slice(0,3);
   const activity = s.activity.map(e => { const t = this.tone(e.tone); return Object.assign({}, e, {ic:IC[e.ic], bg:t[0], fg:t[1]}); });
   const pipe = [['PM',1],['Ops',2],['Finance',3],['You',4],['Payment',5],['Paid',6]].map(([l,k]) => { const nn = s.reqs.filter(r => r.step === k && r.st !== 'rejected').length; const you = k === 4, paid = k === 6; return {l, n:nn, bg:you ? '#FBF6EA' : paid ? '#E6F4EC' : '#F4F1FA', bd:you ? '#E4CD95' : 'transparent', fg:you ? '#8A6414' : paid ? '#1F7549' : '#2B1459'}; });
-  const PS = ['Request','Quotation','Approved','PO issued','Delivered'];
-  const procPipe = PS.map((l,i) => ({l, n:s.proc.filter(p => p.s === i).length}));
+  const PS = ['Request','Approved','Delivered'], pcol = p => (p.s >= 4 ? 2 : p.s >= 2 ? 1 : 0);
+  const procPipe = PS.map((l,i) => ({l, n:s.proc.filter(p => pcol(p) === i).length}));
   const missing = s.staff.filter(p => !p.rep);
   const reports = {sub:s.reportsSub, total:48, w:(s.reportsSub/48*100) + '%', missing:missing.length ? 'Missing: ' + missing.map(p => { const a = this.av(p.k); return a.first + ' ' + a.n.split(' ')[1][0] + '.'; }).join(', ') : 'Everyone has reported'};
   const q = (l, ic, on, primary) => ({l, ic:IC[ic], on, bg:primary ? '#2B1459' : '#fff', c:primary ? '#fff' : '#17152A', bd:primary ? '#2B1459' : '#E8E4EF', icc:primary ? '#E2CE98' : '#6D3CC2'});
@@ -103,5 +103,5 @@ export function renderVals() {
     openCmd:() => this.setState({cmd:true,cmdQ:''}), openAI:() => this.setState({ai:true,drawer:false,more:false}),
     greeting:hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening',
     kpis, chart, tip, chartLeave:() => this.setState({tip:-1}), rangeBtns, donut, attention, activity, pipe, procPipe, reports, quick
-  }, this.pageVals(s, IC, ST, narrow), this.overlayVals(s, IC), this.storeVals(s, IC));
+  }, this.pageVals(s, IC, ST, narrow), this.overlayVals(s, IC), this.storeVals(s, IC), this.todayVals(s));
 }

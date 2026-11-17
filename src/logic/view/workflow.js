@@ -47,15 +47,15 @@ export function pageVals(s, IC, ST, narrow) {
     const pm = this.av(P.pm), u = P.bud ? P.spent / P.bud : 0;
     const ptasks = s.tasks.filter(t => t.p === P.id);
     V.P = Object.assign({id:P.id, name:P.name, client:P.client, pmName:pm.n, due:P.due, prog:P.prog + '%', val:this.fmtM(P.val), margin:P.val ? Math.round((P.val - Math.max(P.bud, P.spent)) / P.val * 100) : 0 + '%',
-      stageLabel:'Stage ' + P.stage + ' of 15 · ' + this.STAGES[P.stage - 1],
-      stages:this.STAGES.map((l,i) => ({l, col:i + 1 < P.stage || P.st === 'done' ? '#2B1459' : i + 1 === P.stage ? '#B49A5A' : '#EDE9F3', c:i + 1 === P.stage ? '#17152A' : '#6E6A7C', fw:i + 1 === P.stage ? 700 : 500})),
+      stageLabel:'Stage ' + this.stageOf(P) + ' of ' + this.STAGES.length + ' · ' + this.STAGES[this.stageOf(P) - 1],
+      stages:this.STAGES.map((l,i) => ({l, col:i + 1 < this.stageOf(P) || P.st === 'done' ? '#2B1459' : i + 1 === this.stageOf(P) ? '#B49A5A' : '#EDE9F3', c:i + 1 === this.stageOf(P) ? '#17152A' : '#6E6A7C', fw:i + 1 === this.stageOf(P) ? 700 : 500})),
       spent:this.fmtM(P.spent), bud:this.fmtM(P.bud), remaining:this.fmtM(Math.max(0, P.bud - P.spent)), over:P.spent > P.bud, overBy:this.fmtM(P.spent - P.bud), spentW:Math.min(100, u*100) + '%', barC:u > 1 ? '#D9535F' : '#2B1459', usedPct:Math.round(u*100) + '% used',
       profit:this.fmtM(P.val - Math.max(P.bud, P.spent)), invoiced:this.fmtM(s.invoices.filter(i => i.p === P.id).reduce((a,b) => a + b.v, 0)),
       tasks:ptasks.map(t => { const a = this.av(t.who), m = this.tst(t.st); return {t:t.t, who:a.n, due:t.due, stl:m[0], stbg:m[1], stfg:m[2], done:t.st === 'done', chkBg:t.st === 'done' ? '#2E9B63' : '#fff', chkBd:t.st === 'done' ? '#2E9B63' : '#D5CFE0', td:t.st === 'done' ? 'line-through' : 'none', toggle:() => this.setState(x => ({tasks:x.tasks.map(y => y.id === t.id ? Object.assign({}, y, {st:y.st === 'done' ? 'prog' : 'done'}) : y)}))}; }),
       tasksEmpty:ptasks.length === 0, openCount:ptasks.filter(t => t.st !== 'done').length + ' open',
       reqs:s.reqs.filter(r => r.p === P.id).map(r => Object.assign({id:r.id, who:this.av(r.who).n, amt:this.fmtT(r.amt), cat:r.cat, on:() => this.go('requests',{reqSel:r.id, reqFilter:'all'})}, pill(this.rst(r)))),
       team:P.team.map(k => this.av(k)), isDone:P.st === 'done', canAdvance:P.st !== 'done',
-      advance:() => { const ns = Math.min(15, P.stage + 1); this.setState(x => ({projects:x.projects.map(p => p.id === P.id ? Object.assign({}, p, {stage:ns, prog:Math.max(p.prog, Math.round(ns/15*100)), st:ns === 15 ? 'done' : p.st}) : p)})); this.toast(ns === 15 ? P.name + ' closed' : 'Moved to ' + this.STAGES[ns - 1]); this.log('folder','purple',P.client + ' · moved to ' + this.STAGES[ns - 1], P.name); },
+      advance:() => { const last = this.STAGES.length, ns = Math.min(last, this.stageOf(P) + 1); this.setState(x => ({projects:x.projects.map(p => p.id === P.id ? Object.assign({}, p, {stage:ns, sv:2, prog:Math.max(p.prog, Math.round(ns/last*100)), st:ns === last ? 'done' : p.st}) : p)})); this.toast(ns === last ? P.name + ' closed' : 'Moved to ' + this.STAGES[ns - 1]); this.log('folder','purple',P.client + ' · moved to ' + this.STAGES[ns - 1], P.name); },
       addTask:() => this.openModal('task',{p:P.id, who:P.pm}), reqMoney:() => this.openModal('req',{p:P.id}), invoice:() => this.openModal('invoice',{p:P.id}),
       back:() => this.go('projects')
     }, pill([ST[P.st].l, ST[P.st].bg, ST[P.st].fg]));
@@ -89,14 +89,16 @@ export function pageVals(s, IC, ST, narrow) {
       if (sel.st === 'rejected' && i === sel.step) st = 'rej';
       if (sel.st === 'rejected' && i > sel.step) st = 'todo';
       if (sel.st === 'paid') st = 'done';
+      if (sel.log[i] === 'Not needed') st = 'skip';
       const a = this.av(ppl[i]);
-      return {l:i === 4 && role === 'ceo' ? 'Management · you' : l, who:a.n, time:st === 'done' || st === 'rej' ? (sel.log[i] || '—') : st === 'cur' ? 'Pending' : '', dotBg:st === 'done' ? '#2E9B63' : st === 'rej' ? '#D9535F' : st === 'cur' ? '#FBF6EA' : '#fff', dotBd:st === 'done' ? '#2E9B63' : st === 'rej' ? '#D9535F' : st === 'cur' ? '#B49A5A' : '#D5CFE0', icon:st === 'done' ? IC.check : st === 'rej' ? IC.x : '', lineC:st === 'done' ? '#2E9B63' : '#E8E4EF', lc:st === 'cur' ? '#8A6414' : st === 'todo' ? '#6E6A7C' : '#17152A', notLast:i !== 5};
+      return {l:i === 4 && role === 'ceo' ? 'Management · you' : l, who:a.n, time:st === 'skip' ? 'Not needed for small amounts' : st === 'done' || st === 'rej' ? (sel.log[i] || '—') : st === 'cur' ? 'Pending' : '', dotBg:st === 'done' ? '#2E9B63' : st === 'rej' ? '#D9535F' : st === 'cur' ? '#FBF6EA' : '#fff', dotBd:st === 'done' ? '#2E9B63' : st === 'rej' ? '#D9535F' : st === 'cur' ? '#B49A5A' : '#D5CFE0', icon:st === 'done' ? IC.check : st === 'rej' ? IC.x : '', lineC:st === 'done' || st === 'skip' ? '#2E9B63' : '#E8E4EF', lc:st === 'cur' ? '#8A6414' : st === 'todo' || st === 'skip' ? '#6E6A7C' : '#17152A', notLast:i !== 5};
     });
     V.R = Object.assign({id:sel.id, cat:sel.cat, amt:this.fmtT(sel.amt), purpose:sel.purpose, proj:rp.id + ' · ' + rp.name, projGo:e => { if (e && e.preventDefault) e.preventDefault(); if (rp.id) this.go('project',{projectId:rp.id}); }, who:this.av(sel.who).n, need:sel.need, chain,
       budFrom:Math.round(ru*100) + '%', budTo:Math.round(after*100) + '%', w1:Math.min(100, ru*100) + '%', w2:Math.max(0, Math.min(100, after*100) - Math.min(100, ru*100)) + '%', budLine:this.fmtM(rp.bud || 0) + ' project budget',
       canDecide:this.canAct(sel), canPay:sel.st === 'approved' && this.canPay(), waiting:sel.st === 'pending' && sel.step < 4 && (!this.canAct(sel) || role === 'ceo'), waitLabel:sel.step < this.CHAIN.length ? 'Waiting for ' + this.CHAIN[sel.step] + ' · ' + this.av(ppl[sel.step]).n : '', isPaid:sel.st === 'paid', isRej:sel.st === 'rejected',
       approve:() => this.decide(sel, true), reject:() => { if (this.confirm('Reject ' + sel.id + ' (' + this.fmtT(sel.amt) + ')? ' + this.av(sel.who).first + ' will be notified.')) this.decide(sel, false); }, pay:() => this.payReq(sel),
       ask:() => { this.remind(sel.who, this.me().first + ' needs more information on ' + sel.id, 'requests', 'message', sel.cat + ' · ' + this.fmtT(sel.amt)); this.toast('Question sent to ' + this.av(sel.who).n); },
+      whatsapp:() => { const to = this.av(ppl[Math.min(sel.step, 5)]).n, txt = sel.id + ' · ' + this.fmtT(sel.amt) + ' · ' + sel.cat + '\n' + sel.purpose + '\nFrom ' + this.av(sel.who).n + ' · ' + rp.name + '\nWaiting for ' + to + '. Please open Trinity Mark 360 to approve.'; try { window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener'); } catch (e) { /* pop-up blocked */ } },
       nudge:() => { const to = ppl[Math.min(sel.step, 5)]; this.remind(to, sel.id + ' is waiting for your approval', 'requests', 'banknote', this.av(sel.who).n + ' · ' + this.fmtT(sel.amt)); this.toast('Reminder sent to ' + this.av(to).n); }
     }, pill(this.rst(sel)));
   } else V.R = {chain:[]};

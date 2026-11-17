@@ -57,14 +57,16 @@ export const ROLES = {
 };
 export const TABS = {
   ceo:[['dashboard','Home','home'],['requests','Approvals','banknote'],['projects','Projects','folder'],['notifications','Alerts','bell']],
-  staff:[['staffportal','My Day','home'],['tasks','Tasks','checkSquare',0,{taskFilter:'mine'}],['projects','Projects','folder'],['notifications','Alerts','bell']],
+  staff:[['staffportal','My Day','home'],['today','To-do','clipboard'],['tasks','Tasks','checkSquare',0,{taskFilter:'mine'}],['notifications','Alerts','bell']],
   finance:[['financeportal','Queue','wallet'],['requests','Requests','banknote'],['finance','Finance','chart'],['notifications','Alerts','bell']],
   reception:[['reception','Desk','message'],['rooms','Rooms','calendar'],['calendar','Calendar','calendar'],['notifications','Alerts','bell']],
   store:[['storekeeper','Store','home'],['requisitions','Requests','clipboard'],['store','Inventory','package'],['notifications','Alerts','bell']],
   production:[['printshop','Print floor','printer'],['production','Jobs','checkSquare'],['requisitions','Materials','package'],['notifications','Alerts','bell']]
 };
 export const ST = {on:{l:'On track',c:'#2E9B63',bg:'#E6F4EC',fg:'#1F7549'},risk:{l:'At risk',c:'#D89B2B',bg:'#FBF1DD',fg:'#8A6414'},late:{l:'Delayed',c:'#D9535F',bg:'#FBEDEE',fg:'#B23A46'},done:{l:'Completed',c:'#2B1459',bg:'#EDE8F6',fg:'#2B1459'}};
-export const STAGES = ['Client brief','Project created','Planning','Budget','Team','Design','Production','Procurement','Store','Logistics','Execution','Delivery','Reporting','Reconciliation','Closure'];
+// Five project stages. Projects saved before this change used 15 stages (no `sv`); OLD_STAGE maps them.
+export const STAGES = ['Brief','Approved','Production','On site','Closed'];
+export const OLD_STAGE = [1,1,1,2,2,2,3,3,3,3,4,4,4,5,5,5];
 export const CHAIN = ['Requested','Project Manager','Operations','Finance','Management','Payment'];
 export const CH = {
   '12W':{labels:['W28','W29','W30','W31','W32','W33','W34','W35','W36','W37','W38','W39'],rev:[52,61,48,70,66,58,74,80,62,77,85,46],exp:[34,40,36,44,47,39,50,52,45,49,55,30]},

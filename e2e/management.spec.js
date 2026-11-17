@@ -100,11 +100,11 @@ test('projects: filters, workflow, tasks, money and invoices from a project', as
   await expect(page.getByText('Lake Zone Roadshow')).toHaveCount(0);
   await btn(page, 'All · 8').click();
   await page.getByText('Lake Zone Roadshow').first().click();
-  await expect(page.getByText(/Stage 9 of 15 · Store/)).toBeVisible();
+  await expect(page.getByText(/Stage 3 of 5 · Production/)).toBeVisible();
 
   await btn(page, 'Advance stage').click();
   await toast(page, 'Moved to Logistics');
-  await expect(page.getByText(/Stage 10 of 15 · Logistics/)).toBeVisible();
+  await expect(page.getByText(/Stage 4 of 5 · On site/)).toBeVisible();
 
   // Tick a task done, then add one from the project.
   await page.locator('div').filter({ hasText: /^Confirm venue permits · Musoma & Bukoba/ }).locator('button').first().click();
@@ -144,12 +144,12 @@ test('tasks board: filters and moving cards through every column', async ({ page
 test('menus stay short: everyday pages first, the rest folded under More', async ({ page }) => {
   const visible = async () => (await page.locator('aside .tm-h4').allInnerTexts()).map(t => t.replace(/\s*\d+$/, '').trim());
   const everyday = {
-    ceo: ['Dashboard', 'Monday Briefing', 'Approvals', 'Projects', 'Tasks', 'CRM', 'Finance & Invoices', 'Reports'],
-    staff: ['My Day', 'My tasks', 'Approvals', 'Field capture'],
-    finance: ['My queue', 'Finance & Invoices', 'Requests & Floats', 'Reports'],
-    reception: ['Front desk', 'Meeting rooms', 'Calendar', 'Client enquiries'],
-    store: ['My store', 'Requisitions', 'Inventory', 'Stock ledger', 'Procurement'],
-    production: ['Print floor', 'Production jobs', 'Store requisitions']
+    ceo: ['Dashboard', 'Daily to-do', 'Monday Briefing', 'Approvals', 'Projects', 'Tasks', 'CRM', 'Finance & Invoices', 'Reports'],
+    staff: ['My Day', 'Daily to-do', 'My tasks', 'Approvals', 'Field capture'],
+    finance: ['My queue', 'Daily to-do', 'Finance & Invoices', 'Requests & Floats', 'Reports'],
+    reception: ['Front desk', 'Daily to-do', 'Meeting rooms', 'Calendar', 'Client enquiries'],
+    store: ['My store', 'Daily to-do', 'Requisitions', 'Inventory', 'Stock ledger', 'Procurement'],
+    production: ['Print floor', 'Daily to-do', 'Production jobs', 'Store requisitions']
   };
   for (const [role, items] of Object.entries(everyday)) {
     await openAs(page, role);

@@ -4,11 +4,15 @@ import StockLedgerPage from './StockLedgerPage';
 import JobPage from './JobPage';
 import PrintFloorPage from './PrintFloorPage';
 import UsersPage from './UsersPage';
+import TodayPage from './TodayPage';
+import CompanyPage from './CompanyPage';
 
 export default {
   requisitions: RequisitionsPage,
   movements: StockLedgerPage,
   job: JobPage,
   printshop: PrintFloorPage,
-  users: UsersPage
+  users: UsersPage,
+  today: TodayPage,
+  company: CompanyPage
 };

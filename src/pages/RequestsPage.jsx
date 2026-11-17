@@ -195,6 +195,9 @@ export default function RequestsPage({ v }) {
                         </svg>
                         Send reminder
                       </button>
+                      <button className="tm-h3" onClick={v.R.whatsapp} style={{ height: "36px", padding: "0 14px", border: "1px solid #E8E4EF", background: "#fff", borderRadius: "9px", fontSize: "13px", fontWeight: "600" }}>
+                        Send on WhatsApp
+                      </button>
                     </div>
                   </>
                 ) : null}

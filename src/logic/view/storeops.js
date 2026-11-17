@@ -30,7 +30,7 @@ export function storeVals(s) {
         return { n: st.n, sku: st.sku, u: st.u, qty: it.qty, issued: it.issued, out, have: st.q, loc: st.loc,
           state: out === 0 ? 'done' : st.q >= out ? 'ready' : st.q > 0 ? 'part' : 'short' };
       });
-      const prs = s.proc.filter(pr => pr.srq === r.id).map(pr => ({ id: pr.id, t: pr.t, stage: ['Request', 'Quotation', 'Approved', 'PO issued', 'Delivered'][pr.s] || 'Delivered', done: pr.s >= 4 }));
+      const prs = s.proc.filter(pr => pr.srq === r.id).map(pr => ({ id: pr.id, t: pr.t, stage: pr.s >= 4 ? 'Delivered' : pr.s >= 2 ? 'Approved' : 'Request', done: pr.s >= 4 }));
       const live = r.st === 'pending' || r.st === 'partial';
       const openPr = s.proc.filter(pr => pr.srq === r.id && pr.s < 4).map(pr => pr.sku);
       const job = s.jobs.find(j => j.id === r.job);

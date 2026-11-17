@@ -83,7 +83,7 @@ test('command palette searches pages, projects, stock and runs actions', async (
   await page.keyboard.press('Control+k');
   await input.fill('Expo Stand');
   await page.getByText('Mlimani Bank · Expo Stand 2026').click();
-  await expect(page.getByText(/Stage 7 of 15/)).toBeVisible();
+  await expect(page.getByText(/Stage 3 of 5 · Production/)).toBeVisible();
 });
 
 test('Trinity Intelligence answers from the live data', async ({ page }) => {
