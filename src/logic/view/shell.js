@@ -13,7 +13,10 @@ export function renderVals() {
   const role = s.role || 'ceo', R = this.ROLES[role];
   const lowN = s.stock.filter(i => i.q < i.min).length, finQ = s.reqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === R.k && t.st !== 'done').length;
   const G = this.navGroups(role);
-  const nav = G.map(([t, items]) => ({t, items:items.map(([k,l,ic,b,ex]) => { const a = k === navPage; return {l, ic:IC[ic], go:() => this.go(k, ex), bg:a ? 'rgba(255,255,255,.11)' : 'transparent', c:a ? '#fff' : 'rgba(255,255,255,.7)', icc:a ? '#E2CE98' : 'rgba(255,255,255,.55)', fw:a ? 700 : 500, b:b || '', hb:!!b}; })}));
+  // "More" opens by itself when the page you are on is inside it; its count adds up what waits inside.
+  const inMore = G.some(([, items, more]) => more && items.some(i => i[0] === navPage));
+  const nav = G.map(([t, items, more]) => ({t, more:!!more, open:!more || !!s.navMore || inMore, toggle:() => this.setState(x => ({navMore:!x.navMore})),
+    count:more ? items.reduce((a, i) => a + (+i[3] || 0), 0) : 0, items:items.map(([k,l,ic,b,ex]) => { const a = k === navPage; return {l, ic:IC[ic], go:() => this.go(k, ex), bg:a ? 'rgba(255,255,255,.11)' : 'transparent', c:a ? '#fff' : 'rgba(255,255,255,.7)', icc:a ? '#E2CE98' : 'rgba(255,255,255,.55)', fw:a ? 700 : 500, b:b || '', hb:!!b}; })}));
   const phone = s.w < 700;
   const flatNav = []; G.forEach(g => g[1].forEach(i => flatNav.push(i)));
   const tabDefs = this.TABS[role] || this.TABS.ceo;

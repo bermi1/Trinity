@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openAs, watchErrors, toast, btn, saved, fillModal, swipe } from './helpers';
+import { openAs, watchErrors, toast, btn, saved, fillModal, swipe, side } from './helpers';
 
 let errors;
 test.beforeEach(async ({ page }) => { errors = watchErrors(page); page.on('dialog', d => d.accept()); });
@@ -158,7 +158,7 @@ test('search and the assistant are one tap away', async ({ page }) => {
 test('home-screen shortcuts open straight to the right place', async ({ page }) => {
   await openAs(page, 'ceo', 'dashboard');
   await page.goto('/app/?go=requests');
-  await expect(title(page)).toHaveText('Requests & Floats');
+  await expect(title(page)).toHaveText('Approvals');
   await expect(page).toHaveURL(/\/$/);
   await page.goto('/app/?go=newreq');
   await expect(page.getByRole('dialog', { name: 'Request money' })).toBeVisible();
@@ -236,7 +236,7 @@ test.describe('tablet', () => {
     await openAs(page, 'ceo', 'dashboard');
     await expect(page.locator('aside')).toHaveCount(0);
     await page.locator('header button').first().click();
-    await page.locator('aside').getByText('Procurement', { exact: true }).click();
+    await side(page, 'Procurement');
     await expect(page.locator('aside')).toHaveCount(0);
     await expect(btn(page, 'Purchase request')).toBeVisible();
   });

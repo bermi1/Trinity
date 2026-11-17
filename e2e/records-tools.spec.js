@@ -108,7 +108,7 @@ test('mobile apps page runs each portal’s phone app, synced with the desktop',
   await page.locator('iframe').evaluate(el => el.scrollIntoView({ block: 'end' }));
   await phone.locator('nav').getByText('Approvals').click();
   await phone.getByRole('button', { name: 'Approve', exact: true }).click();
-  await side(page, 'Requests & Floats');
+  await side(page, 'Approvals');
   await btn(page, /^Approved ·/).click();
   await expect(page.getByText('REQ-0418').first()).toBeVisible();
 });

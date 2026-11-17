@@ -140,3 +140,36 @@ test('tasks board: filters and moving cards through every column', async ({ page
   await card.locator('button').first().click();
   expect((await saved(page)).tasks.find(t => t.id === 'T4').st).toBe('review');
 });
+
+test('menus stay short: everyday pages first, the rest folded under More', async ({ page }) => {
+  const visible = async () => (await page.locator('aside .tm-h4').allInnerTexts()).map(t => t.replace(/\s*\d+$/, '').trim());
+  const everyday = {
+    ceo: ['Dashboard', 'Monday Briefing', 'Approvals', 'Projects', 'Tasks', 'CRM', 'Finance & Invoices', 'Reports'],
+    staff: ['My Day', 'My tasks', 'Approvals', 'Field capture'],
+    finance: ['My queue', 'Finance & Invoices', 'Requests & Floats', 'Reports'],
+    reception: ['Front desk', 'Meeting rooms', 'Calendar', 'Client enquiries'],
+    store: ['My store', 'Requisitions', 'Inventory', 'Stock ledger', 'Procurement'],
+    production: ['Print floor', 'Production jobs', 'Store requisitions']
+  };
+  for (const [role, items] of Object.entries(everyday)) {
+    await openAs(page, role);
+    expect(await visible(), role).toEqual(items);
+  }
+
+  // Management: More shows how many things wait inside it, opens, and is remembered.
+  await openAs(page, 'ceo', 'dashboard');
+  const more = page.locator('aside').getByRole('button', { name: /More/ });
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await expect(more).toContainText(/\d+/);
+  await more.click();
+  await expect(page.locator('aside').getByRole('button', { name: /Less/ })).toHaveAttribute('aria-expanded', 'true');
+  expect((await visible()).length).toBeGreaterThan(20);
+  await page.reload();
+  await expect(page.locator('aside').getByText('Stock ledger', { exact: true })).toBeVisible();
+  await page.locator('aside').getByRole('button', { name: /Less/ }).click();
+  await expect(page.locator('aside').getByText('Stock ledger', { exact: true })).toHaveCount(0);
+
+  // Opening a page that lives under More shows it in the menu, highlighted.
+  await openAs(page, 'ceo', 'logistics');
+  await expect(page.locator('aside').getByText('Logistics', { exact: true })).toBeVisible();
+});

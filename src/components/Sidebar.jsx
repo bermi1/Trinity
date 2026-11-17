@@ -1,4 +1,5 @@
-// Generated from the Claude Design file by scripts/dc-to-jsx.mjs.
+// Generated from the Claude Design file by scripts/dc-to-jsx.mjs, then edited by hand:
+// the "More" group folds away so each portal shows only its everyday pages.
 import { Fragment } from 'react';
 
 export default function Sidebar({ v }) {
@@ -23,10 +24,20 @@ export default function Sidebar({ v }) {
           {(v.nav || []).map((g, _i0) => (
             <Fragment key={_i0}>
               <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
-                <div style={{ fontSize: "10px", fontWeight: "700", letterSpacing: ".16em", textTransform: "uppercase", color: "rgba(255,255,255,.38)", padding: "0 10px 6px" }}>
-                  {g.t}
-                </div>
-                {(g.items || []).map((it, _i1) => (
+                {g.more ? (
+                  <button type="button" className="sb-more" aria-expanded={g.open} onClick={g.toggle}>
+                    <span>{g.open ? 'Less' : 'More'}</span>
+                    {!g.open && g.count ? <span className="sb-more-n">{g.count}</span> : null}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: g.open ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
+                ) : (
+                  <div style={{ fontSize: "10px", fontWeight: "700", letterSpacing: ".16em", textTransform: "uppercase", color: "rgba(255,255,255,.38)", padding: "0 10px 6px" }}>
+                    {g.t}
+                  </div>
+                )}
+                {(g.open ? g.items || [] : []).map((it, _i1) => (
                   <Fragment key={_i1}>
                     <div className="tm-h4" onClick={it.go} style={{ display: "flex", alignItems: "center", gap: "11px", height: "34px", padding: "0 10px", borderRadius: "8px", background: it.bg, color: it.c, fontSize: "13px", fontWeight: it.fw, cursor: "pointer" }}>
                       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={it.icc} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

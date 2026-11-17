@@ -19,7 +19,18 @@ export function watchErrors(page) {
   return errors;
 }
 
-export const side = (page, label) => page.locator('aside').getByText(label, { exact: true }).click();
+// Clicks a sidebar page, opening "More" first when the page lives there.
+export async function side(page, label) {
+  const aside = page.locator('aside');
+  const item = aside.getByText(label, { exact: true }).first();
+  await expect(async () => {
+    if (!(await item.isVisible())) {
+      const more = aside.getByRole('button', { name: 'More' });
+      if (await more.count()) await more.click();
+    }
+    await item.click({ timeout: 2000 });
+  }).toPass({ timeout: 15000 });
+}
 export const toast = (page, text) => expect(page.getByText(text).last()).toBeVisible();
 export const btn = (scope, name) => scope.getByRole('button', { name, exact: true });
 

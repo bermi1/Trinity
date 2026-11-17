@@ -21,7 +21,7 @@ test('a money request travels the whole chain: staff → finance → management 
 
   // Management signs off the Project Manager and Operations steps on their behalf.
   await switchTo(page, 'Management · Command Center');
-  await side(page, 'Requests & Floats');
+  await side(page, 'Approvals');
   await btn(page, /^All ·/).click();
   await page.getByText('REQ-0427').first().click();
   await btn(page, 'Approve').click();
@@ -36,7 +36,7 @@ test('a money request travels the whole chain: staff → finance → management 
   await toast(page, 'REQ-0427 verified · sent to Management');
 
   await switchTo(page, 'Management · Command Center');
-  await side(page, 'Requests & Floats');
+  await side(page, 'Approvals');
   await btn(page, /^Awaiting me ·/).click();
   await page.getByText('REQ-0427').first().click();
   await expect(page.getByText('Taxi to Mlimani site')).toBeVisible();

@@ -59,7 +59,7 @@ export default class TrinityApp extends Logic {
     let emb = false, er = null; try { const qp = new URLSearchParams(location.search); emb = qp.get('embed') === '1'; er = qp.get('role'); } catch (e) {}
     if (emb) { const rr = this.ROLES[er] ? er : 'ceo'; sv = {auth:true, role:rr, page:this.ROLES[rr].home, projectId:'PRJ-0231'}; }
     const data = this.seed(); Object.keys(data).forEach(k => { if (saved && saved[k] !== undefined) data[k] = saved[k]; });
-    return Object.assign({embed:emb,more:false,colSel:{tasks:1,proc:0,crm:0},mobileRole:sv.role||'ceo',docType:'all',docQ:'',propFilter:'all',prefs:sv.prefs||{push:true,email:true,sms:false,digest:true},auth:!!sv.auth,pinUser:sv.pinUser||'',remember:sv.remember !== false,online:typeof navigator === 'undefined' ? true : navigator.onLine !== false,navDir:'tab',role:sv.role||'ceo',loginRole:sv.role||'ceo',mTab:'home',page:sv.page||'dashboard',projectId:sv.projectId||'PRJ-0231',jobId:sv.jobId||'JOB-0313',email:'daniel.k@trinitymark.co.tz',pw:'demo1234',loginErr:'',range:'12W',tip:-1,menu:false,drawer:false,w:typeof window!=='undefined'?window.innerWidth:1440,reqSel:'REQ-0418',reqFilter:'me',taskFilter:'all',projFilter:'all',stockQ:'',leadQ:'',modal:null,form:{},modalErr:'',cmd:false,cmdQ:'',ai:false,aiQ:'',aiBusy:false,aiMsgs:[{r:'ai',t:'Habari. Ask me about projects, money, stock or staff — I read the live Trinity Mark 360 data.'}],toasts:[],fieldTab:'home',newAct:{d:'',a:'',o:'SK',dl:''}}, data); })();
+    return Object.assign({embed:emb,more:false,navMore:!!sv.navMore,colSel:{tasks:1,proc:0,crm:0},mobileRole:sv.role||'ceo',docType:'all',docQ:'',propFilter:'all',prefs:sv.prefs||{push:true,email:true,sms:false,digest:true},auth:!!sv.auth,pinUser:sv.pinUser||'',remember:sv.remember !== false,online:typeof navigator === 'undefined' ? true : navigator.onLine !== false,navDir:'tab',role:sv.role||'ceo',loginRole:sv.role||'ceo',mTab:'home',page:sv.page||'dashboard',projectId:sv.projectId||'PRJ-0231',jobId:sv.jobId||'JOB-0313',email:'daniel.k@trinitymark.co.tz',pw:'demo1234',loginErr:'',range:'12W',tip:-1,menu:false,drawer:false,w:typeof window!=='undefined'?window.innerWidth:1440,reqSel:'REQ-0418',reqFilter:'me',taskFilter:'all',projFilter:'all',stockQ:'',leadQ:'',modal:null,form:{},modalErr:'',cmd:false,cmdQ:'',ai:false,aiQ:'',aiBusy:false,aiMsgs:[{r:'ai',t:'Habari. Ask me about projects, money, stock or staff — I read the live Trinity Mark 360 data.'}],toasts:[],fieldTab:'home',newAct:{d:'',a:'',o:'SK',dl:''}}, data); })();
 
   componentDidMount() {
     this._key = e => {
@@ -98,7 +98,7 @@ export default class TrinityApp extends Logic {
     }
     this._overlayWas = now;
     if (s.auth && this._afterAuth && !this._afterAuthRunning) { this._afterAuthRunning = true; const f = this._afterAuth; this._afterAuth = null; setTimeout(() => { this._afterAuthRunning = false; f(); }, 0); }
-    if (!s.embed) { try { localStorage.setItem('tm360', JSON.stringify({auth:s.auth,role:s.role,page:s.page,projectId:s.projectId,jobId:s.jobId,pinUser:s.pinUser,prefs:s.prefs,remember:s.remember})); } catch (e) {} }
+    if (!s.embed) { try { localStorage.setItem('tm360', JSON.stringify({auth:s.auth,role:s.role,page:s.page,projectId:s.projectId,jobId:s.jobId,pinUser:s.pinUser,prefs:s.prefs,remember:s.remember,navMore:!!s.navMore})); } catch (e) {} }
     const dk = this.dataKeys(), prev = this._prevData || {}, diff = {}; let n = 0;
     dk.forEach(k => { if (s[k] !== prev[k]) { diff[k] = s[k]; n++; } });
     this._prevData = {}; dk.forEach(k => { this._prevData[k] = s[k]; });
@@ -316,28 +316,25 @@ export default class TrinityApp extends Logic {
     const unread = this.myNotes(s).filter(n => !n.read).length, myReq = s.reqs.filter(q => q.st === 'pending' && q.step === 4).length, openTasks = s.tasks.filter(t => t.st !== 'done').length;
     const srqN = s.requisitions.filter(q => q.st === 'pending' || q.st === 'partial').length, waitN = s.jobs.filter(j => j.s < 7 && !this.materialsReady(j)).length;
     const lowN = s.stock.filter(i => i.q < i.min).length, finQ = s.reqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === R.k && t.st !== 'done').length;
+    // Each portal shows only what that person uses every day; everything else waits under "More".
+    const mob = ['ceomobile','Mobile app','phone',0,{mobileRole:role}];
+    const company = [['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']];
     const N = {
-      ceo:[['Overview',[['dashboard','Dashboard','grid'],['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['notifications','Notifications','bell',unread]]],
-        ['Commercial',[['crm','CRM','users'],['proposals','Sales & Proposals','clipboard'],['finance','Finance & Invoices','chart']]],
-        ['Operations',[['projects','Projects','folder'],['tasks','Tasks','checkSquare',openTasks],['production','Production','printer'],['procurement','Procurement','cart'],['store','Store & Inventory','package'],['requisitions','Store requisitions','clipboard',srqN],['movements','Stock ledger','receipt'],['logistics','Logistics','truck']]],
-        ['Money',[['requests','Requests & Floats','banknote',myReq]]],
-        ['People',[['staff','Staff & Reports','user'],['rooms','Meeting rooms','calendar']]],
-        ['Records',[['documents','Documents','paperclip'],['reports','Reports','pie']]],
-        ['Mobile',[['ceomobile','Mobile apps','phone',0,{mobileRole:'ceo'}],['field','Field capture app','camera']]],
-        ['System',[...(this.isAdmin() ? [['users','Users & access','shield']] : []),['settings','Settings','settings']]]],
-      staff:[['My work',[['staffportal','My Day','home'],['tasks','My tasks','checkSquare',myOpen,{taskFilter:'mine'}],['requests','Approvals','banknote',s.reqs.filter(q => this.canAct(q)).length],['field','Field capture','camera'],['ceomobile','Mobile app','phone',0,{mobileRole:'staff'}]]],
-        ['Company',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],['settings','Settings','settings']]]],
-      finance:[['Finance',[['financeportal','My queue','wallet',finQ],['finance','Finance & Invoices','chart'],['requests','Requests & Floats','banknote'],['proposals','Proposals','clipboard'],['procurement','Procurement','cart'],['reports','Reports','pie']]],
-        ['Company',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],['ceomobile','Mobile app','phone',0,{mobileRole:'finance'}],['settings','Settings','settings']]]],
-      reception:[['Front office',[['reception','Front desk','message'],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['crm','Client enquiries','users'],['staff','Staff directory','user']]],
-        ['Company',[['briefing','Monday Briefing','presentation'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],['ceomobile','Mobile app','phone',0,{mobileRole:'reception'}],['settings','Settings','settings']]]],
-      store:[['Store',[['storekeeper','My store','home',lowN],['requisitions','Requisitions','clipboard',srqN],['store','Inventory','package'],['movements','Stock ledger','receipt'],['procurement','Procurement','cart'],['production','Production','printer'],['logistics','Logistics','truck']]],
-        ['Company',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],['ceomobile','Mobile app','phone',0,{mobileRole:'store'}],['settings','Settings','settings']]]],
-      production:[['Printing',[['printshop','Print floor','printer',waitN],['production','Production jobs','checkSquare'],['requisitions','Store requisitions','clipboard'],['store','Inventory','package'],['procurement','Procurement','cart']]],
-        ['Company',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],['ceomobile','Mobile app','phone',0,{mobileRole:'production'}],['settings','Settings','settings']]]]
+      ceo:[['Every day',[['dashboard','Dashboard','grid'],['briefing','Monday Briefing','presentation'],['requests','Approvals','banknote',myReq],['projects','Projects','folder'],['tasks','Tasks','checkSquare',openTasks],['crm','CRM','users'],['finance','Finance & Invoices','chart'],['reports','Reports','pie']]],
+        ['More',[['calendar','Calendar','calendar'],['notifications','Notifications','bell',unread],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['procurement','Procurement','cart'],['store','Store & Inventory','package'],['requisitions','Store requisitions','clipboard',srqN],['movements','Stock ledger','receipt'],['logistics','Logistics','truck'],['staff','Staff & Reports','user'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['ceomobile','Mobile apps','phone',0,{mobileRole:'ceo'}],['field','Field capture app','camera'],...(this.isAdmin() ? [['users','Users & access','shield']] : []),['settings','Settings','settings']], true]],
+      staff:[['My work',[['staffportal','My Day','home'],['tasks','My tasks','checkSquare',myOpen,{taskFilter:'mine'}],['requests','Approvals','banknote',s.reqs.filter(q => this.canAct(q)).length],['field','Field capture','camera']]],
+        ['More',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
+      finance:[['Finance',[['financeportal','My queue','wallet',finQ],['finance','Finance & Invoices','chart'],['requests','Requests & Floats','banknote'],['reports','Reports','pie']]],
+        ['More',[['proposals','Proposals','clipboard'],['procurement','Procurement','cart'],...company], true]],
+      reception:[['Front office',[['reception','Front desk','message'],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['crm','Client enquiries','users']]],
+        ['More',[['staff','Staff directory','user'],['briefing','Monday Briefing','presentation'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
+      store:[['Store',[['storekeeper','My store','home',lowN],['requisitions','Requisitions','clipboard',srqN],['store','Inventory','package'],['movements','Stock ledger','receipt'],['procurement','Procurement','cart']]],
+        ['More',[['production','Production','printer'],['logistics','Logistics','truck'],...company], true]],
+      production:[['Printing',[['printshop','Print floor','printer',waitN],['production','Production jobs','checkSquare'],['requisitions','Store requisitions','clipboard']]],
+        ['More',[['store','Inventory','package'],['procurement','Procurement','cart'],...company], true]]
     };
     let G = N[role] || N.ceo;
-    if (s.embed) G = G.map(([t, items]) => [t, items.filter(i => i[0] !== 'ceomobile')]).filter(g => g[1].length);
+    if (s.embed) G = G.map(([t, items, more]) => [t, items.filter(i => i[0] !== 'ceomobile'), more]).filter(g => g[1].length);
     return G;
   }
   navFor(role) { const out = []; this.navGroups(role).forEach(g => g[1].forEach(i => out.push(i))); return out; }
