@@ -47,22 +47,27 @@ export async function saved(page) {
 // Request money first asks which kind of request; this picks it.
 export async function chooseRequest(page, type = 'Project request') {
   const m = modal(page);
-  await m.locator('label').filter({ has: page.getByText('Type of request', { exact: true }) }).locator('select').selectOption({ label: type });
+  await m.locator('[data-field="Type of request"]').getByRole('radio', { name: type, exact: true }).click();
   await m.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(modal(page).getByText(type, { exact: true }).first()).toBeVisible();
 }
 
-// Fills the open form modal: { 'Label': value } for inputs and selects.
+// Fills the open form: { 'Label': value }. Text and amounts are typed; chips and people are tapped;
+// long lists are opened and the option chosen.
 export async function fillModal(page, values) {
-  const modal = page.locator('div[style*="max-height: 90vh"], .m-sheet');
+  const m = modal(page);
   for (const [label, value] of Object.entries(values)) {
-    const field = modal.locator('label').filter({ has: page.getByText(label, { exact: true }) }).locator('input, select').first();
-    if (await field.evaluate(el => el.tagName) === 'SELECT') await field.selectOption({ label: value });
-    else await field.fill(String(value));
+    const field = m.locator('[data-field="' + label + '"]').first();
+    const input = field.locator('input:not([type=file]):not(.ff-search), textarea').first();
+    if (await input.count()) { await input.fill(String(value)); continue; }
+    const radio = field.getByRole('radio', { name: String(value), exact: true });
+    if (await radio.count()) { await radio.first().click(); continue; }
+    await field.locator('.ff-pick-btn').click();
+    await field.getByRole('option', { name: String(value), exact: true }).click();
   }
-  return modal;
+  return m;
 }
-export const modal = page => page.locator('div[style*="max-height: 90vh"], .m-sheet');
+export const modal = page => page.locator('.fm, .m-sheet');
 
 // The closest block around an exact text that contains buttons (a table row or card).
 export const rowOf = (page, text, nth = 0) => page.getByText(text, { exact: true }).nth(nth).locator('xpath=ancestor::div[.//button][1]');
