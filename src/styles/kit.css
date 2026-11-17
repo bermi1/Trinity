@@ -115,24 +115,6 @@
 .k-select { height: 36px; border: 1px solid #E8E4EF; border-radius: 8px; padding: 0 8px; background: #fff; font-size: 13px; font-weight: 600; }
 @media (max-width: 699px) { .k-select { height: 44px; font-size: 16px; } }
 
-/* Website enquiries (top of CRM) */
-.webenq { margin-bottom: 18px; }
-.webenq-list { list-style: none; margin: 0; padding: 0; }
-.webenq-item + .webenq-item { border-top: 1px solid #EEEAF4; }
-.webenq-head { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border: none; background: none; text-align: left; color: inherit; font: inherit; cursor: pointer; }
-.webenq-head:hover { background: #FAF8FD; }
-.webenq-who { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 4px; font-size: 14px; }
-.webenq-who span { color: #4A4560; }
-.webenq-who small { flex-basis: 100%; color: #8A8599; font-size: 12.5px; margin-top: 3px; }
-.webenq-body { padding: 0 18px 16px; }
-.webenq-msg { margin: 0 0 12px; white-space: pre-wrap; font-size: 14px; line-height: 1.55; color: #2A2540; background: #F7F5FB; border-radius: 10px; padding: 12px 14px; }
-.webenq-meta { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 0 0 14px; font-size: 13px; }
-.webenq-meta dt { color: #8A8599; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
-.webenq-meta dd { margin: 2px 0 0; font-weight: 600; }
-.webenq-meta a { color: #5A2FA8; }
-.webenq-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-@media (max-width: 699px) { .webenq { margin: 0 0 14px; } .webenq-head { padding: 14px 16px; min-height: 56px; } .webenq-body { padding: 0 16px 16px; } }
-
 /* Sidebar: the "More" group folds away */
 .sb-more { display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 10px; margin-bottom: 2px; border: none; border-radius: 8px; background: transparent; color: rgba(255, 255, 255, .55);
   font: inherit; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; cursor: pointer; text-align: left; }

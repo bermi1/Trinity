@@ -17,5 +17,5 @@ createRoot(document.getElementById('root')).render(
 
 // Offline support and installability (production builds only).
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/app/' }).catch(err => console.warn('Service worker not registered', err)));
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(err => console.warn('Service worker not registered', err)));
 }

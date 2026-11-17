@@ -1,6 +1,7 @@
 -- Trinity Mark 360 · enquiries sent from the public website (trinitymark.co.tz contact form).
--- Visitors can only send an enquiry; they cannot read, change or remove any. Signed-in staff
--- see them in CRM and turn them into leads. Safe to run again.
+-- Visitors can only send an enquiry; they cannot read, change or remove any. Signed-in staff can read them.
+-- Not used by the app at the moment: the public website was taken out until its content is ready.
+-- The table is already in the live database, so this file stays to match it. Safe to run again.
 
 create table if not exists public.enquiries (
   id uuid primary key default gen_random_uuid(),

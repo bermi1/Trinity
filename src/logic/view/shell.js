@@ -90,7 +90,6 @@ export function renderVals() {
     ADM:{db:!!s.db, users:s.users || null, busy:!!s.usersBusy, me:this.state.pinUser, load:() => this.loadUsers(), create:f => this.createUser(f), update:(u, c) => this.updateUser(u, c),
       reset:(u, pw) => this.resetPassword(u, pw), del:u => this.deleteUser(u), removeDemo:() => this.removeDemo(), live:!!s.workspaceLive,
       roles:Object.keys(this.ROLES).map(k => ({v:k, l:ROLES_LABEL[k]}))},
-    ENQ:{list:s.enquiries || null, busy:!!s.enquiriesBusy, load:() => this.loadEnquiries(), toLead:q => this.enquiryToLead(q), set:(q, st) => this.setEnquiryStatus(q, st)},
     PIN:{mode:s.pin || null, user:s.pinUser, name:R.n, set:(a, b) => this.setPin(a, b), unlock:p => this.unlock(p), skip:() => this.skipPin(), usePassword:() => this.signOut(), hasPin:!!pinFor(s.pinUser), setup:() => this.setState({pin:'setup', menu:false, more:false}), off:() => this.turnOffPin()},
     showBack:phone && !this.isTab(s.page), goSettings:() => this.go('settings'), goBack:() => this.goBack(), refresh:() => this.refresh(), haptic:ms => this.haptic(ms), remember:s.remember !== false,
     nav, is, narrow, wide, phone, notPhone:!phone, tabletNav:narrow && !phone, toastBottom:phone ? 'calc(78px + env(safe-area-inset-bottom, 0px))' : '24px', deskDisp:phone ? 'none' : 'block',

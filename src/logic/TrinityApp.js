@@ -13,7 +13,6 @@ import RecordSync, { applyChange } from './sync';
 import { printDocument } from '../lib/print';
 import { storeMethods } from './store';
 import { adminMethods, emptyLike } from './admin';
-import { enquiryMethods } from './enquiries';
 import { pinFor, savePin, checkPin, clearPin, clearUnlocked, isUnlocked, isValidPin, markUnlocked, LOCK_AFTER_MS } from './pin';
 import { storeVals } from './view/storeops';
 
@@ -51,7 +50,7 @@ export default class TrinityApp extends Logic {
   }
   signInWith(provider) {
     if (!this.state.db) { this.signIn(); return; }
-    supabase.auth.signInWithOAuth({provider, options:{redirectTo:location.origin + '/app/'}}).then(({error}) => {
+    supabase.auth.signInWithOAuth({provider, options:{redirectTo:location.origin}}).then(({error}) => {
       if (error) this.setState({loginErr:/not enabled|unsupported provider/i.test(error.message) ? (provider === 'google' ? 'Google' : 'Microsoft') + ' sign-in is not switched on yet. Use your email and password.' : error.message});
     });
   }
@@ -203,7 +202,7 @@ export default class TrinityApp extends Logic {
     const s = this.state;
     if (!s.db) { this.setState({loginErr:'A reset link has been sent to ' + s.email + ' (demo).'}); return; }
     if (!s.email.trim()) { this.setState({loginErr:'Enter your email first, then click "Forgot password?".'}); return; }
-    supabase.auth.resetPasswordForEmail(s.email.trim(), {redirectTo:location.origin + '/app/'}).then(({error}) => {
+    supabase.auth.resetPasswordForEmail(s.email.trim(), {redirectTo:location.origin}).then(({error}) => {
       this.setState({loginErr:error ? error.message : 'A reset link has been sent to ' + s.email.trim() + '.'});
     });
   }
@@ -433,7 +432,7 @@ export default class TrinityApp extends Logic {
     const P = this.proj(f.p);
     if (m.act === 'task') { this.setState(x => ({tasks:[{id:'T'+Date.now(),t:f.t,p:f.p,who:f.who,due:f.due||'This week',st:'todo',pri:f.pri}, ...x.tasks]})); this.toast('Task created and assigned to ' + this.av(f.who).n); this.log('checkSquare','purple','Task created · ' + f.t, P.client + ' · assigned to ' + this.av(f.who).first); }
     if (m.act === 'req') { const amt = +f.amt || 0; const id = this.nextId('REQ', s.reqs); const who = f.who || this.me().k; this.setState(x => ({reqs:[{id,who,amt,cat:f.cat,purpose:f.purpose,p:f.p,need:f.need||'This week',step:1,st:'pending',log:[this.now()]}, ...x.reqs], reqSel:id})); this.toast(id + ' submitted · waiting for Project Manager'); this.log('banknote','amber',this.av(who).first + ' requested ' + this.fmtT(amt), P.name + ' · ' + id); }
-    if (m.act === 'lead') { this.setState(x => ({leads:[{id:'L'+Date.now(),c:f.c,t:f.t,v:+f.v||0,s:0,src:f.src}, ...x.leads]})); this.toast('Lead added · ' + f.c); this.log('users','blue','New lead · ' + f.c, f.t); if (f.enq) this.enquiryLeadSaved(f.enq); }
+    if (m.act === 'lead') { this.setState(x => ({leads:[{id:'L'+Date.now(),c:f.c,t:f.t,v:+f.v||0,s:0,src:f.src}, ...x.leads]})); this.toast('Lead added · ' + f.c); this.log('users','blue','New lead · ' + f.c, f.t); }
     if (m.act === 'project') { const id = this.nextId('PRJ', s.projects); const val = +f.val || 0; this.setState(x => ({projects:[{id,name:f.name,client:f.client,pm:f.pm,st:'on',prog:0,val,bud:+(val*0.7).toFixed(1),spent:0,stage:2,due:f.due||'TBC',team:[f.pm]}, ...x.projects]})); this.toast('Project ' + id + ' created'); this.log('folder','purple','Project created · ' + f.client, f.name); setTimeout(() => this.go('project',{projectId:id}), 50); }
     if (m.act === 'issue') { const q = Math.max(0, +f.q || 0); this.setState(this.stockChange([{sku:f.sku, qty:-q, type:'issue'}], 'Direct issue · ' + this.av(f.who).n, f.p, '')); this.toast('Issued ' + q + ' ' + f.u + ' of ' + f.n + ' to ' + P.client); this.log('package','dark','Store issued ' + q + ' ' + f.u + ' · ' + f.n, P.name + ' · ' + this.av(f.who).first); }
     if (m.act === 'receive') { const q = Math.max(0, +f.q || 0); this.setState(this.stockChange([{sku:f.sku, qty:q, type:'receipt'}], 'Received' + (f.sup ? ' · ' + f.sup : ''), '', '')); this.toast('Received ' + q + ' ' + f.u + ' · ' + f.n); this.log('package','green','Stock received · ' + f.n, q + ' ' + f.u + (f.sup ? ' from ' + f.sup : '')); }
@@ -503,4 +502,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals }, storeMethods, adminMethods, enquiryMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals }, storeMethods, adminMethods);

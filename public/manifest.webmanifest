@@ -2,7 +2,7 @@
   "name": "Trinity Mark 360",
   "short_name": "TM 360",
   "description": "Projects, money, materials, people and operations for Trinity Mark Solutions.",
-  "start_url": "/app/",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#F4F1FA",
   "theme_color": "#2B1459",
@@ -25,8 +25,8 @@
       "type": "image/svg+xml"
     }
   ],
-  "id": "/app/",
-  "scope": "/app/",
+  "id": "/",
+  "scope": "/",
   "orientation": "portrait",
   "categories": [
     "business",
@@ -36,7 +36,7 @@
     {
       "name": "Approvals",
       "short_name": "Approvals",
-      "url": "/app/?go=requests",
+      "url": "/?go=requests",
       "icons": [
         {
           "src": "/icon-192.png",
@@ -47,7 +47,7 @@
     {
       "name": "Request money",
       "short_name": "Request money",
-      "url": "/app/?go=newreq",
+      "url": "/?go=newreq",
       "icons": [
         {
           "src": "/icon-192.png",
@@ -58,7 +58,7 @@
     {
       "name": "My tasks",
       "short_name": "Tasks",
-      "url": "/app/?go=tasks",
+      "url": "/?go=tasks",
       "icons": [
         {
           "src": "/icon-192.png",
@@ -69,7 +69,7 @@
     {
       "name": "Notifications",
       "short_name": "Alerts",
-      "url": "/app/?go=notifications",
+      "url": "/?go=notifications",
       "icons": [
         {
           "src": "/icon-192.png",

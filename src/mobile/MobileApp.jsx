@@ -4,7 +4,6 @@ import CUSTOM from '../pages/custom';
 import CommandPalette from '../components/CommandPalette';
 import AssistantPanel from '../components/AssistantPanel';
 import Toasts from '../components/Toasts';
-import WebEnquiries from '../components/WebEnquiries';
 import MobileHeader from './MobileHeader';
 import TabBar from './TabBar';
 import MoreSheet from './MoreSheet';
@@ -31,7 +30,6 @@ export default function MobileApp({ v }) {
       <MobileHeader v={v} />
       <PullToRefresh onRefresh={refresh} disabled={sheetOpen || v.aiOpen || v.cmdOpen} />
       <main key={v.pageKey} className={'m-screen is-' + v.navDir + ' page-' + v.page}>
-        {v.page === 'crm' ? <WebEnquiries v={v} /> : null}
         <Page v={v} />
       </main>
       <TabBar v={v} hidden={keyboard} />
