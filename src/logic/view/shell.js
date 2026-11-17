@@ -2,8 +2,9 @@
 // Values for the app shell, login, navigation and the dashboard.
 import { pinFor } from '../pin';
 import { colorFor } from '../admin';
+import { HIDDEN_ROLES } from '../constants';
 
-const ROLES_LABEL = {ceo:'Management', staff:'Staff', finance:'Finance', reception:'Reception', store:'Store', production:'Printing'};
+const ROLES_LABEL = {ceo:'Management', gm:'General Manager', staff:'Staff', finance:'Finance', reception:'Reception', store:'Store', production:'Printing'};
 export function renderVals() {
   const s = this.state, IC = this.IC, ST = this.ST;
   const narrow = s.w < 960, wide = s.w >= 1240;
@@ -27,7 +28,7 @@ export function renderVals() {
   const mobileTabs = tabDefs.map(([k,l,ic,_b,ex]) => { const a = k === navPage && !s.more; const b = BADGE[k] || 0; return {l, ic:IC[ic], c:a ? '#2B1459' : '#8A8698', bar:a ? '#6D3CC2' : 'transparent', fw:a ? 800 : 600, b, hb:b > 0, on:() => this.go(k, ex)}; });
   mobileTabs.push({l:'More', ic:IC.grid, c:moreActive ? '#2B1459' : '#8A8698', bar:moreActive ? '#6D3CC2' : 'transparent', fw:moreActive ? 800 : 600, b:0, hb:false, on:() => this.setState({more:!s.more})});
   const moreItems = flatNav.filter(i => !tabDefs.some(t => t[0] === i[0]) && !(phone && i[0] === 'ceomobile')).map(([k,l,ic,b,ex]) => { const a = k === navPage; return {l, ic:IC[ic], b:b || 0, hb:!!b, bg:a ? '#EFE8FA' : '#fff', bd:a ? '#6D3CC2' : '#E8E4EF', on:() => this.go(k, ex)}; });
-  const portalChips = Object.keys(this.ROLES).map(k => ({l:this.ROLES[k].label, bg:role === k ? '#2B1459' : '#fff', c:role === k ? '#fff' : '#17152A', bd:role === k ? '#2B1459' : '#E8E4EF', on:() => this.asRole(k)()}));
+  const portalChips = Object.keys(this.ROLES).filter(k => !HIDDEN_ROLES.includes(k)).map(k => ({l:this.ROLES[k].label, bg:role === k ? '#2B1459' : '#fff', c:role === k ? '#fff' : '#17152A', bd:role === k ? '#2B1459' : '#E8E4EF', on:() => this.asRole(k)()}));
   const is = {}; ['dashboard','briefing','notifications','crm','finance','projects','project','tasks','procurement','store','requests','staff','field','staffportal','financeportal','reception','storekeeper','rooms','ceomobile','proposals','production','logistics','documents','reports','calendar','settings'].forEach(k => is[k] = s.page === k);
   const hr = new Date().getHours();
   const d = new Date();
@@ -66,13 +67,13 @@ export function renderVals() {
     ...(overdue[0] ? [{t:overdue[0].c + ' · ' + overdue[0].id, s:'Invoice ' + overdue[0].due + ' · ' + this.fmtM(overdue[0].v), ic:IC.fileText, bg:'#FBEDEE', fg:'#B23A46', on:() => this.go('finance')}] : [])
   ].slice(0,3);
   const activity = s.activity.map(e => { const t = this.tone(e.tone); return Object.assign({}, e, {ic:IC[e.ic], bg:t[0], fg:t[1]}); });
-  const pipe = [['PM',1],['Ops',2],['Finance',3],['You',4],['Payment',5],['Paid',6]].map(([l,k]) => { const nn = s.reqs.filter(r => r.step === k && r.st !== 'rejected').length; const you = k === 4, paid = k === 6; return {l, n:nn, bg:you ? '#FBF6EA' : paid ? '#E6F4EC' : '#F4F1FA', bd:you ? '#E4CD95' : 'transparent', fg:you ? '#8A6414' : paid ? '#1F7549' : '#2B1459'}; });
+  const pipe = [['GM',2],['Finance',3],['Management',4],['Payment',5],['Paid',6]].map(([l,k]) => { const nn = s.reqs.filter(r => r.step === k && r.st !== 'rejected').length; const you = k === 4, paid = k === 6; return {l, n:nn, bg:you ? '#FBF6EA' : paid ? '#E6F4EC' : '#F4F1FA', bd:you ? '#E4CD95' : 'transparent', fg:you ? '#8A6414' : paid ? '#1F7549' : '#2B1459'}; });
   const PS = ['Request','Approved','Delivered'], pcol = p => (p.s >= 4 ? 2 : p.s >= 2 ? 1 : 0);
   const procPipe = PS.map((l,i) => ({l, n:s.proc.filter(p => pcol(p) === i).length}));
   const missing = s.staff.filter(p => !p.rep);
   const reports = {sub:s.reportsSub, total:48, w:(s.reportsSub/48*100) + '%', missing:missing.length ? 'Missing: ' + missing.map(p => { const a = this.av(p.k); return a.first + ' ' + a.n.split(' ')[1][0] + '.'; }).join(', ') : 'Everyone has reported'};
   const q = (l, ic, on, primary) => ({l, ic:IC[ic], on, bg:primary ? '#2B1459' : '#fff', c:primary ? '#fff' : '#17152A', bd:primary ? '#2B1459' : '#E8E4EF', icc:primary ? '#E2CE98' : '#6D3CC2'});
-  const quick = [q('Create project','folder',() => this.openModal('project'),true), q('Create invoice','fileText',() => this.openModal('invoice')), q('Add task','checkSquare',() => this.openModal('task')), q('Request payment','banknote',() => this.openModal('req')), q('Purchase request','cart',() => this.openModal('proc')), q('New lead','users',() => this.openModal('lead')), q('Create proposal','clipboard',() => this.openModal('proposal')), q('Schedule meeting','calendar',() => this.openModal('meet'))];
+  const quick = [q('Create project','folder',() => this.openModal('project'),true), q('Create invoice','fileText',() => this.openModal('invoice')), q('Add task','checkSquare',() => this.openModal('task')), q('Request payment','banknote',() => this.openModal('req')),...(this.isOff('procurement') ? [] : [q('Purchase request','cart',() => this.openModal('proc'))]), q('New lead','users',() => this.openModal('lead')), q('Create proposal','clipboard',() => this.openModal('proposal')), q('Schedule meeting','calendar',() => this.openModal('meet'))];
 
   return Object.assign({
     ic:IC, showLogin:!s.auth, showApp:s.auth, email:s.email, pw:s.pw, loginErr:s.loginErr,
@@ -95,8 +96,8 @@ export function renderVals() {
     nav, is, narrow, wide, phone, notPhone:!phone, tabletNav:narrow && !phone, toastBottom:phone ? 'calc(78px + env(safe-area-inset-bottom, 0px))' : '24px', deskDisp:phone ? 'none' : 'block',
     pageTitle, mobileTabs, moreOpen:phone && !!s.more, closeMore:() => this.setState({more:false}), moreItems, portalChips,
     me:(() => { const R = this.ROLES[s.role || 'ceo']; return {i:R.k, n:R.n, t:R.t, c:this.av(R.k).c, label:R.label.toUpperCase(), first:R.n.split(' ')[0]}; })(),
-    loginRoles:Object.keys(this.ROLES).map(k => { const on = false; return {l:this.ROLES[k].label, on:() => this.quickSignIn(k), bg:on ? '#2B1459' : '#fff', c:on ? '#fff' : '#17152A', bd:on ? '#2B1459' : '#E8E4EF'}; }),
-    asCeo:this.asRole('ceo'), asStaff:this.asRole('staff'), asFinance:this.asRole('finance'), asReception:this.asRole('reception'), asStore:this.asRole('store'), asProduction:this.asRole('production'), asStaffMobile:this.asRole('staff','field'), asCeoMobile:this.asRole(s.role || 'ceo','ceomobile',{mobileRole:s.role || 'ceo'}), showSidebar:!narrow || s.drawer, drawerOpen:narrow && s.drawer, sb:{pos:narrow ? 'fixed' : 'sticky', z:narrow ? 50 : 1},
+    loginRoles:Object.keys(this.ROLES).filter(k => !HIDDEN_ROLES.includes(k)).map(k => { const on = false; return {l:this.ROLES[k].label, on:() => this.quickSignIn(k), bg:on ? '#2B1459' : '#fff', c:on ? '#fff' : '#17152A', bd:on ? '#2B1459' : '#E8E4EF'}; }),
+    asCeo:this.asRole('ceo'), asGm:this.asRole('gm'), asStaff:this.asRole('staff'), asFinance:this.asRole('finance'), asReception:this.asRole('reception'), asStore:this.asRole('store'), asProduction:this.asRole('production'), asStaffMobile:this.asRole('staff','field'), asCeoMobile:this.asRole(s.role || 'ceo','ceomobile',{mobileRole:s.role || 'ceo'}), showSidebar:!narrow || s.drawer, drawerOpen:narrow && s.drawer, sb:{pos:narrow ? 'fixed' : 'sticky', z:narrow ? 50 : 1},
     openDrawer:() => this.setState({drawer:true}), closeDrawer:() => this.setState({drawer:false}),
     dateLabel, unread, hasUnread:unread > 0, menu:s.menu, toggleMenu:() => this.setState({menu:!s.menu}),
     goHome:() => this.go(this.ROLES[s.role || 'ceo'].home), goField:() => this.go('field'), goStaffPortal:() => this.go('staffportal'), goFinancePortal:() => this.go('financeportal'), goReception:() => this.go('reception'), goStorekeeper:() => this.go('storekeeper'), goNotes:() => this.go('notifications'), goBrief:() => this.go('briefing'), goProjects:e => { e && e.preventDefault && e.preventDefault(); this.go('projects',{projFilter:'all'}); }, goReq:e => { e && e.preventDefault && e.preventDefault(); this.go('requests'); }, goProc:() => this.go('procurement'), goStaff:() => this.go('staff'), goTasks:() => this.go('tasks'),

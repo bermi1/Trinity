@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openAs, watchErrors, side, toast, btn, saved, fillModal, modal } from './helpers';
+import { openAs, watchErrors, side, toast, btn, saved, fillModal, modal, chooseRequest } from './helpers';
 
 let errors;
 test.beforeEach(async ({ page }) => { errors = watchErrors(page); page.on('dialog', d => d.accept()); });
@@ -10,22 +10,22 @@ const switchTo = async (page, portal) => {
   await page.getByText(portal, { exact: true }).click();
 };
 
-test('a large money request travels the whole chain: staff → finance → management → paid float → reconciled', async ({ page }) => {
+test('a large project request travels the whole chain: GM → Finance → Management → paid float → reconciled', async ({ page }) => {
   await openAs(page, 'staff', 'staffportal');
   await btn(page, 'Request money').click();
+  await chooseRequest(page, 'Project request');
   await fillModal(page, { 'Amount (TZS)': '350000', Purpose: 'Taxi to Mlimani site' });
   await modal(page).locator('button').last().click();
-  await toast(page, 'REQ-0427 submitted · waiting for Project Manager');
+  await toast(page, 'REQ-0427 submitted · waiting for General Manager');
   let r = (await saved(page)).reqs.find(x => x.id === 'REQ-0427');
-  expect(r).toMatchObject({ who: 'GM', step: 1, st: 'pending' });
+  expect(r).toMatchObject({ type: 'project', who: 'GM', step: 2, st: 'pending' });
+  expect((await saved(page)).notes.find(n => n.to === 'GN').t).toBe('REQ-0427 needs your approval');
 
-  // Management signs off the Project Manager and Operations steps on their behalf.
-  await switchTo(page, 'Management · Command Center');
+  // The General Manager approves first.
+  await switchTo(page, 'General Manager');
   await side(page, 'Approvals');
-  await btn(page, /^All ·/).click();
+  await btn(page, /^Awaiting me ·/).click();
   await page.getByText('REQ-0427').first().click();
-  await btn(page, 'Approve').click();
-  await toast(page, 'REQ-0427 approved · sent to Operations');
   await btn(page, 'Approve').click();
   await toast(page, 'REQ-0427 approved · sent to Finance');
   expect((await saved(page)).notes.find(n => n.to === 'RT').t).toBe('REQ-0427 needs your approval');
@@ -121,4 +121,48 @@ test('rejecting asks first; cancelling leaves the request untouched', async ({ p
   await btn(page, 'Reject').click();
   expect(asked).toBe('Reject REQ-0418 (TZS 300,000)? John will be notified.');
   expect((await saved(page)).reqs?.find(r => r.id === 'REQ-0418')?.st ?? 'pending').toBe('pending');
+});
+
+test('internal, emergency and management requests follow their own routes', async ({ page }) => {
+  // Internal office request: GM → Finance → Management → Finance pays.
+  await openAs(page, 'staff', 'staffportal');
+  await btn(page, 'Request money').click();
+  await expect(modal(page).locator('select option')).toHaveText(['Project request', 'Internal office request', 'Emergency request']);
+  await chooseRequest(page, 'Internal office request');
+  await fillModal(page, { Title: 'Office internet, May', 'Amount (TZS)': '450000', Purpose: 'Monthly fibre bill' });
+  await modal(page).locator('button').last().click();
+  await toast(page, 'REQ-0427 submitted · waiting for General Manager');
+  expect((await saved(page)).reqs[0]).toMatchObject({ type: 'internal', title: 'Office internet, May', step: 2 });
+
+  // Emergency: GM → Management → Finance pays (no Finance check first).
+  await btn(page, 'Request money').click();
+  await chooseRequest(page, 'Emergency request');
+  await fillModal(page, { Title: 'Generator repair on site', 'Amount (TZS)': '600000', 'What happened, and what is it for?': 'Generator failed during setup' });
+  await modal(page).locator('button').last().click();
+  await toast(page, 'REQ-0428 submitted · waiting for General Manager');
+
+  await switchTo(page, 'General Manager');
+  await side(page, 'Approvals');
+  await btn(page, /^Awaiting me · 2/).click();
+  await page.getByText('REQ-0428').first().click();
+  await expect(page.getByText('Emergency request · Generator repair on site')).toBeVisible();
+  await btn(page, 'Approve').click();
+  await toast(page, 'REQ-0428 approved · sent to Management');
+  await page.getByText('REQ-0427').first().click();
+  await btn(page, 'Approve').click();
+  await toast(page, 'REQ-0427 approved · sent to Finance');
+  // The GM cannot act on a request that has moved past their step.
+  await expect(page.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0);
+
+  // Management's own request: only Finance checks it before paying. Staff never see this type.
+  await switchTo(page, 'Management · Command Center');
+  await side(page, 'Approvals');
+  await btn(page, 'New request').click();
+  await chooseRequest(page, 'Management request');
+  await fillModal(page, { Title: 'Client dinner', 'Amount (TZS)': '300000', Purpose: 'Dinner with Kilimo Bank' });
+  await modal(page).locator('button').last().click();
+  await toast(page, 'REQ-0429 submitted · waiting for Finance');
+  const r = (await saved(page)).reqs.find(x => x.id === 'REQ-0429');
+  expect(r).toMatchObject({ type: 'management', step: 3 });
+  expect(r.log.filter(t => t === 'Not needed')).toHaveLength(2);
 });

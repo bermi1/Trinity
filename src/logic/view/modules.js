@@ -68,8 +68,8 @@ export function pageVals2(s, IC, ST, narrow) {
   const fr = s.fieldReq, setFR = k => e => this.setState({fieldReq:Object.assign({}, s.fieldReq, {[k]:e.target.value})});
   V.fr = fr; V.frAmt = setFR('amt'); V.frPurpose = setFR('purpose'); V.frP = setFR('p'); V.frCat = setFR('cat');
   V.projOpts = s.projects.filter(p => p.st !== 'done').map(p => ({v:p.id, l:p.client + ' · ' + p.name}));
-  V.catOpts = ['Transport','Fuel','Materials','Permits','Meals'].map(x => ({v:x, l:x}));
-  V.frSubmit = () => { const amt = +fr.amt || 0; if (amt <= 0 || !fr.purpose.trim()) { this.toast('Enter an amount and a purpose'); return; } const p = fr.p || (V.projOpts[0] || {}).v || ''; const id = this.nextId('REQ', s.reqs); this.setState(x => ({reqs:[{id, who:fk, amt, cat:fr.cat, purpose:fr.purpose.trim(), p, need:'Today', step:1, st:'pending', log:[this.now()]}, ...x.reqs], fieldReq:{amt:'', purpose:'', p, cat:'Transport'}, fieldTab:'home'})); this.toast(id + ' sent · waiting for Project Manager'); this.log('banknote','amber',fme.first + ' requested ' + this.fmtT(amt), this.proj(p).name + ' · ' + id); };
+  V.catOpts = ['Team','Operations','Supplies'].map(x => ({v:x, l:x}));
+  V.frSubmit = () => { const amt = +fr.amt || 0; if (amt <= 0 || !fr.purpose.trim()) { this.toast('Enter an amount and a purpose'); return; } const p = fr.p || (V.projOpts[0] || {}).v || ''; this.createRequest({type:'project', who:fk, amt, cat:fr.cat, purpose:fr.purpose, p, need:'Today'}); this.setState({fieldReq:{amt:'', purpose:'', p, cat:'Team'}, fieldTab:'home'}); };
   V.myReqs = s.reqs.filter(r => r.who === fk).slice(0,3).map(r => Object.assign({id:r.id, amt:this.fmtT(r.amt), cat:r.cat}, (a => ({stl:a[0], stbg:a[1], stfg:a[2]}))(this.rst(r))));
   const sent = !!(s.reportsToday || {})[fk];
   V.reportText = s.reportText; V.onReport = e => this.setState({reportText:e.target.value}); V.reportSent = sent; V.reportOpen = !sent;
@@ -98,7 +98,7 @@ export function pageVals2(s, IC, ST, narrow) {
   V.FP = {
     title:FK.n + '\u2019s queue',
     kpis:[{l:'Awaiting verification', v:String(fReqs.length)}, {l:'Overdue invoices', v:String(s.invoices.filter(i => i.st === 'overdue').length), c:'#B23A46'}, {l:'Open floats', v:String(s.staff.filter(p => p.fl > 0).length)}, {l:'Paid this week', v:String(s.reqs.filter(r => r.st === 'paid').length)}],
-    reqs:fReqs.map(r => ({who:this.av(r.who).n, amt:this.fmtT(r.amt), cat:r.cat, proj:this.proj(r.p).name, verify:() => this.decide(r, true)})),
+    reqs:fReqs.map(r => ({who:this.av(r.who).n, amt:this.fmtT(r.amt), cat:this.reqWhat(r).split(' · ')[0], proj:this.reqWhat(r).split(' · ').slice(1).join(' · '), verify:() => this.decide(r, true)})),
     reqsEmpty:fReqs.length === 0,
     overdue:s.invoices.filter(i => i.st === 'overdue').map(i => ({id:i.id, c:i.c, due:i.due, v:this.fmtM(i.v)})), overdueEmpty:s.invoices.filter(i => i.st === 'overdue').length === 0,
     floats:s.staff.filter(p => p.fl > 0).map(p => { const a = this.av(p.k); return {n:a.n, i:a.i, c:a.c, amt:this.fmtT(p.fl), age:({JM:'1 day',GM:'2 days',AJ:'4 days',PL:'12 days'})[p.k] || 'today', rec:() => { this.setState(x => ({staff:x.staff.map(q => q.k === p.k ? Object.assign({}, q, {fl:0}) : q)})); this.toast('Float reconciled · ' + a.n); this.log('receipt','green','Float reconciled · ' + this.fmtT(p.fl), a.n); }}; })
@@ -148,7 +148,7 @@ export function pageVals2(s, IC, ST, narrow) {
     kpis:[['Revenue today','TZS 14.2M','▲ 8%','#1F7549'],['Approvals',String(appr.length),this.fmtT(appr.reduce((a,b) => a + b.amt, 0)),'#8A6414'],['Active projects',String(s.projects.filter(p => p.st !== 'done').length),(s.projects.filter(p => p.st === 'risk' || p.st === 'late').length) + ' at risk','#B23A46'],['Overdue',this.fmtM(s.invoices.filter(i => i.st === 'overdue').reduce((a,b) => a + b.v, 0)),s.invoices.filter(i => i.st === 'overdue').length + ' invoices','#B23A46']].map(([l,v,n,c]) => ({l,v,n,c})),
     sl, sf:sl + ' L300 80 L0 80 Z',
     risk:s.projects.filter(p => p.st === 'risk' || p.st === 'late').map(p => ({n:p.client, t:p.name, stl:ST[p.st].l, stbg:ST[p.st].bg, stfg:ST[p.st].fg})),
-    approvals:appr.map(q => ({who:this.av(q.who).n, i:q.who, c:this.av(q.who).c, amt:this.fmtT(q.amt), cat:q.cat, proj:this.proj(q.p).name, need:q.need, approve:() => this.decide(q, true), reject:() => this.decide(q, false)})),
+    approvals:appr.map(q => ({who:this.av(q.who).n, i:q.who, c:this.av(q.who).c, amt:this.fmtT(q.amt), cat:this.reqWhat(q).split(' · ')[0], proj:this.reqWhat(q).split(' · ').slice(1).join(' · '), need:q.need, approve:() => this.decide(q, true), reject:() => this.decide(q, false)})),
     apprEmpty:appr.length === 0,
     notes:this.myNotes(s).slice(0,8).map(n => ({ic:IC[n.ic] || IC.bell, t:n.t, s:n.s, time:n.time, unread:!n.read, fw:n.read ? 500 : 700, on:() => this.setState(x => ({notes:x.notes.map(y => y.id === n.id ? Object.assign({}, y, {read:true}) : y)}))}))
   };
@@ -232,7 +232,7 @@ export function pageVals2(s, IC, ST, narrow) {
     const mr = this.ROLES[s.mobileRole] ? s.mobileRole : 'ceo';
     let pth = ''; try { pth = location.pathname; } catch (e) {} V.devSrc = (pth || '/') + '?embed=1&role=' + mr;
     V.devTabs = cp(mr, 'mobileRole', Object.keys(this.ROLES).map(k => [k, this.ROLES[k].label]));
-    const DI = {ceo:['Management app','Daniel runs the whole company from his phone: approvals, cash, projects at risk and every module one tap away.'], staff:['Staff app','Grace’s day in her pocket: tasks, money requests, daily reports, projects and meetings.'], finance:['Finance app','Rose verifies requests, chases invoices and reconciles floats from anywhere.'], reception:['Reception app','Aisha checks visitors in, logs deliveries and books rooms from a tablet or phone.'], store:['Store app','Fatma issues and receives stock, reorders low items and receives deliveries on the store floor.'], production:['Printing app','Juma runs the print floor: job stages, materials from the store, returns and wastage.']};
+    const DI = {gm:['General Manager app','The General Manager follows every department from the phone: requests waiting for approval, projects and alerts.'], ceo:['Management app','Daniel runs the whole company from his phone: approvals, cash, projects at risk and every module one tap away.'], staff:['Staff app','Grace’s day in her pocket: tasks, money requests, daily reports, projects and meetings.'], finance:['Finance app','Rose verifies requests, chases invoices and reconciles floats from anywhere.'], reception:['Reception app','Aisha checks visitors in, logs deliveries and books rooms from a tablet or phone.'], store:['Store app','Fatma issues and receives stock, reorders low items and receives deliveries on the store floor.'], production:['Printing app','Juma runs the print floor: job stages, materials from the store, returns and wastage.']};
     const tabsR = this.TABS[mr];
     V.dev = {title:DI[mr][0], d:DI[mr][1], tabs:tabsR.map(t => ({l:t[1]})).concat([{l:'More'}]), more:this.navFor(mr).filter(it => !tabsR.some(t => t[0] === it[0]) && it[0] !== 'ceomobile').map(it => ({l:it[1]}))};
   }

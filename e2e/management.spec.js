@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openAs, watchErrors, side, toast, btn, saved, fillModal, modal } from './helpers';
+import { openAs, watchErrors, side, toast, btn, saved, fillModal, modal, chooseRequest } from './helpers';
 
 let errors;
 test.beforeEach(async ({ page }) => { errors = watchErrors(page); page.on('dialog', d => d.accept()); });
@@ -29,7 +29,6 @@ test('dashboard: figures, chart, shortcuts and every quick action', async ({ pag
     ['Create invoice', { 'Amount (TZS M)': '12' }, 'Invoice INV-0199 saved as draft'],
     ['Add task', { Task: 'Book sound system' }, 'Task created and assigned to Sarah Kimaro'],
     ['Request payment', { 'Amount (TZS)': '50000', Purpose: 'Parking fees' }, /REQ-0427 submitted/],
-    ['Purchase request', { Item: 'Cable ties × 500' }, /Purchase request PR-0213 submitted/],
     ['New lead', { Client: 'Vodashop', Opportunity: 'Store openings' }, 'Lead added · Vodashop'],
     ['Create proposal', { Client: 'Vodashop', 'Service / scope': 'Store openings' }, 'Proposal PRO-0153 saved as draft'],
     ['Schedule meeting', { Title: 'Ops review' }, /Meeting scheduled · Mon 21/]
@@ -37,6 +36,7 @@ test('dashboard: figures, chart, shortcuts and every quick action', async ({ pag
   for (const [label, values, done] of quick) {
     if (!(await page.getByText('Quick actions').isVisible())) await side(page, 'Dashboard');
     await btn(page, label).click();
+    if (label === 'Request payment') await chooseRequest(page, 'Project request');
     await btn(modal(page), await modal(page).locator('button').last().innerText()).click();
     await expect(modal(page).getByText(/is required\./)).toBeVisible();
     await fillModal(page, values);
@@ -49,7 +49,7 @@ test('dashboard: figures, chart, shortcuts and every quick action', async ({ pag
   // A created project opens on its own page.
   const data = await saved(page);
   expect(data.projects[0]).toMatchObject({ id: 'PRJ-0236', client: 'Azam Media' });
-  expect(data.reqs[0]).toMatchObject({ id: 'REQ-0427', who: 'DK', amt: 50000, step: 1 });
+  expect(data.reqs[0]).toMatchObject({ id: 'REQ-0427', type: 'project', who: 'DK', amt: 50000, step: 2 });
 
   // The activity feed records what happened.
   await side(page, 'Dashboard');
@@ -59,6 +59,8 @@ test('dashboard: figures, chart, shortcuts and every quick action', async ({ pag
 test('forms reject zero or negative amounts', async ({ page }) => {
   await openAs(page, 'ceo', 'requests');
   await btn(page, 'New request').click();
+  await chooseRequest(page, 'Internal office request');
+  await fillModal(page, { Title: 'Office internet' });
   await fillModal(page, { 'Amount (TZS)': '-5', Purpose: 'Test' });
   await modal(page).locator('button').last().click();
   await expect(modal(page).getByText('Amount (TZS) must be a number above 0.')).toBeVisible();
@@ -103,7 +105,7 @@ test('projects: filters, workflow, tasks, money and invoices from a project', as
   await expect(page.getByText(/Stage 3 of 5 · Production/)).toBeVisible();
 
   await btn(page, 'Advance stage').click();
-  await toast(page, 'Moved to Logistics');
+  await toast(page, 'Moved to On site');
   await expect(page.getByText(/Stage 4 of 5 · On site/)).toBeVisible();
 
   // Tick a task done, then add one from the project.
@@ -115,6 +117,9 @@ test('projects: filters, workflow, tasks, money and invoices from a project', as
   await expect(page.getByText('Print crew badges')).toBeVisible();
 
   await btn(page, 'Request money').click();
+  await chooseRequest(page, 'Project request');
+  // The project is already chosen.
+  await expect(modal(page).locator('label').filter({ hasText: 'Project' }).locator('select')).toHaveValue('PRJ-0231');
   await fillModal(page, { 'Amount (TZS)': '75000', Purpose: 'Badge printing' });
   await modal(page).locator('button').last().click();
   await expect(page.getByText('REQ-0427')).toBeVisible();
@@ -144,32 +149,35 @@ test('tasks board: filters and moving cards through every column', async ({ page
 test('menus stay short: everyday pages first, the rest folded under More', async ({ page }) => {
   const visible = async () => (await page.locator('aside .tm-h4').allInnerTexts()).map(t => t.replace(/\s*\d+$/, '').trim());
   const everyday = {
-    ceo: ['Dashboard', 'Daily to-do', 'Monday Briefing', 'Approvals', 'Projects', 'Tasks', 'CRM', 'Finance & Invoices', 'Reports'],
-    staff: ['My Day', 'Daily to-do', 'My tasks', 'Approvals', 'Field capture'],
-    finance: ['My queue', 'Daily to-do', 'Finance & Invoices', 'Requests & Floats', 'Reports'],
+    ceo: ['Dashboard', 'Daily to-do', 'Monday Briefing', 'Approvals', 'Projects', 'Tasks', 'CRM', 'Finance & Invoices'],
+    gm: ['Dashboard', 'Daily to-do', 'Monday Briefing', 'Approvals', 'Projects', 'Tasks', 'CRM', 'Finance & Invoices'],
+    staff: ['My Day', 'Daily to-do', 'My tasks', 'My requests', 'Field capture'],
+    finance: ['My queue', 'Daily to-do', 'Finance & Invoices', 'Requests & Floats'],
     reception: ['Front desk', 'Daily to-do', 'Meeting rooms', 'Calendar', 'Client enquiries'],
-    store: ['My store', 'Daily to-do', 'Requisitions', 'Inventory', 'Stock ledger', 'Procurement'],
-    production: ['Print floor', 'Daily to-do', 'Production jobs', 'Store requisitions']
+    production: ['Print floor', 'Daily to-do']
   };
   for (const [role, items] of Object.entries(everyday)) {
     await openAs(page, role);
     expect(await visible(), role).toEqual(items);
   }
 
-  // Management: More shows how many things wait inside it, opens, and is remembered.
+  // Management: More opens, and is remembered.
   await openAs(page, 'ceo', 'dashboard');
   const more = page.locator('aside').getByRole('button', { name: /More/ });
   await expect(more).toHaveAttribute('aria-expanded', 'false');
-  await expect(more).toContainText(/\d+/);
   await more.click();
   await expect(page.locator('aside').getByRole('button', { name: /Less/ })).toHaveAttribute('aria-expanded', 'true');
-  expect((await visible()).length).toBeGreaterThan(20);
+  expect((await visible()).length).toBeGreaterThan(12);
   await page.reload();
-  await expect(page.locator('aside').getByText('Stock ledger', { exact: true })).toBeVisible();
+  await expect(page.locator('aside').getByText('Meeting rooms', { exact: true })).toBeVisible();
   await page.locator('aside').getByRole('button', { name: /Less/ }).click();
-  await expect(page.locator('aside').getByText('Stock ledger', { exact: true })).toHaveCount(0);
+  await expect(page.locator('aside').getByText('Meeting rooms', { exact: true })).toHaveCount(0);
 
   // Opening a page that lives under More shows it in the menu, highlighted.
-  await openAs(page, 'ceo', 'logistics');
-  await expect(page.locator('aside').getByText('Logistics', { exact: true })).toBeVisible();
+  await openAs(page, 'ceo', 'rooms');
+  await expect(page.locator('aside').getByText('Meeting rooms', { exact: true })).toBeVisible();
+
+  // Parked sections (store, production, logistics, procurement, documents, reports) and Notifications are not in the menu.
+  await page.locator('aside').getByRole('button', { name: /More|Less/ }).click();
+  for (const gone of ['Store & Inventory', 'Production', 'Logistics', 'Procurement', 'Documents', 'Reports', 'Notifications']) await expect(page.locator('aside').getByText(gone, { exact: true })).toHaveCount(0);
 });

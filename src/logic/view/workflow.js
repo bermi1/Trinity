@@ -46,7 +46,7 @@ export function pageVals(s, IC, ST, narrow) {
   if (P.id) {
     const pm = this.av(P.pm), u = P.bud ? P.spent / P.bud : 0;
     const ptasks = s.tasks.filter(t => t.p === P.id);
-    V.P = Object.assign({id:P.id, name:P.name, client:P.client, pmName:pm.n, due:P.due, prog:P.prog + '%', val:this.fmtM(P.val), margin:P.val ? Math.round((P.val - Math.max(P.bud, P.spent)) / P.val * 100) : 0 + '%',
+    V.P = Object.assign({id:P.id, name:P.name, client:P.client, pmName:pm.n, due:P.due, prog:P.prog + '%', val:this.fmtM(P.val), margin:(P.val ? Math.round((P.val - Math.max(P.bud, P.spent)) / P.val * 100) : 0) + '%',
       stageLabel:'Stage ' + this.stageOf(P) + ' of ' + this.STAGES.length + ' · ' + this.STAGES[this.stageOf(P) - 1],
       stages:this.STAGES.map((l,i) => ({l, col:i + 1 < this.stageOf(P) || P.st === 'done' ? '#2B1459' : i + 1 === this.stageOf(P) ? '#B49A5A' : '#EDE9F3', c:i + 1 === this.stageOf(P) ? '#17152A' : '#6E6A7C', fw:i + 1 === this.stageOf(P) ? 700 : 500})),
       spent:this.fmtM(P.spent), bud:this.fmtM(P.bud), remaining:this.fmtM(Math.max(0, P.bud - P.spent)), over:P.spent > P.bud, overBy:this.fmtM(P.spent - P.bud), spentW:Math.min(100, u*100) + '%', barC:u > 1 ? '#D9535F' : '#2B1459', usedPct:Math.round(u*100) + '% used',
@@ -60,6 +60,12 @@ export function pageVals(s, IC, ST, narrow) {
       back:() => this.go('projects')
     }, pill([ST[P.st].l, ST[P.st].bg, ST[P.st].fg]));
   } else V.P = {stages:[], tasks:[], reqs:[], team:[]};
+  // Staff, Reception and Printing see projects without money figures.
+  if (['staff','reception','production'].includes(s.role || 'ceo')) {
+    const hide = {val:'—', margin:'—', spent:'—', bud:'—', remaining:'—', over:false, overBy:'—', spentW:'0%', usedPct:'—', profit:'—', invoiced:'—', budLine:'—'};
+    V.P = Object.assign({}, V.P, hide, {reqs:(V.P.reqs || []).filter(r => r.who === this.av(this.me().k).n)});
+    V.projRows = V.projRows.map(r => Object.assign({}, r, {val:'—', used:'—'}));
+  }
 
   // Tasks
   const tf = s.taskFilter;
@@ -75,11 +81,13 @@ export function pageVals(s, IC, ST, narrow) {
   // Requests
   const rf = s.reqFilter;
   const role = s.role || 'ceo';
-  const RF = {me:r => this.canAct(r) && (role !== 'ceo' || r.step === 4), all:() => true, approved:r => r.st === 'approved' || r.st === 'paid', rejected:r => r.st === 'rejected'};
+  // Staff, Reception and Printing see only their own requests; they never approve.
+  const ownOnly = ['staff','reception','production'].includes(role), mine = r => !ownOnly || r.who === this.me().k;
+  const RF = {me:r => mine(r) && (ownOnly ? r.st === 'pending' : this.canAct(r) && (role !== 'ceo' || r.step === 4)), all:r => mine(r), approved:r => mine(r) && (r.st === 'approved' || r.st === 'paid'), rejected:r => mine(r) && r.st === 'rejected'};
   V.reqTabs = [['me','Awaiting me'],['all','All'],['approved','Approved'],['rejected','Rejected']].map(([k,l]) => ({l:l + ' · ' + s.reqs.filter(RF[k]).length, on:() => this.setState({reqFilter:k}), bg:rf === k ? '#2B1459' : 'transparent', c:rf === k ? '#fff' : '#6E6A7C'}));
   const rl = s.reqs.filter(RF[rf]);
   const sel = rl.find(r => r.id === s.reqSel) || rl[0];
-  V.reqList = rl.map(r => Object.assign({id:r.id, name:this.av(r.who).n, amt:this.fmtT(r.amt), cat:r.cat + ' · ' + this.proj(r.p).name, need:'needed ' + r.need, bg:sel && r.id === sel.id ? '#F4F1FA' : '#fff', bd:sel && r.id === sel.id ? '#6D3CC2' : 'transparent', on:() => this.setState({reqSel:r.id})}, pill(this.rst(r))));
+  V.reqList = rl.map(r => Object.assign({id:r.id, name:this.av(r.who).n, amt:this.fmtT(r.amt), cat:this.reqWhat(r), need:'needed ' + r.need, bg:sel && r.id === sel.id ? '#F4F1FA' : '#fff', bd:sel && r.id === sel.id ? '#6D3CC2' : 'transparent', on:() => this.setState({reqSel:r.id})}, pill(this.rst(r))));
   V.reqEmpty = rl.length === 0; V.hasSel = !!sel;
   if (sel) {
     const rp = this.proj(sel.p), ru = rp.bud ? rp.spent / rp.bud : 0, after = rp.bud ? (rp.spent + sel.amt/1e6) / rp.bud : 0;
@@ -91,9 +99,9 @@ export function pageVals(s, IC, ST, narrow) {
       if (sel.st === 'paid') st = 'done';
       if (sel.log[i] === 'Not needed') st = 'skip';
       const a = this.av(ppl[i]);
-      return {l:i === 4 && role === 'ceo' ? 'Management · you' : l, who:a.n, time:st === 'skip' ? 'Not needed for small amounts' : st === 'done' || st === 'rej' ? (sel.log[i] || '—') : st === 'cur' ? 'Pending' : '', dotBg:st === 'done' ? '#2E9B63' : st === 'rej' ? '#D9535F' : st === 'cur' ? '#FBF6EA' : '#fff', dotBd:st === 'done' ? '#2E9B63' : st === 'rej' ? '#D9535F' : st === 'cur' ? '#B49A5A' : '#D5CFE0', icon:st === 'done' ? IC.check : st === 'rej' ? IC.x : '', lineC:st === 'done' || st === 'skip' ? '#2E9B63' : '#E8E4EF', lc:st === 'cur' ? '#8A6414' : st === 'todo' || st === 'skip' ? '#6E6A7C' : '#17152A', notLast:i !== 5};
+      return {l:i === 4 && role === 'ceo' ? 'Management · you' : l, who:a.n, time:st === 'skip' ? 'Not needed for this request' : st === 'done' || st === 'rej' ? (sel.log[i] || '—') : st === 'cur' ? 'Pending' : '', dotBg:st === 'done' ? '#2E9B63' : st === 'rej' ? '#D9535F' : st === 'cur' ? '#FBF6EA' : '#fff', dotBd:st === 'done' ? '#2E9B63' : st === 'rej' ? '#D9535F' : st === 'cur' ? '#B49A5A' : '#D5CFE0', icon:st === 'done' ? IC.check : st === 'rej' ? IC.x : '', lineC:st === 'done' || st === 'skip' ? '#2E9B63' : '#E8E4EF', lc:st === 'cur' ? '#8A6414' : st === 'todo' || st === 'skip' ? '#6E6A7C' : '#17152A', notLast:i !== 5};
     });
-    V.R = Object.assign({id:sel.id, cat:sel.cat, amt:this.fmtT(sel.amt), purpose:sel.purpose, proj:rp.id + ' · ' + rp.name, projGo:e => { if (e && e.preventDefault) e.preventDefault(); if (rp.id) this.go('project',{projectId:rp.id}); }, who:this.av(sel.who).n, need:sel.need, chain,
+    V.R = Object.assign({id:sel.id, cat:(this.REQ_TYPES[sel.type || 'project'] || {}).l + (sel.title ? ' · ' + sel.title : sel.type && sel.type !== 'project' ? '' : ' · ' + sel.cat), amt:this.fmtT(sel.amt), purpose:sel.purpose, proj:sel.p ? rp.id + ' · ' + rp.name : 'Not for a project', projGo:e => { if (e && e.preventDefault) e.preventDefault(); if (rp.id) this.go('project',{projectId:rp.id}); }, who:this.av(sel.who).n, need:sel.need, chain,
       budFrom:Math.round(ru*100) + '%', budTo:Math.round(after*100) + '%', w1:Math.min(100, ru*100) + '%', w2:Math.max(0, Math.min(100, after*100) - Math.min(100, ru*100)) + '%', budLine:this.fmtM(rp.bud || 0) + ' project budget',
       canDecide:this.canAct(sel), canPay:sel.st === 'approved' && this.canPay(), waiting:sel.st === 'pending' && sel.step < 4 && (!this.canAct(sel) || role === 'ceo'), waitLabel:sel.step < this.CHAIN.length ? 'Waiting for ' + this.CHAIN[sel.step] + ' · ' + this.av(ppl[sel.step]).n : '', isPaid:sel.st === 'paid', isRej:sel.st === 'rejected',
       approve:() => this.decide(sel, true), reject:() => { if (this.confirm('Reject ' + sel.id + ' (' + this.fmtT(sel.amt) + ')? ' + this.av(sel.who).first + ' will be notified.')) this.decide(sel, false); }, pay:() => this.payReq(sel),

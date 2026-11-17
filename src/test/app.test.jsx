@@ -27,15 +27,16 @@ describe('sign in', () => {
     render(<App />);
     expect(screen.queryByText('Google')).toBeNull();
     expect(screen.queryByText('Microsoft')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Store' }));
+    expect(screen.queryByRole('button', { name: 'Store' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Finance' }));
     expect(screen.queryByText('Not now')).toBeNull();
-    expect(screen.getByText('STOREKEEPER PORTAL')).toBeTruthy();
+    expect(screen.getByText('Rose Temba’s queue')).toBeTruthy();
   });
 });
 
 describe('every page renders for every role', () => {
   const pages = ['dashboard', 'briefing', 'projects', 'project', 'tasks', 'requests', 'finance', 'store', 'procurement', 'crm', 'staff', 'notifications', 'field', 'staffportal', 'financeportal', 'reception', 'storekeeper', 'rooms', 'proposals', 'production', 'logistics', 'documents', 'reports', 'calendar', 'settings', 'ceomobile'];
-  for (const role of ['ceo', 'staff', 'finance', 'reception', 'store']) {
+  for (const role of ['ceo', 'gm', 'staff', 'finance', 'reception', 'store', 'production']) {
     it(role, () => {
       for (const page of pages) {
         localStorage.setItem('tm360', JSON.stringify({ auth: true, role, page, projectId: 'PRJ-0231' }));
@@ -124,60 +125,73 @@ describe('command palette', () => {
     signIn('ceo');
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
     const input = screen.getByPlaceholderText(/search/i);
-    fireEvent.change(input, { target: { value: 'go to logistics' } });
+    fireEvent.change(input, { target: { value: 'go to calendar' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    expect(screen.getAllByText('Logistics').length).toBeGreaterThan(0);
-    expect(screen.getByText(/Vehicles, drivers and every trip/)).toBeTruthy();
+    expect(screen.getAllByText('Calendar').length).toBeGreaterThan(0);
   });
 });
 
 describe('approval chain permissions', () => {
-  it('lets the project manager approve their step and nobody else in a staff portal', () => {
+  const route = (app, f) => {
+    const id = app.createRequest(Object.assign({ who: 'SK', p: 'PRJ-0231', purpose: 'Test' }, f));
+    const steps = [app.state.reqs.find(r => r.id === id).step];
+    const notified = [app.state.notes[0].to];
+    while (app.state.reqs.find(r => r.id === id).st === 'pending') {
+      app.decide(app.state.reqs.find(r => r.id === id), true);
+      steps.push(app.state.reqs.find(r => r.id === id).step);
+      notified.push(app.state.notes[0].to);
+    }
+    return { r: app.state.reqs.find(r => r.id === id), steps, notified };
+  };
+
+  it('project and internal requests: GM → Finance → Management → Finance pays', () => {
+    for (const type of ['project', 'internal']) {
+      const { r, steps, notified } = route(new TrinityApp(), { type, amt: 900000, title: 'Office internet' });
+      expect(steps).toEqual([2, 3, 4, 5]);
+      expect(notified).toEqual(['GN', 'RT', 'DK', 'RT']);
+      expect(r).toMatchObject({ type, st: 'approved' });
+      expect(r.log[1]).toBe('Not needed');
+    }
+  });
+
+  it('emergency requests: GM → Management → Finance pays', () => {
+    const { steps, notified, r } = route(new TrinityApp(), { type: 'emergency', amt: 900000, title: 'Generator repair' });
+    expect(steps).toEqual([2, 4, 5]);
+    expect(notified).toEqual(['GN', 'DK', 'RT']);
+    expect(r.log.filter(t => t === 'Not needed')).toHaveLength(2);
+  });
+
+  it('management requests: Finance checks, then pays', () => {
+    const { steps, notified } = route(new TrinityApp(), { type: 'management', amt: 900000, title: 'Client dinner' });
+    expect(steps).toEqual([3, 5]);
+    expect(notified).toEqual(['RT', 'RT']);
+  });
+
+  it('small project and office requests skip Management; the company sets the limit (0 = never)', () => {
+    expect(route(new TrinityApp(), { type: 'project', amt: 150000 }).steps).toEqual([2, 3, 5]);
+    expect(route(new TrinityApp(), { type: 'emergency', amt: 150000 }).steps).toEqual([2, 4, 5]);
     const app = new TrinityApp();
-    const req = { id: 'REQ-9', who: 'GM', p: 'PRJ-0231', step: 1, st: 'pending', log: [] };
+    app.setState({ company: { smallLimit: 0, off: [] } });
+    expect(route(app, { type: 'internal', amt: 5000 }).steps).toEqual([2, 3, 4, 5]);
+  });
+
+  it('only the GM, Finance and Management approve; staff never do', () => {
+    const app = new TrinityApp();
+    const req = { id: 'REQ-9', type: 'project', who: 'GM', p: 'PRJ-0231', amt: 900000, step: 2, st: 'pending', log: [] };
+    app.setState({ role: 'staff' });
+    expect([2, 3, 4].map(step => app.canAct({ ...req, step }))).toEqual([false, false, false]);
+    expect(app.canPay()).toBe(false);
+    app.setState({ role: 'gm' });
+    expect([2, 3, 4].map(step => app.canAct({ ...req, step }))).toEqual([true, false, false]);
+    app.setState({ role: 'finance' });
+    expect([2, 3, 4].map(step => app.canAct({ ...req, step }))).toEqual([false, true, false]);
+    expect(app.canPay()).toBe(true);
+    app.setState({ role: 'ceo' });
+    expect([2, 3, 4].map(step => app.canAct({ ...req, step }))).toEqual([true, true, true]);
+    // Requests made before the request types existed still wait for their Project Manager.
     app.setState({ role: 'staff' });
     app.ROLES = { ...app.ROLES, staff: { ...app.ROLES.staff, k: 'SK' } };
-    expect(app.canAct(req)).toBe(true);
-    expect(app.canAct({ ...req, step: 2 })).toBe(false);
-    app.ROLES = { ...app.ROLES, staff: { ...app.ROLES.staff, k: 'MM' } };
-    expect(app.canAct({ ...req, step: 2 })).toBe(true);
-    expect(app.canPay()).toBe(false);
-    app.setState({ role: 'finance' });
-    expect(app.canAct({ ...req, step: 3 })).toBe(true);
-    expect(app.canAct({ ...req, step: 4 })).toBe(false);
-    expect(app.canPay()).toBe(true);
-  });
-
-  it('small requests need only the Project Manager and Finance; the skipped steps show as not needed', () => {
-    const app = new TrinityApp();
-    app.setState({ reqs: [{ id: 'REQ-8', who: 'GM', p: 'PRJ-0231', amt: 150000, step: 1, st: 'pending', log: ['09:00'] }] });
-    app.decide(app.state.reqs[0], true);
-    expect(app.state.reqs[0].step).toBe(3);
-    expect(app.state.notes[0].to).toBe('RT');
-    app.decide(app.state.reqs[0], true);
-    expect(app.state.reqs[0]).toMatchObject({ step: 5, st: 'approved' });
-    expect(app.state.reqs[0].log.filter(t => t === 'Not needed')).toHaveLength(2);
-    expect(app.state.reqs[0].log[2]).toBe('Not needed');
-    expect(app.state.reqs[0].log[4]).toBe('Not needed');
-  });
-
-  it('the limit is set by the company; 0 sends every request through all steps', () => {
-    const app = new TrinityApp();
-    app.setState({ company: { smallLimit: 0, off: [] }, reqs: [{ id: 'REQ-7', who: 'GM', p: 'PRJ-0231', amt: 5000, step: 1, st: 'pending', log: [] }] });
-    app.decide(app.state.reqs[0], true);
-    expect(app.state.reqs[0].step).toBe(2);
-  });
-
-  it('moves one step per approval and notifies the next approver', () => {
-    const app = new TrinityApp();
-    app.setState({ reqs: [{ id: 'REQ-9', who: 'GM', p: 'PRJ-0231', amt: 900000, step: 1, st: 'pending', log: [] }] });
-    for (const [step, to] of [[2, 'MM'], [3, 'RT'], [4, 'DK']]) {
-      app.decide(app.state.reqs[0], true);
-      expect(app.state.reqs[0].step).toBe(step);
-      expect(app.state.notes[0].to).toBe(to);
-    }
-    app.decide(app.state.reqs[0], true);
-    expect(app.state.reqs[0]).toMatchObject({ step: 5, st: 'approved' });
+    expect(app.canAct({ ...req, step: 1 })).toBe(true);
   });
 });
 

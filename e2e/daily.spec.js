@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openAs, watchErrors, side, toast, btn, saved, fillModal, modal } from './helpers';
+import { openAs, watchErrors, side, toast, btn, saved, fillModal, modal, chooseRequest } from './helpers';
 
 let errors;
 test.beforeEach(async ({ page }) => { errors = watchErrors(page); page.on('dialog', d => d.accept()); });
@@ -89,13 +89,14 @@ test('managers see the whole team’s to-do and remind people who have not writt
   await expect(page.getByRole('button', { name: 'Team', exact: true })).toHaveCount(0);
 });
 
-test('a small request needs only the Project Manager and Finance', async ({ page }) => {
+test('a small project request goes GM → Finance and skips Management', async ({ page }) => {
   await openAs(page, 'staff', 'staffportal');
   await btn(page, 'Request money').click();
-  await expect(modal(page).getByText(/Up to TZS 200,000: Project Manager → Finance/)).toBeVisible();
+  await chooseRequest(page, 'Project request');
+  await expect(modal(page).getByText(/Up to TZS 200,000, Management is not needed/)).toBeVisible();
   await fillModal(page, { 'Amount (TZS)': '120000', Purpose: 'Taxi to Mlimani site' });
   await modal(page).locator('button').last().click();
-  await toast(page, 'REQ-0427 submitted · waiting for Project Manager');
+  await toast(page, 'REQ-0427 submitted · waiting for General Manager');
 
   await switchTo(page, 'Management · Command Center');
   await side(page, 'Approvals');
@@ -103,7 +104,7 @@ test('a small request needs only the Project Manager and Finance', async ({ page
   await page.getByText('REQ-0427').first().click();
   await btn(page, 'Approve').click();
   await toast(page, 'REQ-0427 approved · sent to Finance');
-  await expect(page.getByText('Not needed for small amounts').first()).toBeVisible();
+  await expect(page.getByText('Not needed for this request').first()).toBeVisible();
 
   await switchTo(page, 'Finance portal');
   const row = page.locator('div').filter({ hasText: /^Grace Mrema/ }).filter({ has: page.getByRole('button', { name: 'Verify & send to Management' }) }).last();
@@ -141,7 +142,8 @@ test('company setup: switch sections off and change the small-request limit', as
   await page.keyboard.press('Control+k');
   await page.getByPlaceholder(/Search/).fill('Request money');
   await page.keyboard.press('Enter');
-  await expect(modal(page).getByText('Routes to PM → Operations → Finance → Management → Payment.')).toBeVisible();
+  await chooseRequest(page, 'Internal office request');
+  await expect(modal(page).getByText('Goes to GM → Finance → Management → Finance pays.', { exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
 
   // Switching back on brings it back.

@@ -66,12 +66,12 @@ describe('live database', () => {
 
   it('opens a demo portal with one tap using the demo password, with no PIN prompt', async () => {
     vi.stubEnv('VITE_DEMO_PASSWORD', 'demo-pass');
-    db.users['store@trinitymark.co.tz'] = { id: 'u4', password: 'demo-pass' };
-    db.tables.profiles.set('u4', { role: 'store', full_name: 'Fatma Hassan', title: 'Storekeeper', person_key: 'FH', is_demo: true });
+    db.users['gm@trinitymark.co.tz'] = { id: 'u4', password: 'demo-pass' };
+    db.tables.profiles.set('u4', { role: 'gm', full_name: 'Joseph Ngowi', title: 'General Manager', person_key: 'GN', is_demo: true });
     render(<App />);
     await screen.findByText('SIGN IN');
-    fireEvent.click(screen.getByRole('button', { name: 'Store' }));
-    expect(await screen.findByText('STOREKEEPER PORTAL')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'General Manager' }));
+    expect(await screen.findByText('COMPANY COMMAND CENTER')).toBeTruthy();
     expect(screen.queryByText('Not now')).toBeNull();
     vi.unstubAllEnvs();
   });
@@ -80,8 +80,8 @@ describe('live database', () => {
     vi.stubEnv('VITE_DEMO_PASSWORD', '');
     render(<App />);
     await screen.findByText('SIGN IN');
-    fireEvent.click(screen.getByRole('button', { name: 'Store' }));
-    expect(await screen.findByText('Enter the password for store@trinitymark.co.tz.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Finance' }));
+    expect(await screen.findByText('Enter the password for rose.t@trinitymark.co.tz.')).toBeTruthy();
     vi.unstubAllEnvs();
   });
 

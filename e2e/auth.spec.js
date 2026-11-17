@@ -29,7 +29,7 @@ test('sign-in: email and password, or one tap on a demo portal', async ({ page }
 
   // Demo portals open with one tap: no password, no PIN prompt.
   await expect(page.getByRole('group', { name: 'Demo portals' })).toBeVisible();
-  for (const [portal, landing] of [['Staff', /Good (morning|afternoon|evening), Grace/], ['Finance', 'Rose Temba’s queue'], ['Reception', 'OFFICE FRONT · RECEPTION'], ['Store', 'Fatma’s store'], ['Printing', /Good (morning|afternoon|evening), Juma/], ['Management', 'COMPANY COMMAND CENTER']]) {
+  for (const [portal, landing] of [['Staff', /Good (morning|afternoon|evening), Grace/], ['Finance', 'Rose Temba’s queue'], ['Reception', 'OFFICE FRONT · RECEPTION'], ['General Manager', 'COMPANY COMMAND CENTER'], ['Printing', /Good (morning|afternoon|evening), Juma/], ['Management', 'COMPANY COMMAND CENTER']]) {
     await btn(page.getByRole('group', { name: 'Demo portals' }), portal).click();
     await expect(page.getByText(landing).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Not now' })).toHaveCount(0);

@@ -2,6 +2,9 @@ import { readFileSync } from 'node:fs';
 import { test, expect } from '@playwright/test';
 import { openAs, watchErrors, side, toast, btn, saved, fillModal, modal, rowOf } from './helpers';
 
+// Store and printing jobs are parked for now (hidden from every menu); these tests come back with them.
+test.skip(true, 'Store and production are parked for now');
+
 let errors;
 test.beforeEach(async ({ page }) => { errors = watchErrors(page); page.on('dialog', d => d.accept()); });
 test.afterEach(() => expect(errors).toEqual([]));

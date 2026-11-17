@@ -21,6 +21,8 @@ export function watchErrors(page) {
 
 // Clicks a sidebar page, opening "More" first when the page lives there.
 export async function side(page, label) {
+  // Notifications open from the bell in the top bar, not the side menu.
+  if (label === 'Notifications') { await page.locator('header').getByRole('button', { name: 'Notifications' }).click(); return; }
   const aside = page.locator('aside');
   const item = aside.getByText(label, { exact: true }).first();
   await expect(async () => {
@@ -38,6 +40,14 @@ export const btn = (scope, name) => scope.getByRole('button', { name, exact: tru
 export async function saved(page) {
   await page.waitForTimeout(450);
   return page.evaluate(() => JSON.parse(localStorage.getItem('tm360data') || '{}'));
+}
+
+// Request money first asks which kind of request; this picks it.
+export async function chooseRequest(page, type = 'Project request') {
+  const m = modal(page);
+  await m.locator('label').filter({ has: page.getByText('Type of request', { exact: true }) }).locator('select').selectOption({ label: type });
+  await m.getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect(modal(page).getByText(type, { exact: true }).first()).toBeVisible();
 }
 
 // Fills the open form modal: { 'Label': value } for inputs and selects.

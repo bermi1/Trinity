@@ -82,7 +82,7 @@ test('field app: the person’s own tasks, money request, photo and daily report
   await page.getByPlaceholder('300000').fill('40000');
   await page.getByPlaceholder('What is the money for?').fill('Ladder hire');
   await btn(page, 'Submit request').click();
-  await toast(page, 'REQ-0427 sent · waiting for Project Manager');
+  await toast(page, 'REQ-0427 submitted · waiting for General Manager');
 
   await btn(page, 'Report').click();
   await page.getByPlaceholder('e.g. Outlet 4 wall is damp — returning Thursday.').fill('Outlet 4 done, outlet 5 tomorrow');
@@ -106,9 +106,13 @@ test('staff portal: own tasks, money request and daily report', async ({ page })
   const d = await saved(page);
   expect(d.reportsToday.GM).toBe(true);
   await expect(page.getByText('Sent', { exact: true })).toBeVisible();
-  // Staff see an Approvals page for requests waiting on them.
-  await side(page, 'Approvals');
-  await expect(btn(page, /^Awaiting me · 0/)).toBeVisible();
+  // Staff never approve: they see only their own requests.
+  await expect(page.locator('aside').getByText('Approvals', { exact: true })).toHaveCount(0);
+  await side(page, 'My requests');
+  const names = await page.locator('main').getByText(/^REQ-\d+$/).allInnerTexts();
+  const own = (await saved(page)).reqs.filter(r => r.who === 'GM').map(r => r.id);
+  for (const id of names) expect(own).toContain(id);
+  await expect(page.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0);
 });
 
 test('meeting rooms: book a free slot, cancel it, and see who holds the others', async ({ page }) => {

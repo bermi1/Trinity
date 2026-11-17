@@ -2,14 +2,14 @@
 // Managers see the whole team. Also the company setup (small-request limit, sections on/off).
 // Mixed into TrinityApp, so `this` is the app.
 import { dayKey } from './seed';
+import { PARKED } from './constants';
 
 // Sections the administrator can switch off. Home pages, approvals, tasks, projects,
 // notifications, settings and accounts always stay.
 export const SECTIONS = [
   ['today', 'Daily to-do'], ['briefing', 'Monday Briefing'], ['calendar', 'Calendar'], ['crm', 'CRM / Client enquiries'],
-  ['proposals', 'Sales & Proposals'], ['finance', 'Finance & Invoices'], ['production', 'Production jobs'], ['procurement', 'Procurement'],
-  ['store', 'Store & Inventory'], ['requisitions', 'Store requisitions'], ['movements', 'Stock ledger'], ['logistics', 'Logistics'],
-  ['staff', 'Staff & Reports'], ['rooms', 'Meeting rooms'], ['documents', 'Documents'], ['reports', 'Reports'],
+  ['proposals', 'Sales & Proposals'], ['finance', 'Finance & Invoices'],
+  ['staff', 'Staff & Reports'], ['rooms', 'Meeting rooms'],
   ['field', 'Field capture app'], ['ceomobile', 'Mobile apps preview']
 ];
 
@@ -20,7 +20,7 @@ const dayName = key => {
 
 export const todoMethods = {
   today() { return dayKey(0); },
-  isOff(page) { const c = this.state.company || {}; return Array.isArray(c.off) && c.off.includes(page); },
+  isOff(page) { const c = this.state.company || {}; return PARKED.includes(page) || (Array.isArray(c.off) && c.off.includes(page)); },
   // Administrators set up the company; in the demo, Management can.
   canSetup() { return this.state.db ? this.isAdmin() : (this.state.role || 'ceo') === 'ceo'; },
 
@@ -84,7 +84,7 @@ export function todayVals(s) {
   const company = Object.assign({ smallLimit: 200000, off: [] }, s.company || {});
   return {
     TD: {
-      dayLabel: dayName(today), isTeam: s.todoTab === 'team', canTeam: (s.role || 'ceo') === 'ceo',
+      dayLabel: dayName(today), isTeam: s.todoTab === 'team', canTeam: ['ceo', 'gm'].includes(s.role || 'ceo'),
       showMine: () => this.setState({ todoTab: 'mine' }), showTeam: () => this.setState({ todoTab: 'team' }),
       done: mine.filter(i => i.st === 'done' && i.doneOn === today).map(item),
       plan: mine.filter(i => i.st === 'todo').sort((a, b) => (a.d < b.d ? 1 : -1)).map(item),

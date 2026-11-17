@@ -68,7 +68,7 @@ export default function TopBar({ v }) {
           </svg>
         </button>
         {' '}
-        <button className="tm-h3" onClick={v.goNotes} title="Notifications" style={{ position: "relative", width: "40px", height: "40px", border: "1px solid #E8E4EF", borderRadius: "10px", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+        <button className="tm-h3" onClick={v.goNotes} title="Notifications" aria-label="Notifications" style={{ position: "relative", width: "40px", height: "40px", border: "1px solid #E8E4EF", borderRadius: "10px", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d={v.ic.bell} />
           </svg>
@@ -110,6 +110,12 @@ export default function TopBar({ v }) {
                   </svg>
                   Management · Command Center
                 </div>
+                <div className="tm-h3" onClick={v.asGm} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={v.ic.chart} />
+                  </svg>
+                  General Manager
+                </div>
                 <div className="tm-h3" onClick={v.asCeoMobile} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer" }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d={v.ic.phone} />
@@ -139,12 +145,6 @@ export default function TopBar({ v }) {
                     <path d={v.ic.message} />
                   </svg>
                   Office front · Reception
-                </div>
-                <div className="tm-h3" onClick={v.asStore} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={v.ic.package} />
-                  </svg>
-                  Storekeeper portal
                 </div>
                 <div className="tm-h3" onClick={v.asProduction} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer" }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

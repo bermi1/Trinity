@@ -133,7 +133,7 @@ export function seed() {
     {id:'MV-0202',d:'Thu 17 · 10:45',sku:'PET-ROLL',type:'issue',qty:-3,ref:'SRQ-0101',p:'PRJ-0231',by:'FH',v:630000},
     {id:'MV-0201',d:'Wed 16 · 15:10',sku:'PET-ROLL',type:'receipt',qty:6,ref:'GRN-0396 · Chapa Supplies',p:'',by:'FH',v:1260000}
   ],
-  reportsSub:44, reportsToday:{}, reportText:'', fieldReq:{amt:'',purpose:'',p:'PRJ-0231',cat:'Transport'},
+  reportsSub:44, reportsToday:{}, reportText:'', fieldReq:{amt:'',purpose:'',p:'PRJ-0231',cat:'Team'},
   // Company-wide setup: requests up to smallLimit (TZS) need only the PM and Finance; `off` hides sections.
   company:{smallLimit:200000, off:['ceomobile']},
   // Daily to-do: what each person did today and plans to do.
