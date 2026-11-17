@@ -135,3 +135,42 @@ export const projectMethods = {
   },
   startTask(id) { this.setState(x => ({ tasks: x.tasks.map(y => (y.id === id && y.st === 'todo' ? Object.assign({}, y, { st: 'prog' }) : y)) })); }
 };
+
+// Questions on a request, and reconciling a paid request with receipts.
+export const reqFlowMethods = {
+  askReq(id, text) {
+    const t = String(text || '').trim(); if (!t) return 'Write your question';
+    const r = this.state.reqs.find(x => x.id === id); if (!r) return 'Request not found';
+    this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { info: 'asked', thread: [...(q.thread || []), { by: this.me().k, t, at: this.today() + ' ' + this.now() }] }) : q)) }));
+    if (r.who !== this.me().k) this.notify({ to: r.who, ic: 'message', t: this.me().n + ' asks about ' + r.id, s: t, go: 'requests' });
+    this.toast('Question sent to ' + this.av(r.who).n);
+    return '';
+  },
+  answerReq(id, text) {
+    const t = String(text || '').trim(); if (!t) return 'Write your answer';
+    const r = this.state.reqs.find(x => x.id === id); if (!r) return 'Request not found';
+    const asker = [...(r.thread || [])].reverse().find(m => m.by !== r.who);
+    this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { info: 'answered', thread: [...(q.thread || []), { by: this.me().k, t, at: this.today() + ' ' + this.now() }] }) : q)) }));
+    if (asker) this.notify({ to: asker.by, ic: 'message', t: this.me().n + ' answered on ' + r.id, s: t, go: 'requests' });
+    this.toast('Answer sent');
+    return '';
+  },
+  // The person who received the money reports what was spent, with the receipt; Finance confirms.
+  async reconcileReq(id, spent, file) {
+    const r = this.state.reqs.find(x => x.id === id); if (!r) return 'Request not found';
+    const amt = Math.round(+spent || 0); if (amt <= 0) return 'Enter the amount spent';
+    if (amt > r.amt) return 'Spent is more than the ' + this.fmtT(r.amt) + ' received';
+    let rc = null;
+    if (file) { try { rc = await this.storeFile(file); } catch (e) { return 'Receipt upload failed · ' + (e.message || e); } }
+    this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { rec: { spent: amt, back: r.amt - amt, file: rc, at: this.today(), st: 'submitted' } }) : q)) }));
+    this.notify({ to: this.ROLES.finance.k, ic: 'receipt', t: 'Receipts to check · ' + r.id, s: this.av(r.who).n + ' spent ' + this.fmtT(amt) + (r.amt - amt ? ' · returns ' + this.fmtT(r.amt - amt) : ''), go: 'requests' });
+    this.toast('Sent to Finance to check');
+    return '';
+  },
+  confirmRec(id) {
+    const r = this.state.reqs.find(x => x.id === id); if (!r || !r.rec) return;
+    this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { rec: Object.assign({}, q.rec, { st: 'ok', by: this.me().k }) }) : q)), staff: x.staff.map(p => (p.k === r.who ? Object.assign({}, p, { fl: Math.max(0, p.fl - r.amt) }) : p)) }));
+    if (r.who !== this.me().k) this.notify({ to: r.who, ic: 'check', t: 'Receipts accepted · ' + r.id, s: 'Your float for this request is closed', go: 'requests' });
+    this.toast('Reconciled · ' + r.id);
+  }
+};

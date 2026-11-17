@@ -49,7 +49,8 @@ function InvoiceRow({ i, F }) {
             <Btn kind="ghost" onClick={i.print}>Open PDF</Btn>
             {i.canSign ? <Btn kind="dark" onClick={i.sign}>Sign &amp; stamp</Btn> : null}
             {i.st === 'draft' && i.signed ? <Btn kind="dark" onClick={i.send}>Mark as sent</Btn> : null}
-            {i.st === 'draft' && F.canInvoice ? <Btn kind="ghost" onClick={i.edit}>Edit</Btn> : null}
+            {i.needsSign && !i.canSign ? <span className="k-sub">Edited or new · waiting for signature</span> : null}
+            {i.st !== 'paid' && F.canInvoice ? <Btn kind="ghost" onClick={i.edit}>Edit</Btn> : null}
             {i.canPay && !paying ? <Btn kind="dark" onClick={() => setPaying(true)}>Record payment</Btn> : null}
           </div>
           {i.needsSign ? <p className="k-sub">Waiting for the {i.signer} to sign. The signature and company stamp appear on the PDF only after signing.</p> : null}

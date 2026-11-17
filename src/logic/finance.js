@@ -76,7 +76,8 @@ export const financeMethods = {
     const base = { c: d.c, tin: d.tin || cust.tin || '', vrn: d.vrn || '', p: d.p || '', title: (d.title || '').trim(), po: d.po || '', poDate: d.poDate || '', vendor: d.vendor || '', lines, admin: d.admin == null ? 15 : +d.admin, vat: 18, signer: d.signer || 'ED', due: d.due || '30 days', by: this.me().k };
     base.v = invTotals(base).total / 1e6;
     if (d.id) {
-      this.setState(x => ({ invoices: x.invoices.map(i => (i.id === d.id ? Object.assign({}, i, base, { signed: null, st: 'draft' }) : i)) }));
+      this.setState(x => ({ invoices: x.invoices.map(i => (i.id === d.id ? Object.assign({}, i, base, { signed: null, st: (i.payments || []).some(p => p.ok) ? 'partial' : i.st === 'draft' ? 'draft' : 'sent' }) : i)) }));
+      { const sk = this.ROLES[SIGNERS[base.signer].role].k; if (sk !== this.me().k) this.remind(sk, 'Edited invoice to sign again · ' + d.id, 'finance', 'fileText', d.c); }
       this.toast(d.id + ' saved'); return '';
     }
     const id = this.nextId('INV', this.state.invoices);
@@ -210,7 +211,9 @@ export function financeVals(s) {
     invoices: inv, filter: s.invFilter || 'open', setFilter: k => this.setState({ invFilter: k }),
     canInvoice: this.canInvoice(), newInvoice: () => this.setState({ invEdit: 'new' }),
     editing: s.invEdit || null, closeEdit: () => this.setState({ invEdit: null }),
-    draft: s.invEdit && s.invEdit !== 'new' ? (s.invoices.find(i => i.id === s.invEdit) || null) : null,
+    draft: (() => { const i = s.invEdit && s.invEdit !== 'new' ? s.invoices.find(x => x.id === s.invEdit) : null; if (!i) return null;
+      if (i.lines && i.lines.length) return i;
+      const T = invTotals(i); return Object.assign({}, i, { admin: 0, lines: [{ item: this.proj(i.p).name || 'Services as agreed', n: 1, rate: T.net, days: 1, events: 1 }] }); })(),
     save: d => { const e = this.saveInvoice(d); if (!e) this.setState({ invEdit: null, finTab: 'invoices' }); return e; },
     customers: (s.customers || []).map(c => ({ v: c.n, l: c.n, tin: c.tin || '' })),
     projects: s.projects.filter(p => p.st !== 'done').map(p => ({ v: p.id, l: p.client + ' · ' + p.name, c: p.client })),

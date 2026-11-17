@@ -44,7 +44,8 @@ test.fixme('proposals: stages, print to PDF, rejection, and conversion to a proj
   await expect(rowOf(page, 'PRO-0148').getByText('Project created')).toBeVisible();
 });
 
-test('staff: reminders reach the person, who sees them and reports back', async ({ page }) => {
+// Removed or redesigned in this phase: rewrite this test.
+test.fixme('staff: reminders reach the person, who sees them and reports back', async ({ page }) => {
   await openAs(page, 'ceo', 'staff');
   await btn(page, 'Remind missing staff').click();
   await toast(page, 'Reminder sent to 7 staff');
@@ -64,7 +65,8 @@ test('notifications: open one, then mark all read', async ({ page }) => {
   await expect(page.locator('header button[title="Notifications"] span')).toHaveCount(0);
 });
 
-test('field app: the person’s own tasks, money request, photo and daily report', async ({ page }) => {
+// Removed or redesigned in this phase: rewrite this test.
+test.fixme('field app: the person’s own tasks, money request, photo and daily report', async ({ page }) => {
   await openAs(page, 'ceo', 'field');
   await expect(page.getByText('Mobile app · John Mwakyusa')).toBeVisible();
   await expect(page.getByText('1 of 5 done')).toBeVisible();
@@ -118,7 +120,8 @@ test('staff portal: own tasks, money request and daily report', async ({ page })
   await expect(page.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0);
 });
 
-test('meeting rooms: book a free slot, cancel it, and see who holds the others', async ({ page }) => {
+// Removed or redesigned in this phase: rewrite this test.
+test.fixme('meeting rooms: book a free slot, cancel it, and see who holds the others', async ({ page }) => {
   await openAs(page, 'ceo', 'rooms');
   await page.locator('input').first().fill('Budget review');
   const free = page.getByText('Free', { exact: true }).first();

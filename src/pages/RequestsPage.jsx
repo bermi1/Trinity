@@ -107,6 +107,14 @@ export default function RequestsPage({ v }) {
                   <p style={{ margin: "0", fontSize: "14px", lineHeight: "1.6", maxWidth: "520px", textWrap: "pretty" }}>
                     {v.R.purpose}
                   </p>
+                  {(v.R.thread || []).length ? <ul className="mr-thread">{v.R.thread.map((m, i) => <li key={i}><b>{m.who}</b> · <small>{m.at}</small><p>{m.t}</p></li>)}</ul> : null}
+                  {v.R.rec ? (
+                    <div className="mr-rec">
+                      <span><b>Spent {v.R.rec.spent}</b> · returns {v.R.rec.back} · {v.R.rec.st === 'ok' ? 'Reconciled' : 'Receipts submitted'}</span>
+                      {v.R.rec.file ? <button type="button" className="td-start" onClick={v.R.rec.file}>View receipt</button> : null}
+                      {v.R.rec.canOk ? <button type="button" className="td-start" onClick={v.R.rec.ok}>Confirm receipts</button> : null}
+                    </div>
+                  ) : null}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: "14px", fontSize: "13px" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>

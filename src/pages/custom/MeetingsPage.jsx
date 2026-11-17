@@ -40,30 +40,49 @@ function NewMeeting({ M, onDone }) {
   );
 }
 
-// Meetings: who is meeting when. Invitations reach everyone invited; client meetings also go to Reception.
+function AddEvent({ M, onDone }) {
+  const [f, setF] = useState({ title: '', date: M.dates[0].v, time: '', kind: 'Staff meeting' });
+  const [err, setErr] = useState('');
+  const set = (k, v) => setF(x => Object.assign({}, x, { [k]: v }));
+  return (
+    <section className="fh-card mt-new">
+      <label className="ff"><span className="ff-l">What</span><input value={f.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Staff meeting · Q4 results presentation" /></label>
+      <div className="ff"><span className="ff-l">Type</span><div className="ff-chips">{M.kinds.map(k => <button key={k} type="button" className={f.kind === k ? 'is-on' : ''} onClick={() => set('kind', k)}>{k}</button>)}</div></div>
+      <div className="fh-two">
+        <label className="ff"><span className="ff-l">Day</span><input type="date" value={f.date} onChange={e => set('date', e.target.value)} /></label>
+        <label className="ff"><span className="ff-l">Time (optional)</span><input type="time" value={f.time} onChange={e => set('time', e.target.value)} /></label>
+      </div>
+      {err ? <div className="fm-err" role="alert">{err}</div> : null}
+      <div className="fh-row"><Btn kind="dark" onClick={() => { const e = M.addCal(f); if (e) setErr(e); else onDone(); }}>Add to calendar</Btn><Btn kind="ghost" onClick={onDone}>Cancel</Btn></div>
+    </section>
+  );
+}
+
+// Calendar: meetings, company events and project deadlines, in one list everyone sees. Invitations reach everyone invited; client meetings also go to Reception.
 export default function MeetingsPage({ v }) {
   const M = v.MT;
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState('');
   return (
     <>
-      <PageHead kicker="Office" title="Meetings" sub="Invite everyone, an office or chosen people. Client meetings tell Reception who to welcome.">
-        {M.can && !adding ? <Btn kind="dark" onClick={() => setAdding(true)}>New meeting</Btn> : null}
+      <PageHead kicker="Office" title="Calendar" sub="Meetings, company events and project deadlines. Client meetings tell Reception who to welcome.">
+        {M.can && !adding ? <><Btn kind="dark" onClick={() => setAdding('meet')}>New meeting</Btn><Btn kind="ghost" onClick={() => setAdding('event')}>Add event</Btn></> : null}
       </PageHead>
-      {adding ? <NewMeeting M={M} onDone={() => setAdding(false)} /> : null}
+      {adding === 'meet' ? <NewMeeting M={M} onDone={() => setAdding('')} /> : null}
+      {adding === 'event' ? <AddEvent M={M} onDone={() => setAdding('')} /> : null}
       {M.days.length ? M.days.map(d => (
         <section key={d.k} className="fh-card">
           <h3>{d.l}</h3>
           <ul className="mt-list">
             {d.items.map(m => (
-              <li key={m.id} className={m.client ? 'is-client' : ''}>
+              <li key={m.id} className={'is-' + m.kind} onClick={m.go} style={m.go ? { cursor: 'pointer' } : undefined}>
                 <time>{m.time}</time>
-                <span><b>{m.title}</b><small>{m.place} · {m.who}{m.guest ? ' · Guest: ' + m.guest : ''} · by {m.by}</small></span>
+                <span><b>{m.title}</b><small>{m.place} · {m.who}{m.guest ? ' · Guest: ' + m.guest : ''}{m.by ? ' · by ' + m.by : ''}</small></span>
                 {m.canCancel ? <button type="button" className="td-start" onClick={m.cancel}>Cancel</button> : null}
               </li>
             ))}
           </ul>
         </section>
-      )) : <Empty>No meetings coming up.</Empty>}
+      )) : <Empty>Nothing on the calendar yet.</Empty>}
     </>
   );
 }

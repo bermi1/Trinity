@@ -828,3 +828,43 @@
 .rd-list span { display: flex; flex-direction: column; min-width: 0; font-size: 14px; }
 .rd-list small { color: #8A8D99; font-size: 12.5px; }
 @media (max-width: 600px) { .rd-tiles { grid-template-columns: 1fr 1fr; } .rd-stats { width: 100%; } .rd-stats span { flex: 1; min-width: 0; } }
+.mr-thread { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.mr-thread li { background: #F4F1FA; border-radius: 4px 12px 12px 12px; padding: 8px 10px; font-size: 13px; }
+.mr-thread li.is-mine { background: #E7F6EE; }
+.mr-thread p { margin: 2px 0 0; }
+.mr-thread small { color: #8A8D99; }
+.mr-reply { display: flex; gap: 8px; flex-wrap: wrap; }
+.mr-reply .ff-search { flex: 1 1 200px; }
+.mr-reconcile { display: grid; gap: 8px; padding: 12px; border-radius: 12px; background: #FBF6EA; max-width: 420px; }
+.mr-rec { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 12px; background: #FBF6EA; border-radius: 10px; font-size: 13px; }
+.mr-recline { color: #1F7549; font-weight: 600; font-size: 13px; }
+.mt-list li.is-cal time { color: #1F7549; } .mt-list li.is-due time { color: #B23A46; }
+/* Management home on the phone: small, tight tiles */
+@media (max-width: 700px) {
+  .hd { gap: 12px; }
+  .hd-top h1 { font-size: 20px; }
+  .hd-top p { font-size: 12.5px; margin-top: 2px; }
+  .hd-kpis { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .hd-kpi, .hd-kpi:first-child { grid-column: auto !important; padding: 10px 12px; border-radius: 14px; gap: 1px; background: #fff; }
+  .hd-kpi:first-child span, .hd-kpi:first-child small { color: #8A8D99; }
+  .hd-kpi b, .hd-kpi:first-child b { font-size: 17px; color: #17152A; }
+  .hd-kpi span { font-size: 11px; }
+  .hd-kpi small { font-size: 11px; }
+  .hd-card { padding: 12px 14px; gap: 8px; border-radius: 16px; }
+  .hd-card h3 { font-size: 13.5px; }
+  .hd-att li button { padding: 8px 0; gap: 8px; }
+  .hd-att em { font-size: 10px; padding: 2px 6px; }
+  .hd-att li span { font-size: 12.5px; }
+  .hd-pipe li { grid-template-columns: 84px 1fr 18px; font-size: 12px; }
+  .hd-stages div { padding: 8px 10px; }
+  .hd-stages b { font-size: 17px; }
+  .hd-btn i { width: 46px; height: 46px; border-radius: 15px; }
+}
+@media (max-width: 600px) {
+  .k-card { padding: 0 !important; }
+  .k-card-head { padding: 12px 14px 0; }
+  .k-card-head h3 { font-size: 14px; }
+  .k-card-body { padding: 8px 10px 10px; }
+  .mr-row { padding: 10px 0; }
+  .mr-left, .mr-right { font-size: 13px; }
+}

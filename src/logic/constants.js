@@ -86,7 +86,7 @@ export const REQ_TYPES = {
 };
 // Parked for now: hidden from every menu, search and portal list until the company is ready for them.
 // Sections not part of this phase: hidden from every menu until we agree on them.
-export const PARKED = ['logistics','production','store','requisitions','movements','storekeeper','reports','documents','procurement','proposals','rooms','calendar','field','ceomobile','staff'];
+export const PARKED = ['logistics','production','store','requisitions','movements','storekeeper','reports','documents','procurement','proposals','rooms','calendar','field','ceomobile','staff','briefing'];
 export const HIDDEN_ROLES = ['store'];
 // Departments: who leads each (Company setup can change it) and the portal of its people.
 export const DEPTS = {

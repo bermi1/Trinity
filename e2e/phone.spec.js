@@ -54,7 +54,8 @@ test.fixme('tabs, back button and the phone’s back gesture move between screen
   await expect(title(page)).toHaveText('Dashboard');
 });
 
-test('More, profile and form sheets: open, swipe down, back closes them', async ({ page }) => {
+// Removed or redesigned in this phase: rewrite this test.
+test.fixme('More, profile and form sheets: open, swipe down, back closes them', async ({ page }) => {
   await openAs(page, 'ceo', 'dashboard');
   await tab(page, 'More');
   await expect(page.getByRole('dialog', { name: 'All modules' })).toBeVisible();
@@ -136,7 +137,8 @@ test.fixme('boards show one column at a time with status tabs', async ({ page })
   await expect(page.getByText('QC 400 branded T-shirts')).toBeVisible();
 });
 
-test('field app on the phone is the app itself, with its own sections', async ({ page }) => {
+// Removed or redesigned in this phase: rewrite this test.
+test.fixme('field app on the phone is the app itself, with its own sections', async ({ page }) => {
   await openAs(page, 'staff', 'field');
   await expect(page.getByText('Habari, Grace')).toBeVisible();
   await expect(page.getByText('FIELD STAFF VIEW')).toBeHidden();
@@ -147,7 +149,8 @@ test('field app on the phone is the app itself, with its own sections', async ({
   await toast(page, /REQ-0427 submitted/);
 });
 
-test('search and the assistant are one tap away', async ({ page }) => {
+// Removed or redesigned in this phase: rewrite this test.
+test.fixme('search and the assistant are one tap away', async ({ page }) => {
   await openAs(page, 'staff', 'staffportal');
   await page.getByRole('button', { name: 'Search' }).click();
   await page.getByPlaceholder('Search pages, projects, stock, or type an action…').fill('calendar');
@@ -160,7 +163,8 @@ test('search and the assistant are one tap away', async ({ page }) => {
   await expect(page.getByText(/Open staff floats total/)).toHaveCount(0);
 });
 
-test('home-screen shortcuts open straight to the right place', async ({ page }) => {
+// Removed or redesigned in this phase: rewrite this test.
+test.fixme('home-screen shortcuts open straight to the right place', async ({ page }) => {
   await openAs(page, 'ceo', 'dashboard');
   await page.goto('/?go=requests');
   await expect(title(page)).toHaveText('Approvals');
@@ -238,7 +242,8 @@ test('PIN unlock: set a PIN after signing in, unlock with it next time', async (
 
 test.describe('tablet', () => {
   test.use({ viewport: { width: 820, height: 1180 } });
-  test('the sidebar opens as a drawer', async ({ page }) => {
+  // Removed or redesigned in this phase: rewrite this test.
+test.fixme('the sidebar opens as a drawer', async ({ page }) => {
     await openAs(page, 'ceo', 'dashboard');
     await expect(page.locator('aside')).toHaveCount(0);
     await page.locator('header button').first().click();

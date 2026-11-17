@@ -9,7 +9,21 @@ import { DEPTS } from './constants';
 const OFFICES = ['clientservice', 'creative', 'operations', 'finance', 'production', 'reception'];
 const dayLabel = k => { if (k === dayKey(0)) return 'Today'; if (k === dayKey(1)) return 'Tomorrow'; const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); };
 
+const MON = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+// Project due dates are written like "10 Oct": read them as this year (or next, if already well past).
+const dueKey = due => { const m = /^(\d{1,2})\s+([A-Z][a-z]{2})/.exec(due || ''); if (!m || MON[m[2]] == null) return ''; const now = new Date(); const d = new Date(now.getFullYear(), MON[m[2]], +m[1]); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+export const CAL_KINDS = ['Staff meeting', 'Presentation', 'Event', 'Holiday', 'Deadline', 'Other'];
+
 export const officeMethods = {
+  addCal(f) {
+    if (!(f.title || '').trim()) return 'Give it a title';
+    if (!f.date) return 'Choose the day';
+    const e = { id: 'CE' + Date.now().toString(36), title: f.title.trim(), date: f.date, time: f.time || '', kind: f.kind || 'Event', by: this.me().k };
+    this.setState(x => ({ cal: [e, ...(x.cal || [])] }));
+    this.toast('Added to the calendar · ' + e.title);
+    return '';
+  },
+  removeCal(id) { this.setState(x => ({ cal: (x.cal || []).filter(e => e.id !== id) })); },
   canCreateMeeting() { const d = this.myDept(); return this.isTop() || (this.state.role === 'finance') || (d && this.isManagerOf(d)) || this.state.role === 'reception'; },
   meetingPeople(m) {
     const t = m.to || {}, out = new Set(t.people || []);
@@ -66,17 +80,21 @@ export function officeVals(s) {
   const me = this.me().k, today = dayKey(0);
   const face = k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c }; };
   const mine = (s.meetings || []).filter(m => m.date >= today && (this.isTop() || this.meetingPeople(m).includes(me))).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-  const days = [];
-  mine.forEach(m => { let d = days.find(x => x.k === m.date); if (!d) days.push(d = { k: m.date, l: dayLabel(m.date), items: [] });
+  const days = [], end = dayKey(45);
+  const dayOf = k => { let d = days.find(x => x.k === k); if (!d) days.push(d = { k, l: dayLabel(k), items: [] }); return d; };
+  (s.cal || []).filter(e => e.date >= today && e.date <= end).forEach(e => dayOf(e.date).items.push({ id: e.id, time: e.time || 'All day', title: e.title, place: e.kind, kind: 'cal', who: 'Everyone', by: this.av(e.by).n, canCancel: e.by === me || this.isTop(), cancel: () => this.removeCal(e.id) }));
+  this.visibleProjects().filter(p => p.st !== 'done').forEach(p => { const k = dueKey(p.due); if (k && k >= today && k <= end) dayOf(k).items.push({ id: 'due' + p.id, time: 'Due', title: p.client + ' · ' + p.name, place: 'Project deadline', kind: 'due', who: 'PM ' + (p.pm ? this.av(p.pm).n : 'not chosen'), by: '', go: () => this.go('project', { projectId: p.id }) }); });
+  mine.forEach(m => { const d = dayOf(m.date);
     const t = m.to || {};
     d.items.push({ id: m.id, time: m.time, title: m.title, place: m.place, client: m.kind === 'client', guest: m.guest ? m.guest.name + (m.guest.co ? ' · ' + m.guest.co : '') : '',
       who: t.all ? 'Everyone' : [...(t.depts || []).map(x => DEPTS[x].l), ...(t.people || []).map(k => this.av(k).first)].join(', ') || 'Client visit', by: this.av(m.by).n,
-      canCancel: m.by === me || this.isTop(), cancel: () => this.cancelMeeting(m.id) }); });
+      kind: m.kind === 'client' ? 'client' : 'meet', canCancel: m.by === me || this.isTop(), cancel: () => this.cancelMeeting(m.id) }); });
+  days.sort((a, b) => a.k.localeCompare(b.k)); days.forEach(d => d.items.sort((a, b) => String(a.time).localeCompare(String(b.time))));
   const vis = s.visitors || [], isToday = v => !v.date || v.date === today;
   const vrow = v => ({ id: v.id, name: v.name, co: v.co || '', phone: v.phone || '', purpose: v.purpose || '', host: this.av(v.host).n, time: v.time || '', out: v.outAt || '',
     arrive: () => this.arrived(v.id), leave: () => this.checkOut(v.id) });
   return {
-    MT: { days, can: this.canCreateMeeting(), create: f => this.createMeeting(f),
+    MT: { days, can: this.canCreateMeeting(), create: f => this.createMeeting(f), addCal: f => this.addCal(f), kinds: CAL_KINDS,
       offices: OFFICES.map(d => ({ v: d, l: DEPTS[d].l })), people: this.everyone().map(face).sort((a, b) => a.l.localeCompare(b.l)),
       dates: [0, 1, 2, 3, 4, 5, 6].map(o => ({ v: dayKey(o), l: dayLabel(dayKey(o)) })) },
     RD: { inside: vis.filter(v => v.st === 'in' && isToday(v)).map(vrow), expected: vis.filter(v => v.st === 'expected' && (v.date || today) === today).sort((a, b) => (a.time || '').localeCompare(b.time || '')).map(vrow),
