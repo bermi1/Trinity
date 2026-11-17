@@ -5,10 +5,10 @@ import TopBar from './TopBar';
 import DashboardPage from '../pages/DashboardPage';
 import BriefingPage from '../pages/BriefingPage';
 import ProjectsPage from '../pages/ProjectsPage';
-import ProjectDetailPage from '../pages/ProjectDetailPage';
+import ProjectView from '../pages/custom/ProjectView';
 import TasksPage from '../pages/TasksPage';
 import RequestsPage from '../pages/RequestsPage';
-import FinancePage from '../pages/FinancePage';
+import FinanceHub from '../pages/custom/FinanceHub';
 import StorePage from '../pages/StorePage';
 import ProcurementPage from '../pages/ProcurementPage';
 import CrmPage from '../pages/CrmPage';
@@ -50,10 +50,10 @@ export default function AppShell({ v }) {
             {v.is.dashboard ? <DashboardPage v={v} /> : null}
             {v.is.briefing ? <BriefingPage v={v} /> : null}
             {v.is.projects ? <ProjectsPage v={v} /> : null}
-            {v.is.project ? <ProjectDetailPage v={v} /> : null}
+            {v.is.project ? <ProjectView v={v} /> : null}
             {v.is.tasks ? <TasksPage v={v} /> : null}
             {v.is.requests ? <RequestsPage v={v} /> : null}
-            {v.is.finance ? <FinancePage v={v} /> : null}
+            {v.is.finance ? <FinanceHub v={v} /> : null}
             {v.is.store ? <StorePage v={v} /> : null}
             {v.is.procurement ? <ProcurementPage v={v} /> : null}
             {v.is.crm ? <CrmPage v={v} /> : null}

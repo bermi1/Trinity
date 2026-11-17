@@ -104,5 +104,5 @@ export function renderVals() {
     openCmd:() => this.setState({cmd:true,cmdQ:''}), openAI:() => this.setState({ai:true,drawer:false,more:false}),
     greeting:hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening',
     kpis, chart, tip, chartLeave:() => this.setState({tip:-1}), rangeBtns, donut, attention, activity, pipe, procPipe, reports, quick
-  }, this.pageVals(s, IC, ST, narrow), this.overlayVals(s, IC), this.storeVals(s, IC), this.todayVals(s), this.deptVals(s), this.crmVals(s), this.projectVals(s));
+  }, this.pageVals(s, IC, ST, narrow), this.overlayVals(s, IC), this.storeVals(s, IC), this.todayVals(s), this.deptVals(s), this.crmVals(s), this.projectVals(s), this.financeVals(s));
 }

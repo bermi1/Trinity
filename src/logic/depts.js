@@ -119,7 +119,9 @@ export const deptMethods = {
   },
   // Which parts of a project a person sees: each department sees what it adds.
   projectParts(p) {
-    const role = this.state.role || 'ceo', me = this.me().k, top = ['ceo', 'gm'].includes(role), fin = role === 'finance';
+    // Management, the GM and Finance see the whole project. The Operations Manager and the
+    // project's PM also see the internal budget. Invoices stay with Management, the GM and Finance.
+    const role = this.state.role || 'ceo', me = this.me().k, top = ['ceo', 'gm', 'finance'].includes(role), fin = false;
     const isPM = p.pm === me, ops = this.isManagerOf('operations') || isPM;
     const dept = this.myDept();
     return {
@@ -130,9 +132,9 @@ export const deptMethods = {
       money: top || fin,
       allTasks: top || ops,
       allReqs: top || fin || ops,
-      canPM: top || this.isManagerOf('operations'),
-      canAdvance: top || ops,
-      canTask: top || ops || this.assignable().length > 1,
+      canPM: ['ceo', 'gm'].includes(role) || this.isManagerOf('operations'),
+      canAdvance: ['ceo', 'gm'].includes(role) || ops,
+      canTask: ['ceo', 'gm'].includes(role) || ops || this.assignable().length > 1,
       canBrief: top || dept === 'clientservice'
     };
   },

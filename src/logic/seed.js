@@ -109,6 +109,7 @@ export function seed() {
     {k:'RS',role:'Creative Lead',dept:'creative',rep:false,fl:0},{k:'DS',role:'Graphic Designer',dept:'creative',rep:false,fl:0},{k:'KM',role:'Client Service Executive',dept:'clientservice',rep:false,fl:0},
     {k:'JA',role:'Printer Operator',dept:'production',rep:false,fl:0},{k:'FH',role:'Storekeeper',dept:'store',rep:false,fl:0},{k:'AM',role:'Front Office',dept:'reception',rep:false,fl:0}
   ],
+  float:{grants:[{id:'FG1',amt:15000000,note:'November float',by:'DK',at:'2026-11-03'}],allocs:[{id:'FL1',to:'PRJ-0231',amt:6000000,at:'2026-11-03',by:'RT'},{id:'FL2',to:'PRJ-0233',amt:3500000,at:'2026-11-04',by:'RT'},{id:'FL3',to:'office:Office running',amt:1500000,at:'2026-11-04',by:'RT'},{id:'FL4',to:'office:Transport',amt:800000,at:'2026-11-05',by:'RT'}],asks:[]},
   invoices:[
     {id:'INV-0187',c:'Kivuko Foods',p:'PRJ-0226',v:18.6,st:'overdue',due:'21 days late'},
     {id:'INV-0189',c:'Kilimo Bank',p:'PRJ-0230',v:22.6,st:'overdue',due:'9 days late'},
@@ -116,7 +117,10 @@ export function seed() {
     {id:'INV-0196',c:'Mlimani Bank',p:'PRJ-0233',v:63.0,st:'sent',due:'05 Oct'},
     {id:'INV-0197',c:'Safari Mobile',p:'PRJ-0235',v:58.2,st:'sent',due:'12 Oct'},
     {id:'INV-0195',c:'Serengeti Telecom',p:'PRJ-0231',v:84.0,st:'paid',due:'Paid 15 Sep'},
-    {id:'INV-0198',c:'Nyota Insurance',p:'PRJ-0224',v:18.0,st:'draft',due:'—'}
+    {id:'INV-0198',c:'Nyota Insurance',p:'PRJ-0224',v:18.0,st:'draft',due:'—'},
+    {id:'INV-0199',c:'Serengeti Telecom',tin:'100-146-304',vrn:'10-0066-45-E',p:'PRJ-0231',title:'Lake Zone Roadshow · Phase 2 activation',po:'PO-55821',poDate:'2026-11-02',vendor:'V-2219',signer:'ED',at:'2026-11-12',due:'30 days',by:'RT',admin:15,vat:18,st:'partial',v:19.1337,
+      lines:[{item:'Brand ambassadors',n:12,rate:60000,days:6,events:1},{item:'Roadshow truck with sound system',n:1,rate:850000,days:6,events:1},{item:'Gazebos 3×3 branded',n:4,rate:120000,days:6,events:1},{item:'Event supervisor',n:2,rate:150000,days:6,events:1}],
+      signed:{by:'DK',name:'Daniel K.',at:'2026-11-12'},payments:[{id:'PY1',amt:6000000,ref:'CRDB TT 88213',at:'2026-11-14',rec:'RT',ok:'DK'},{id:'PY2',amt:4000000,ref:'CRDB TT 88907',at:'2026-11-16',rec:'RT',ok:null}]}
   ],
   activity:[
     {time:'08:42',ic:'banknote',tone:'amber',t:'John M. requested TZS 300,000 for crew transport',s:'Lake Zone Roadshow · REQ-0418'},
@@ -154,7 +158,8 @@ export function seed() {
   ],
   reportsSub:44, reportsToday:{}, reportText:'', fieldReq:{amt:'',purpose:'',p:'PRJ-0231',cat:'Team'},
   // Company-wide setup: requests up to smallLimit (TZS) need only the PM and Finance; `off` hides sections.
-  company:{smallLimit:200000, off:['ceomobile'], managers:{}, csTarget:500},
+  outbox:[],
+  company:{notify:{wa:true,sms:false,email:false,events:{clients:true,approvals:true,designs:true,payments:true,tasks:false}},phones:{DK:'+255 754 000 101',GN:'+255 754 000 102',NL:'+255 754 000 103',RS:'+255 754 000 104',MM:'+255 754 000 105',RT:'+255 754 000 106'},smallLimit:200000, off:['ceomobile'], managers:{}, csTarget:500},
   // Daily to-do: what each person did today and plans to do.
   todos:[
     {id:'TD-1',k:'GM',t:'Delivered branded tents to Mwanza site',st:'done',d:dayKey(0),doneOn:dayKey(0)},

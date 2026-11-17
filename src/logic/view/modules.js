@@ -15,7 +15,7 @@ export function pageVals2(s, IC, ST, narrow) {
   V.aging = bv.map(b => ({l:b.l, c:b.c, v:this.fmtM(b.v), w:(b.v/bm*100) + '%'}));
   const EC = [['Production',38,'#2B1459'],['Field & logistics',22,'#6D3CC2'],['Procurement',18,'#B49A5A'],['Payroll',15,'#4C78D0'],['Admin & other',7,'#A9A3B8']];
   V.expCats = EC.map(([l,p,c]) => ({l, p:p + '%', w:p + '%', c, v:this.fmtM(p * 172 / 100)}));
-  const IS = {paid:['Paid','#E6F4EC','#1F7549'], sent:['Sent','#E9EFFA','#3559A8'], overdue:['Overdue','#FBEDEE','#B23A46'], draft:['Draft','#F1EEF6','#6E6A7C']};
+  const IS = {paid:['Paid','#E6F4EC','#1F7549'], sent:['Sent','#E9EFFA','#3559A8'], overdue:['Overdue','#FBEDEE','#B23A46'], draft:['Draft','#F1EEF6','#6E6A7C'], partial:['Part paid','#FBF1DD','#8A6414']};
   V.invRows = s.invoices.map(i => ({id:i.id, c:i.c, proj:this.proj(i.p).name, v:this.fmtM(i.v), due:i.due, stl:IS[i.st][0], stbg:IS[i.st][1], stfg:IS[i.st][2], canPay:i.st === 'sent' || i.st === 'overdue', canSend:i.st === 'draft',
     pay:() => { this.setState(x => ({invoices:x.invoices.map(y => y.id === i.id ? Object.assign({}, y, {st:'paid', due:'Paid today'}) : y)})); this.toast(i.id + ' marked paid · ' + this.fmtM(i.v) + ' received'); this.log('trendUp','green','Payment received · ' + i.c, i.id + ' · ' + this.fmtM(i.v)); },
     send:() => { this.setState(x => ({invoices:x.invoices.map(y => y.id === i.id ? Object.assign({}, y, {st:'sent', due:y.due === '—' ? '30 days' : y.due}) : y)})); this.toast(i.id + ' sent to ' + i.c); }}));

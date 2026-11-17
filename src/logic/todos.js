@@ -118,7 +118,14 @@ export function todayVals(s) {
       csTarget: company.csTarget == null ? 500 : company.csTarget, setTarget: n => { this.setCompany({ csTarget: Math.max(0, +n || 0) }); this.toast('Client Service target: ' + this.fmtM(Math.max(0, +n || 0)) + ' a month'); },
       depts: ['clientservice', 'creative', 'operations', 'production', 'finance', 'reception'].map(d => ({ d, l: DEPTS[d].l, mgr: this.managerOf(d),
         set: k => { this.setCompany({ managers: Object.assign({}, company.managers || {}, { [d]: k }) }); this.toast(DEPTS[d].l + ' manager: ' + this.av(k).n); } })),
-      people: this.everyone().map(k => ({ v: k, l: this.av(k).n })).sort((a, b) => a.l.localeCompare(b.l))
+      people: this.everyone().map(k => ({ v: k, l: this.av(k).n })).sort((a, b) => a.l.localeCompare(b.l)),
+      notify: Object.assign({ wa: true, sms: false, email: false, events: { clients: true, approvals: true, designs: true, payments: true, tasks: false } }, company.notify || {}),
+      setNotify: ch => { const cur = Object.assign({ wa: true, sms: false, email: false, events: {} }, company.notify || {}); this.setCompany({ notify: Object.assign({}, cur, ch, ch.events ? { events: Object.assign({}, cur.events, ch.events) } : {}) }); },
+      phones: this.everyone().map(k => ({ k, n: this.av(k).n, phone: (company.phones || {})[k] || '' })).sort((a, b) => (b.phone ? 1 : 0) - (a.phone ? 1 : 0) || a.n.localeCompare(b.n)),
+      setPhone: (k, ph) => this.setCompany({ phones: Object.assign({}, company.phones || {}, { [k]: ph.trim() }) }),
+      outbox: (s.outbox || []).slice(0, 15).map(m => ({ id: m.id, to: this.av(m.to).n, phone: m.phone, text: m.text, st: m.st, at: m.at, ch: m.ch,
+        send: () => { const num = m.phone.replace(/\D/g, ''); try { window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(m.text), '_blank', 'noopener'); } catch (e) { /* blocked */ } this.setState(x => ({ outbox: x.outbox.map(o => (o.id === m.id ? Object.assign({}, o, { st: 'sent by hand' }) : o)) })); } })),
+      test: () => { this.notify({ to: this.ROLES.clientservice.k, ic: 'users', t: 'Test alert: new client enquiry', s: 'This is how Client Service alerts arrive on WhatsApp', go: 'clients' }); this.toast('Test alert queued for ' + this.av(this.ROLES.clientservice.k).n); }
     }
   };
 }

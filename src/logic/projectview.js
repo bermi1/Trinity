@@ -81,6 +81,34 @@ export function projectVals(s) {
     V.money = { val: this.fmtM(P.val), invoiced: this.fmtM(invoiced), margin: (P.val ? Math.round((P.val - Math.max(P.bud, P.spent)) / P.val * 100) : 0) + '%',
       invoices: inv.map(i => ({ id: i.id, v: this.fmtM(i.v), st: i.st, due: i.due })), invoice: () => this.openModal('invoice', { p: P.id }) };
   }
+  // Activity: what each department added, newest first, plus notes people log on the project.
+  const ev = [];
+  const lead = (s.leads || []).find(l => l.job === P.id);
+  if (lead && can.client) (lead.hist || []).forEach(h => ev.push({ at: h.at, who: h.by, t: 'Lead · ' + (['New', 'Contacted', 'Meeting', 'Proposal sent', 'Negotiation', 'Won', 'Lost'][h.s] || ''), s: h.note || '', tone: 'blue' }));
+  if (can.creative) (s.tasks || []).filter(t => t.kind === 'brief' && t.p === P.id).forEach(b => {
+    ev.push({ at: '', who: b.from, t: 'Design brief sent · ' + b.t, s: b.place || '', tone: 'purple' });
+    (b.files || []).forEach(f => ev.push({ at: f.at, who: f.by, t: 'Design uploaded', s: f.name, tone: 'purple' }));
+    if (b.st === 'done') ev.push({ at: '', who: this.managerOf('creative'), t: 'Design approved · ' + b.t, s: 'Sent to GM, Management and Client Service', tone: 'green' });
+  });
+  tasks.filter(t => t.st === 'done').forEach(t => ev.push({ at: t.doneOn || '', who: t.who, t: 'Task done', s: t.t, tone: 'green' }));
+  reqs.forEach(r => ev.push({ at: '', who: r.who, t: 'Money request · ' + this.fmtT(r.amt), s: this.reqStatus(r), tone: 'amber' }));
+  (P.notes || []).forEach(n => ev.push({ at: n.at, who: n.by, t: 'Note', s: n.t, tone: 'dark', note: true }));
+  V.feed = ev.sort((a, b) => (b.at || '').localeCompare(a.at || '')).slice(0, 30).map(e => Object.assign({}, e, { w: face(e.who) }));
+  V.addNote = t => {
+    const text = String(t || '').trim(); if (!text) return false;
+    this.setState(x => ({ projects: x.projects.map(p => (p.id === P.id ? Object.assign({}, p, { notes: [...(p.notes || []), { by: me, at: this.today(), t: text.slice(0, 500) }] }) : p)) }));
+    return true;
+  };
+  // Smart buttons: how much of each part there is; a tap opens that tab.
+  V.tab = s.pvTab || 'overview';
+  V.setTab = k => this.setState({ pvTab: k });
+  V.tabs = [
+    ['overview', 'Overview', ''],
+    ...(V.briefs ? [['designs', 'Designs', String(V.briefs.length)]] : []),
+    ['tasks', can.allTasks ? 'Tasks' : 'My tasks', String(V.tasks.filter(t => !t.done).length)],
+    ['money', can.allReqs ? 'Requests' : 'My requests', String(V.reqs.length)],
+    ...(V.money ? [['invoices', 'Invoices', String(V.money.invoices.length)]] : [])
+  ].map(([k, l, n]) => ({ k, l, n }));
   return { PV: V };
 }
 

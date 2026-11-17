@@ -5,7 +5,7 @@ import ProjectsPage from './ProjectsPage';
 import ProjectView from './custom/ProjectView';
 import TasksPage from './TasksPage';
 import RequestsPage from './RequestsPage';
-import FinancePage from './FinancePage';
+import FinanceHub from './custom/FinanceHub';
 import StorePage from './StorePage';
 import ProcurementPage from './ProcurementPage';
 import CrmPage from './CrmPage';
@@ -33,7 +33,7 @@ export default {
   project: ProjectView,
   tasks: TasksPage,
   requests: RequestsPage,
-  finance: FinancePage,
+  finance: FinanceHub,
   store: StorePage,
   procurement: ProcurementPage,
   crm: CrmPage,

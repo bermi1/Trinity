@@ -3,7 +3,7 @@
 // components render (see src/logic/view).
 import Logic from './Logic';
 import { IC, PPL, ROLES, TABS, ST, STAGES, OLD_STAGE, CHAIN, CH, REQ_TYPES, PARKED } from './constants';
-import { seed } from './seed';
+import { seed, dayKey } from './seed';
 import { renderVals } from './view/shell';
 import { pageVals } from './view/workflow';
 import { pageVals2 } from './view/modules';
@@ -19,6 +19,7 @@ import { todoMethods, todayVals } from './todos';
 import { deptMethods, deptVals } from './depts';
 import { crmMethods, crmVals, SOURCES } from './crm';
 import { projectMethods, projectVals } from './projectview';
+import { financeMethods, financeVals } from './finance';
 
 // Password of the demo accounts, so they open with one tap (see .env). Leave it out to require passwords.
 const demoPassword = () => import.meta.env.VITE_DEMO_PASSWORD || '';
@@ -353,7 +354,7 @@ export default class TrinityApp extends Logic {
     N.creative = [['Creative',[['dept','Creative','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
     N.operations = [['Operations',[['dept','Operations','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',[['field','Field capture app','camera'], ...deptMore],true]];
     // The General Manager sees what Management sees, without company setup and accounts.
-    N.gm = N.ceo.map(([t, items, more]) => [t, items.filter(i => !['company','users','field','ceomobile'].includes(i[0])).map(i => (i[0] === 'requests' ? ['requests','Approvals','banknote',s.reqs.filter(q => q.st === 'pending' && q.step === 2).length] : i)), more]);
+    N.gm = N.ceo.map(([t, items, more]) => [t, items.filter(i => !['company','users','field','ceomobile'].includes(i[0])).map(i => (i[0] === 'requests' ? ['requests','Approvals','banknote',s.reqs.filter(q => q.st === 'pending' && q.step === 2).length] : i[0] === 'finance' ? ['finance','Invoices','fileText'] : i)), more]);
     let G = N[role] || N.ceo;
     // Sections the administrator switched off are hidden everywhere.
     // Notifications open from the bell (and the Alerts tab on phones), not from the side menu.
@@ -423,12 +424,27 @@ export default class TrinityApp extends Logic {
   asRole(r, page, extra) { return () => { if (this.state.db && this.account && this.account.role !== 'ceo' && r !== this.account.role) { this.setState({menu:false, more:false}); this.toast('Your account uses the ' + this.ROLES[this.account.role].label + ' portal'); return; } this.setState(Object.assign({role:r, menu:false, drawer:false, more:false, page:page || this.ROLES[r].home, tip:-1, taskFilter:r === 'staff' ? 'mine' : 'all'}, extra || {})); try { window.scrollTo(0,0); } catch (e) {} }; }
   goTarget(g) { if (g && g.indexOf('project:') === 0) this.go('project',{projectId:g.slice(8)}); else this.go(g || 'dashboard'); }
   toast(t) { this.haptic(10); const id = Date.now() + Math.random(); this.setState(s => ({toasts:[...s.toasts,{id,t}]})); setTimeout(() => this.setState(s => ({toasts:s.toasts.filter(x => x.id !== id)})), 3200); }
-  notify(n) { this.setState(s => ({notes:[Object.assign({id:Date.now()+Math.random(),read:false,time:this.now()}, n), ...s.notes]})); }
+  notify(n) {
+    this.setState(s => ({notes:[Object.assign({id:Date.now()+Math.random(),read:false,time:this.now()}, n), ...s.notes]}));
+    this.queueOutside(n);
+  }
+  // Alerts that should reach people outside the system (WhatsApp, SMS, email) go to an outbox.
+  // A server function sends them once the gateway keys are set; until then each one can be sent by hand.
+  alertKind(n) { const g = n.go || ''; return g === 'clients' ? 'clients' : g === 'requests' ? 'approvals' : g === 'finance' ? 'payments' : /design/i.test(n.t || '') ? 'designs' : g === 'today' || g === 'tasks' ? 'tasks' : 'other'; }
+  queueOutside(n) {
+    const c = this.state.company || {}, N = Object.assign({ wa: true, sms: false, email: false, events: { clients: true, approvals: true, designs: true, payments: true, tasks: false } }, c.notify || {});
+    const phone = (c.phones || {})[n.to], kind = this.alertKind(n);
+    if (!n.to || !phone || !(N.events || {})[kind] || !(N.wa || N.sms)) return;
+    const msg = { id: 'OB' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), to: n.to, phone, ch: N.wa ? 'whatsapp' : 'sms', kind, text: 'Trinity Mark 360 · ' + n.t + (n.s ? '\n' + n.s : ''), st: 'queued', at: dayKey(0) + ' ' + this.now() };
+    this.setState(s => ({ outbox: [msg, ...(s.outbox || [])].slice(0, 200) }));
+  }
   log(ic, tone, t, sub) { this.setState(s => ({activity:[{time:this.now(),ic,tone,t,s:sub}, ...s.activity].slice(0,7)})); }
   smooth(pts) { let d = 'M' + pts[0][0] + ' ' + pts[0][1]; for (let i = 0; i < pts.length - 1; i++) { const p0 = pts[i-1] || pts[i], p1 = pts[i], p2 = pts[i+1], p3 = pts[i+2] || p2; d += ' C' + (p1[0]+(p2[0]-p0[0])/6).toFixed(1) + ' ' + (p1[1]+(p2[1]-p0[1])/6).toFixed(1) + ' ' + (p2[0]-(p3[0]-p1[0])/6).toFixed(1) + ' ' + (p2[1]-(p3[1]-p1[1])/6).toFixed(1) + ' ' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1); } return d; }
   spark(vals) { const mn = Math.min(...vals), mx = Math.max(...vals), r = mx - mn || 1; const pts = vals.map((v,i) => [3 + i*(84/(vals.length-1)), 27 - (v-mn)/r*22]); const l = this.smooth(pts); return {l, f:l + ' L87 30 L3 30 Z'}; }
 
   openModal(act, preset) {
+    // Invoices open the full invoice editor (works on the phone too).
+    if (act === 'invoice') { if (!this.canInvoice()) { this.toast('Invoices are created by Management, the GM and Finance'); return; } this.go('finance', {invEdit:'new', finTab:'invoices'}); return; }
     const PO = this.state.projects.filter(p => p.st !== 'done').map(p => ({v:p.id,l:p.client + ' · ' + p.name}));
     const PP = Object.keys(this.PPL).map(k => ({v:k,l:this.PPL[k][0]}));
     const O = a => a.map(x => ({v:x,l:x}));
@@ -439,7 +455,7 @@ export default class TrinityApp extends Logic {
       customer:{title:'Add customer',sub:'Clients we have worked with. TIN and VRN are used on invoices.',submit:'Add customer',fields:[{k:'n',l:'Company',ph:'e.g. CRDB Bank PLC',req:1},{k:'contact',l:'Contact person',ph:'Name · title'},{k:'phone',l:'Phone',ph:'+255 7xx xxx xxx'},{k:'email',l:'Email',ph:'name@company.co.tz'},{k:'tin',l:'TIN',ph:'100-000-000'},{k:'city',l:'City',ph:'Dar es Salaam'},{k:'owner',l:'Account owner',opts:this.teamOf('clientservice').map(k => ({v:k,l:this.av(k).n}))}]},
       brief:{title:'Send brief to Creative',sub:'The Creative lead receives it and assigns a designer. You are told when artwork goes to the client.',submit:'Send brief',fields:[{k:'t',l:'What is needed',ph:'e.g. Stage backdrop and 3 roll-up banners',req:1},{k:'p',l:'Project',opts:PO},{k:'place',l:'For',opts:O(['Indoor event','Outdoor event','Print','Digital'])},{k:'note',l:'Brief memo',ph:'Theme, sizes, client wishes, deadlines'},{k:'due',l:'Needed by',ph:'e.g. Fri 21'}]},
       reqProject:{title:'Project request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'amt',l:'Amount (TZS)',type:'number',ph:'300000',req:1},{k:'cat',l:'Category',opts:O(['Team','Operations','Supplies'])},{k:'p',l:'Project',opts:PO},{k:'purpose',l:'Purpose',ph:'What is the money for?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'}]},
-      reqInternal:{title:'Internal office request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'title',l:'Title',ph:'e.g. Office internet, May',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'150000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for and why?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'}]},
+      reqInternal:{title:'Internal office request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'title',l:'Title',ph:'e.g. Office internet, May',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'150000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for and why?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'},...(this.fl().allocs.some(a => a.to.indexOf('office:') === 0) ? [{k:'alloc',l:'From the office float',opts:this.fl().allocs.filter(a => a.to.indexOf('office:') === 0).map(a => ({v:a.to,l:a.to.slice(7) + ' · ' + this.fmtT(this.allocUse(a).left) + ' left'}))}] : [])]},
       reqEmergency:{title:'Emergency request',sub:'Goes to GM → Management → Finance pays. Use only when it cannot wait.',submit:'Submit emergency',fields:[{k:'title',l:'Title',ph:'e.g. Generator repair on site',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'250000',req:1},{k:'p',l:'Project',opts:[{v:'',l:'Not for a project'}, ...PO]},{k:'purpose',l:'What happened, and what is it for?',ph:'Explain the emergency',req:1}]},
       reqMgmt:{title:'Management request',sub:'Finance checks, then pays.',submit:'Submit request',fields:[{k:'title',l:'Title',ph:'e.g. Client meeting expenses',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'500000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for?',req:1}]},
       lead:{title:'New lead',sub:'Leads move Lead → Qualified → Proposal → Negotiation → Won.',submit:'Add lead',fields:[{k:'c',l:'Client',ph:'Company name',req:1},{k:'t',l:'Opportunity',ph:'e.g. Product launch event',req:1},{k:'v',l:'Estimated value (TZS M)',type:'number',ph:'80'},{k:'src',l:'Source',opts:O(['Website','Referral','Tender','Existing client','Walk-in'])}]},
@@ -531,7 +547,7 @@ export default class TrinityApp extends Logic {
     const id = this.nextId('REQ', s.reqs), draft = {type, amt};
     const step = this.nextStep(draft, 0), log = [this.now()];
     for (let i = 1; i < step; i++) log.push('Not needed');
-    const r = {id, type, who, amt, cat:type === 'project' ? (f.cat || 'Operations') : REQ_TYPES[type].l.replace(' request', ''), title:(f.title || '').trim(), purpose:(f.purpose || '').trim(), p:f.p || '', need:f.need || (type === 'emergency' ? 'Today' : 'This week'), step, st:step >= 5 ? 'approved' : 'pending', log};
+    const r = {id, type, who, amt, cat:type === 'project' ? (f.cat || 'Operations') : REQ_TYPES[type].l.replace(' request', ''), title:(f.title || '').trim(), purpose:(f.purpose || '').trim(), p:f.p || '', alloc:f.alloc || '', need:f.need || (type === 'emergency' ? 'Today' : 'This week'), step, st:step >= 5 ? 'approved' : 'pending', log};
     this.setState(x => ({reqs:[r, ...x.reqs], reqSel:id}));
     const to = step >= 5 ? 'RT' : this.approverAt(r, step);
     this.remind(to, step >= 5 ? id + ' is ready to pay' : id + ' needs your approval', 'requests', 'banknote', this.av(who).n + ' · ' + this.fmtT(amt));
@@ -582,4 +598,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods);
