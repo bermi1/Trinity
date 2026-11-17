@@ -227,3 +227,35 @@ body:has(.m-app), body:has(.m-login) { overscroll-behavior-y: none; background: 
   backdrop-filter: blur(12px); box-shadow: 0 4px 16px rgba(29, 16, 61, .08);
 }
 .page-field > div:nth-child(2) > div > div > div:nth-child(3) button { min-height: 52px; border-radius: 12px; }
+
+/* ---------- App header & floating tab bar ---------- */
+.m-header { grid-template-columns: 1fr auto; height: calc(60px + var(--m-top)); padding: var(--m-top) 14px 0; background: rgba(242, 241, 246, .92); }
+.m-header-left { gap: 6px; }
+.m-brand, .m-back { width: 40px; height: 40px; border-radius: 12px; background: #fff; box-shadow: 0 1px 4px rgba(29,16,61,.08); justify-content: center; padding: 0; flex: none; }
+.m-htitle { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; margin-left: 4px; }
+.m-htitle b { font-size: 17px; font-weight: 800; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-htitle small { font-size: 11px; color: #8A8599; font-weight: 600; white-space: nowrap; }
+.m-header-actions { gap: 8px; }
+.m-hbtn { border: none; border-radius: 50%; box-shadow: 0 1px 4px rgba(29,16,61,.08); position: relative; }
+.m-bell .m-badge { top: -4px; left: auto; right: -4px; }
+.m-avatar { box-shadow: 0 1px 4px rgba(29,16,61,.12); }
+.m-tabbar {
+  left: 12px; right: 12px; bottom: calc(10px + var(--m-bottom)); height: 64px; padding: 6px; border-radius: 24px; border: none;
+  background: #1D103D; box-shadow: 0 12px 30px rgba(29, 16, 61, .35);
+}
+.m-tab { color: rgba(255,255,255,.62); min-height: 0; border-radius: 18px; gap: 2px; font-size: 10.5px; }
+.m-tab-icon { width: auto; height: 26px; background: none !important; }
+.m-tab.is-on { background: #fff; color: #2B1459; }
+.m-tab.is-on .m-tab-icon { color: #6D3CC2; }
+.m-tab .m-badge { border-color: #1D103D; }
+/* The page title is in the header, so the page's own kicker and subtitle go on phones. */
+.m-screen .k-kicker, .m-screen .k-head-text p, .m-screen .k-head .k-sub { display: none; }
+.m-screen .k-head h1 { font-size: 24px; }
+.m-screen .dk-val { font-size: 21px !important; white-space: nowrap !important; }
+.m-screen .dk-val > span { display: inline !important; }
+.m-screen .dk-spark { display: none; }
+.m-screen .rc-status li { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-left: 14px; padding-right: 2px; font-size: 11px; }
+.m-screen .rc-acts { margin: 0; padding: 0; max-width: 100%; }
+.m-screen .rc-fields, .m-screen .rc-sec .rc-fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.m-screen .rc-sheet, .m-screen .rc-body, .m-screen .rc { min-width: 0; max-width: 100%; }
+.m-screen .ff-people { flex-wrap: nowrap; overflow-x: auto; }

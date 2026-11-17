@@ -53,12 +53,7 @@ export default function MobileNav({ v }) {
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-              <button onClick={v.openAI} style={{ height: "46px", border: "1px solid #E4D6B3", background: "#FBF6EA", color: "#8A6414", borderRadius: "12px", fontSize: "13px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d={v.ic.sparkle} />
-                </svg>
-                Trinity AI
-              </button>
+
               <button onClick={v.signOut} style={{ height: "46px", border: "1px solid #F0C9CD", background: "#fff", color: "#B23A46", borderRadius: "12px", fontSize: "13px", fontWeight: "700" }}>
                 Sign out
               </button>

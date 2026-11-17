@@ -42,7 +42,7 @@ describe('live database', () => {
     expect(screen.getByText('Sign in with your Trinity Mark account')).toBeTruthy();
     signInAs('daniel@tm.co.tz', 'secret123');
     await skipPin();
-    await screen.findByText('COMPANY COMMAND CENTER');
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening),/ });
     expect(screen.getByText('LIVE DATA')).toBeTruthy();
     window.innerWidth = 1024;
     expect(db.tables.app_records.get('reqs|REQ-0418').data.st).toBe('pending');
@@ -57,7 +57,7 @@ describe('live database', () => {
     await screen.findByText('SIGN IN');
     signInAs('daniel@tm.co.tz', 'secret123');
     await skipPin();
-    await screen.findByText('COMPANY COMMAND CENTER');
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening),/ });
     fireEvent.click(screen.getAllByText('Projects')[0]);
     const row = db.tables.app_records.get('projects|PRJ-0231');
     act(() => db.remoteUpsert({ ...row, data: { ...row.data, name: 'Lake Zone Roadshow II' } }));
@@ -71,7 +71,7 @@ describe('live database', () => {
     render(<App />);
     await screen.findByText('SIGN IN');
     fireEvent.click(screen.getByRole('button', { name: 'General Manager' }));
-    expect(await screen.findByText('COMPANY COMMAND CENTER')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening),/ })).toBeTruthy();
     expect(screen.queryByText('Not now')).toBeNull();
     vi.unstubAllEnvs();
   });
@@ -101,7 +101,7 @@ describe('administrator', () => {
     await screen.findByText('SIGN IN');
     signInAs('admin@tm.co.tz', 'admin12345');
     await skipPin();
-    await screen.findByText('COMPANY COMMAND CENTER');
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening),/ });
     fireEvent.click(screen.getByRole('button', { name: /More/ }));
     fireEvent.click(screen.getByText('Users & access'));
     await screen.findByText('Accounts · 3');
@@ -113,7 +113,7 @@ describe('administrator', () => {
     await screen.findByText('SIGN IN');
     signInAs('daniel@tm.co.tz', 'secret123');
     await skipPin();
-    await screen.findByText('COMPANY COMMAND CENTER');
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening),/ });
     fireEvent.click(screen.getByRole('button', { name: /More/ }));
     expect(screen.getByText('Settings')).toBeTruthy();
     expect(screen.queryByText('Users & access')).toBeNull();

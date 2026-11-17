@@ -62,11 +62,7 @@ export default function TopBar({ v }) {
             </span>
           </>
         ) : null}
-        <button className="tm-h7" onClick={v.openAI} title="Trinity Intelligence" style={{ width: "40px", height: "40px", border: "1px solid #E4D6B3", borderRadius: "10px", background: "#FBF6EA", color: "#8A6414", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d={v.ic.sparkle} />
-          </svg>
-        </button>
+
         {' '}
         <button className="tm-h3" onClick={v.goNotes} title="Notifications" aria-label="Notifications" style={{ position: "relative", width: "40px", height: "40px", border: "1px solid #E8E4EF", borderRadius: "10px", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

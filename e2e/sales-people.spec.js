@@ -57,7 +57,7 @@ test('notifications: open one, then mark all read', async ({ page }) => {
   await openAs(page, 'ceo', 'notifications');
   // This alert points at the store, which is parked: it opens Management's home instead.
   await page.getByText('Low stock · Vinyl 1.37m gloss').click();
-  await expect(page.getByText('COMPANY COMMAND CENTER')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening),/ })).toBeVisible();
   await side(page, 'Notifications');
   await btn(page, 'Mark all as read').click();
   expect((await saved(page)).notes.every(n => n.read)).toBe(true);

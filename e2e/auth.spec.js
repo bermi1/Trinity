@@ -23,7 +23,7 @@ test('sign-in: email and password, or one tap on a demo portal', async ({ page }
   await page.locator('input[type=password]').fill('demo1234');
   await page.locator('input[type=password]').press('Enter');
   await page.getByRole('button', { name: 'Not now' }).click();
-  await expect(page.getByText('COMPANY COMMAND CENTER').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening),/ }).first()).toBeVisible();
   await page.locator('header div[style*="cursor: pointer"]').last().click();
   await page.getByText('Sign out', { exact: true }).click();
 
@@ -52,9 +52,9 @@ test('"Remember me" off ends the session when the browser closes', async ({ page
   await page.locator('input[type=password]').fill('demo1234');
   await btn(page, 'SIGN IN').click();
   await page.getByRole('button', { name: 'Not now' }).click();
-  await expect(page.getByText('COMPANY COMMAND CENTER')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening),/ })).toBeVisible();
   await page.reload();
-  await expect(page.getByText('COMPANY COMMAND CENTER')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening),/ })).toBeVisible();
   // A new tab starts a new browser session.
   const fresh = await context.newPage();
   await fresh.goto('/');
@@ -66,5 +66,5 @@ test('sign-in persists across reloads when remembered', async ({ page }) => {
   await page.locator('input[type=password]').fill('demo1234');
   await btn(page, 'SIGN IN').click();
   await page.goto('/');
-  await expect(page.getByText('COMPANY COMMAND CENTER')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening),/ })).toBeVisible();
 });

@@ -20,6 +20,8 @@ import { deptMethods, deptVals } from './depts';
 import { crmMethods, crmVals, SOURCES } from './crm';
 import { projectMethods, projectVals } from './projectview';
 import { financeMethods, financeVals, reportMethods, reportVals } from './finance';
+import { homeVals } from './home';
+import { officeMethods, officeVals } from './office';
 
 // Password of the demo accounts, so they open with one tap (see .env). Leave it out to require passwords.
 const demoPassword = () => import.meta.env.VITE_DEMO_PASSWORD || '';
@@ -335,13 +337,13 @@ export default class TrinityApp extends Logic {
     const mob = ['ceomobile','Mobile app','phone',0,{mobileRole:role}];
     const company = [['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']];
     const N = {
-      ceo:[['Every day',[['dashboard','Dashboard','grid'],['today','My work','checkSquare',myOpen],['briefing','Monday Briefing','presentation'],['requests','Approvals','banknote',myReq],['projects','Projects','folder'],['clients','Clients & leads','users'],['finance','Finance & Invoices','chart'],['reports','Reports','pie']]],
+      ceo:[['Every day',[['dashboard','Dashboard','grid'],['today','My work','checkSquare',myOpen],['briefing','Monday Briefing','presentation'],['meetings','Meetings','calendar'],['requests','Approvals','banknote',myReq],['projects','Projects','folder'],['clients','Clients & leads','users'],['finance','Finance & Invoices','chart'],['reports','Reports','pie']]],
         ['More',[['calendar','Calendar','calendar'],['notifications','Notifications','bell',unread],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['procurement','Procurement','cart'],['store','Store & Inventory','package'],['requisitions','Store requisitions','clipboard',srqN],['movements','Stock ledger','receipt'],['logistics','Logistics','truck'],['staff','Staff & Reports','user'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['ceomobile','Mobile apps','phone',0,{mobileRole:'ceo'}],['field','Field capture app','camera'],...(this.canSetup() ? [['company','Company setup','settings']] : []),...(this.isAdmin() ? [['users','Users & access','shield']] : []),['settings','Settings','settings']], true]],
-      staff:[['My work',[['staffportal','My Day','home'],['today','My work','checkSquare',myOpen],['requests','My requests','banknote'],['field','Field capture','camera']]],
+      staff:[['My work',[['staffportal','My Day','home'],['meetings','Meetings','calendar'],['today','My work','checkSquare',myOpen],['requests','My requests','banknote'],['field','Field capture','camera']]],
         ['More',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
-      finance:[['Finance',[['financeportal','My queue','wallet',finQ],['today','My work','checkSquare',myOpen],['finance','Finance & Invoices','chart'],['requests','Requests & Floats','banknote'],['reports','Reports','pie']]],
+      finance:[['Finance',[['financeportal','My queue','wallet',finQ],['meetings','Meetings','calendar'],['today','My work','checkSquare',myOpen],['finance','Finance & Invoices','chart'],['requests','Requests & Floats','banknote'],['reports','Reports','pie']]],
         ['More',[['proposals','Proposals','clipboard'],['procurement','Procurement','cart'],...company], true]],
-      reception:[['Front office',[['reception','Front desk','message'],['today','My work','checkSquare',myOpen],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['clients','Client enquiries','users']]],
+      reception:[['Front office',[['reception','Front desk','message'],['meetings','Meetings','calendar'],['today','My work','checkSquare',myOpen],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['clients','Client enquiries','users']]],
         ['More',[['staff','Staff directory','user'],['briefing','Monday Briefing','presentation'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
       store:[['Store',[['storekeeper','My store','home',lowN],['today','My work','checkSquare',myOpen],['requisitions','Requisitions','clipboard',srqN],['store','Inventory','package'],['movements','Stock ledger','receipt'],['procurement','Procurement','cart']]],
         ['More',[['production','Production','printer'],['logistics','Logistics','truck'],...company], true]],
@@ -349,7 +351,7 @@ export default class TrinityApp extends Logic {
         ['More',[['store','Inventory','package'],['procurement','Procurement','cart'],...company], true]]
     };
     // Department portals: their dashboard first, then what that department works with.
-    const myReqs = ['requests','My requests','banknote'], deptMore = [['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['rooms','Meeting rooms','calendar'],['settings','Settings','settings']];
+    const myReqs = ['requests','My requests','banknote'], deptMore = [['meetings','Meetings','calendar'],['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['rooms','Meeting rooms','calendar'],['settings','Settings','settings']];
     N.clientservice = [['Client Service',[['dept','Client Service','home'],['today','My work','checkSquare',myOpen],['clients','Clients & leads','users'],['proposals','Proposals','clipboard'],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
     N.creative = [['Creative',[['dept','Creative','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
     N.operations = [['Operations',[['dept','Operations','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',[['field','Field capture app','camera'], ...deptMore],true]];
@@ -358,7 +360,7 @@ export default class TrinityApp extends Logic {
     let G = N[role] || N.ceo;
     // Sections the administrator switched off are hidden everywhere.
     // Notifications open from the bell (and the Alerts tab on phones), not from the side menu.
-    G = G.map(([t, items, more]) => [t, items.filter(i => !this.isOff(i[0]) && i[0] !== 'notifications' && !(s.embed && i[0] === 'ceomobile')), more]).filter(g => g[1].length);
+    G = G.map(([t, items, more]) => [t, items.filter(i => !this.isOff(i[0]) && i[0] !== 'notifications' && i[0] !== 'settings' && !(s.embed && i[0] === 'ceomobile')), more]).filter(g => g[1].length);
     return G;
   }
   navFor(role) { const out = []; this.navGroups(role).forEach(g => g[1].forEach(i => out.push(i))); return out; }
@@ -598,4 +600,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, officeVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods);

@@ -26,7 +26,6 @@ export default function MoreSheet({ v }) {
               </button>
             ))}
           </div>
-          <button className="m-row-btn is-gold" onClick={v.openAI}><Icon d={v.ic.sparkle} size={20} />Ask Trinity Intelligence<Icon d={v.ic.chevR} size={18} style={{ marginLeft: 'auto' }} /></button>
           {mode ? (
             <button className="m-row-btn" onClick={() => (mode === 'prompt' ? install().then(close) : setIosHelp(true))}>
               <Icon d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" size={20} />Install the app<Icon d={v.ic.chevR} size={18} style={{ marginLeft: 'auto' }} />

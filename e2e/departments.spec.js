@@ -9,7 +9,7 @@ test('department portals open on their own dashboard, never the company one', as
   for (const [role, label] of [['clientservice', 'Client Service'], ['creative', 'Creative'], ['operations', 'Operations']]) {
     await openAs(page, role, 'dashboard');
     await expect(page.getByText(label + ' department')).toBeVisible();
-    await expect(page.getByText('COMPANY COMMAND CENTER')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening),/ })).toHaveCount(0);
     await expect(page.getByText('Revenue vs expenses')).toHaveCount(0);
   }
   // Creative sees projects without money figures.

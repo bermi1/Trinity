@@ -173,6 +173,11 @@ export function seed() {
   reportsSub:44, reportsToday:{}, reportText:'', fieldReq:{amt:'',purpose:'',p:'PRJ-0231',cat:'Team'},
   // Company-wide setup: requests up to smallLimit (TZS) need only the PM and Finance; `off` hides sections.
   outbox:[],
+  meetings:[
+    {id:'MT1',title:'Gala planning with Safari Mobile',date:dayKey(0),time:'16:00',place:'Boardroom',kind:'client',to:{all:false,depts:['clientservice'],people:['GN']},guest:{name:'Halima Juma',co:'Safari Mobile',phone:'+255 767 300 900'},by:'DK',at:dayKey(-1)},
+    {id:'MT2',title:'Weekly project review',date:dayKey(1),time:'09:00',place:'Boardroom',kind:'internal',to:{all:false,depts:['operations','creative'],people:[]},guest:null,by:'GN',at:dayKey(-1)},
+    {id:'MT3',title:'All staff: end of year plans',date:dayKey(3),time:'14:00',place:'Main hall',kind:'internal',to:{all:true,depts:[],people:[]},guest:null,by:'DK',at:dayKey(-1)}
+  ],
   ledger:ledgerSeed(),
   company:{notify:{wa:true,sms:false,email:false,events:{clients:true,approvals:true,designs:true,payments:true,tasks:false}},phones:{DK:'+255 754 000 101',GN:'+255 754 000 102',NL:'+255 754 000 103',RS:'+255 754 000 104',MM:'+255 754 000 105',RT:'+255 754 000 106'},smallLimit:200000, off:['ceomobile'], managers:{}, csTarget:500},
   // Daily to-do: what each person did today and plans to do.
@@ -234,9 +239,10 @@ export function seed() {
   ],
   newUpdate:{who:'SK', t:'', pres:false},
   visitors:[
-    {id:1,name:'James Mollel',co:'Serengeti Telecom',purpose:'Contract review',host:'SK',time:'09:15',st:'in'},
-    {id:2,name:'Grace Kimaro',co:'Chapa Supplies',purpose:'Deliver invoice',host:'RT',time:'10:02',st:'out'},
-    {id:3,name:'Peter Nnko',co:'Applicant',purpose:'Interview \u2014 Graphic Designer role',host:'MM',time:'11:30',st:'waiting'}
+    {id:'V1',name:'James Mollel',co:'Serengeti Telecom',phone:'+255 713 220 114',purpose:'Contract review',host:'SK',date:dayKey(0),time:'09:15',st:'in'},
+    {id:'V2',name:'Grace Kimaro',co:'Chapa Supplies',phone:'+255 754 880 201',purpose:'Delivery',host:'RT',date:dayKey(0),time:'10:02',st:'out',outAt:'10:20'},
+    {id:'V3',name:'Peter Nnko',co:'Applicant',phone:'+255 688 410 552',purpose:'Interview',host:'MM',date:dayKey(0),time:'15:30',st:'expected'},
+    {id:'V4',name:'Halima Juma',co:'Safari Mobile',phone:'+255 767 300 900',purpose:'Gala planning meeting',host:'DK',date:dayKey(0),time:'16:00',st:'expected',meeting:'MT1'}
   ],
   newVisitor:{name:'',co:'',purpose:'',host:'SK'},
   rooms:[

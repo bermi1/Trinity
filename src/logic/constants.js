@@ -60,16 +60,16 @@ export const ROLES = {
   production:{k:'JA',n:'Juma Ally',t:'Print Production Lead',label:'Printing',home:'printshop',email:'print@trinitymark.co.tz'}
 };
 export const TABS = {
-  ceo:[['dashboard','Home','home'],['requests','Approvals','banknote'],['projects','Projects','folder'],['notifications','Alerts','bell']],
-  gm:[['dashboard','Home','home'],['requests','Approvals','banknote'],['projects','Projects','folder'],['notifications','Alerts','bell']],
-  clientservice:[['dept','Home','home'],['clients','Clients','users'],['today','My work','checkSquare'],['notifications','Alerts','bell']],
-  creative:[['dept','Home','home'],['today','My work','checkSquare'],['requests','Requests','banknote'],['notifications','Alerts','bell']],
-  operations:[['dept','Home','home'],['projects','Projects','folder'],['today','My work','checkSquare'],['notifications','Alerts','bell']],
-  staff:[['staffportal','My Day','home'],['today','My work','checkSquare'],['requests','Requests','banknote'],['notifications','Alerts','bell']],
-  finance:[['financeportal','Queue','wallet'],['requests','Requests','banknote'],['finance','Finance','chart'],['notifications','Alerts','bell']],
-  reception:[['reception','Desk','message'],['rooms','Rooms','calendar'],['calendar','Calendar','calendar'],['notifications','Alerts','bell']],
-  store:[['storekeeper','Store','home'],['requisitions','Requests','clipboard'],['store','Inventory','package'],['notifications','Alerts','bell']],
-  production:[['printshop','Print floor','printer'],['production','Jobs','checkSquare'],['requisitions','Materials','package'],['notifications','Alerts','bell']]
+  ceo:[['dashboard','Home','home'],['requests','Approvals','banknote'],['projects','Projects','folder'],['finance','Finance','chart']],
+  gm:[['dashboard','Home','home'],['requests','Approvals','banknote'],['projects','Projects','folder'],['finance','Invoices','fileText']],
+  clientservice:[['dept','Home','home'],['clients','Clients','users'],['today','My work','checkSquare'],['projects','Projects','folder']],
+  creative:[['dept','Home','home'],['today','My work','checkSquare'],['projects','Projects','folder'],['requests','Requests','banknote']],
+  operations:[['dept','Home','home'],['projects','Projects','folder'],['today','My work','checkSquare'],['requests','Requests','banknote']],
+  staff:[['staffportal','Home','home'],['today','My work','checkSquare'],['requests','Requests','banknote'],['projects','Projects','folder']],
+  finance:[['financeportal','Queue','wallet'],['finance','Finance','chart'],['requests','Requests','banknote'],['today','My work','checkSquare']],
+  reception:[['reception','Desk','message'],['today','My work','checkSquare'],['clients','Clients','users'],['requests','Requests','banknote']],
+  store:[['storekeeper','Store','home'],['today','My work','checkSquare'],['requests','Requests','banknote'],['projects','Projects','folder']],
+  production:[['printshop','Print floor','printer'],['today','My work','checkSquare'],['requests','Requests','banknote'],['projects','Projects','folder']]
 };
 export const ST = {on:{l:'On track',c:'#2E9B63',bg:'#E6F4EC',fg:'#1F7549'},risk:{l:'At risk',c:'#D89B2B',bg:'#FBF1DD',fg:'#8A6414'},late:{l:'Delayed',c:'#D9535F',bg:'#FBEDEE',fg:'#B23A46'},done:{l:'Completed',c:'#2B1459',bg:'#EDE8F6',fg:'#2B1459'}};
 // Five project stages. Projects saved before this change used 15 stages (no `sv`); OLD_STAGE maps them.
@@ -85,7 +85,8 @@ export const REQ_TYPES = {
   management:{l:'Management request', skip:[1,2,4]}
 };
 // Parked for now: hidden from every menu, search and portal list until the company is ready for them.
-export const PARKED = ['logistics','production','store','requisitions','movements','storekeeper','reports','documents','procurement','proposals'];
+// Sections not part of this phase: hidden from every menu until we agree on them.
+export const PARKED = ['logistics','production','store','requisitions','movements','storekeeper','reports','documents','procurement','proposals','rooms','calendar','field','ceomobile','staff'];
 export const HIDDEN_ROLES = ['store'];
 // Departments: who leads each (Company setup can change it) and the portal of its people.
 export const DEPTS = {

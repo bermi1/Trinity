@@ -17,7 +17,6 @@ import NotificationsPage from '../pages/NotificationsPage';
 import FieldAppPage from '../pages/FieldAppPage';
 import StaffPortalPage from '../pages/StaffPortalPage';
 import FinancePortalPage from '../pages/FinancePortalPage';
-import ReceptionPage from '../pages/ReceptionPage';
 import StorekeeperPage from '../pages/StorekeeperPage';
 import RoomsPage from '../pages/RoomsPage';
 import ProposalsPage from '../pages/ProposalsPage';
@@ -29,6 +28,8 @@ import CalendarPage from '../pages/CalendarPage';
 import SettingsPage from '../pages/SettingsPage';
 import MobileAppsPage from '../pages/MobileAppsPage';
 import FormModal from './FormModal';
+import HomeDash from '../pages/custom/HomeDash';
+import ReceptionDesk from '../pages/custom/ReceptionDesk';
 import CommandPalette from './CommandPalette';
 import AssistantPanel from './AssistantPanel';
 import MobileNav from './MobileNav';
@@ -37,7 +38,7 @@ import Toasts from './Toasts';
 export default function AppShell({ v }) {
   return (
     <>
-      <div style={{ display: "flex", minHeight: "100vh", background: "#F4F1FA" }}>
+      <div className="app" style={{ display: "flex", minHeight: "100vh", background: "#F6F7FB" }}>
         {v.drawerOpen ? (
           <>
             <div onClick={v.closeDrawer} style={{ position: "fixed", inset: "0", background: "rgba(23,21,42,.45)", zIndex: "40" }} />
@@ -47,7 +48,7 @@ export default function AppShell({ v }) {
         <main style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column" }}>
           <TopBar v={v} />
           <div style={{ padding: "clamp(16px,2.4vw,32px)", display: "flex", flexDirection: "column", gap: "20px", animation: "tmIn .25s ease" }}>
-            {v.is.dashboard ? <DashboardPage v={v} /> : null}
+            {v.is.dashboard ? <HomeDash v={v} /> : null}
             {v.is.briefing ? <BriefingPage v={v} /> : null}
             {v.is.projects ? <ProjectsPage v={v} /> : null}
             {v.is.project ? <ProjectView v={v} /> : null}
@@ -62,7 +63,7 @@ export default function AppShell({ v }) {
             {v.is.field ? <FieldAppPage v={v} /> : null}
             {v.is.staffportal ? <StaffPortalPage v={v} /> : null}
             {v.is.financeportal ? <FinancePortalPage v={v} /> : null}
-            {v.is.reception ? <ReceptionPage v={v} /> : null}
+            {v.is.reception ? <ReceptionDesk v={v} /> : null}
             {v.is.storekeeper ? <StorekeeperPage v={v} /> : null}
             {v.is.rooms ? <RoomsPage v={v} /> : null}
             {v.is.proposals ? <ProposalsPage v={v} /> : null}

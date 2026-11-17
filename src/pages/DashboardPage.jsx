@@ -46,13 +46,13 @@ export default function DashboardPage({ v }) {
                 </span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "8px" }}>
-                <span style={{ fontSize: "28px", fontWeight: "700", letterSpacing: "-.02em", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                <span className="dk-val" style={{ fontSize: "28px", fontWeight: "700", letterSpacing: "-.02em", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
                   <span style={{ fontSize: "13px", color: "#6E6A7C", fontWeight: "600", marginRight: "4px" }}>
                     {k.u}
                   </span>
                   <span>{k.v}</span>
                 </span>
-                <svg width="84" height="30" viewBox="0 0 90 30" fill="none" style={{ flex: "0 1 84px", minWidth: "0", maxWidth: "84px" }}>
+                <svg className="dk-spark" width="84" height="30" viewBox="0 0 90 30" fill="none" style={{ flex: "0 1 84px", minWidth: "0", maxWidth: "84px" }}>
                   <path d={k.spf} fill={k.spc} fillOpacity=".1" stroke="none" />
                   <path d={k.sp} stroke={k.spc} strokeWidth="1.8" strokeLinecap="round" />
                 </svg>

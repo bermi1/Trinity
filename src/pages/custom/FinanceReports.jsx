@@ -5,7 +5,17 @@ const digits = v => String(v || '').replace(/\D/g, '');
 const n = v => Math.round(+v || 0).toLocaleString('en-US');
 
 export function Periods({ R }) {
-  return <div className="k-chips fr-per" role="tablist" aria-label="Period">{R.periods.map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={R.per === k} className={R.per === k ? 'is-on' : ''} onClick={() => R.setPer(k)}>{l}</button>)}</div>;
+  return (
+    <div className="fr-perwrap">
+      <div className="k-chips fr-per" role="tablist" aria-label="Period">{R.periods.map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={R.per === k} className={R.per === k ? 'is-on' : ''} onClick={() => (k === 'custom' ? R.setRange(R.from, R.to) : R.setPer(k))}>{l}</button>)}</div>
+      {R.per === 'custom' ? (
+        <div className="fr-range">
+          <label>From<input type="date" value={R.from} max={R.to} onChange={e => R.setRange(e.target.value, R.to)} /></label>
+          <label>To<input type="date" value={R.to} min={R.from} onChange={e => R.setRange(R.from, e.target.value)} /></label>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function RepKpis({ R }) {
@@ -24,22 +34,30 @@ export function RepKpis({ R }) {
 // Money in and out, side by side, for each day (or month).
 export function CashChart({ R }) {
   const [hover, setHover] = useState(-1);
-  const h = R.chart[hover];
+  const [pick, setPick] = useState(-1);
+  const h = R.chart[hover >= 0 ? hover : pick];
+  const sel = R.chart[pick];
   return (
     <section className="fh-card fr-chart">
       <header className="fr-chart-h">
         <h3>Money in and out · {R.label}</h3>
         <span className="fr-legend"><i className="is-in" />In <i className="is-out" />Out</span>
       </header>
-      <div className="fr-tip">{h ? <><b>{h.k}</b> · In {h.tin} · Out {h.tout}</> : <span className="k-sub">Point at a bar to see the amounts. Highest: {R.maxT}</span>}</div>
+      <div className="fr-tip">{h ? <><b>{h.k}</b> · In {h.tin} · Out {h.tout}</> : <span className="k-sub">Highest: {R.maxT}</span>}</div>
       <div className="fr-bars" onMouseLeave={() => setHover(-1)}>
         {R.chart.map((c, i) => (
-          <button key={c.k} type="button" className={'fr-col' + (hover === i ? ' is-on' : '')} onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onClick={() => setHover(i)} aria-label={c.k + ': in ' + c.tin + ', out ' + c.tout}>
+          <button key={c.k} type="button" className={'fr-col' + (hover === i || pick === i ? ' is-on' : '')} onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onClick={() => setPick(pick === i ? -1 : i)} aria-pressed={pick === i} aria-label={c.k + ': in ' + c.tin + ', out ' + c.tout}>
             <span className="fr-pair"><i className="is-in" style={{ height: c.hi + '%' }} /><i className="is-out" style={{ height: c.ho + '%' }} /></span>
             <small>{i % R.showEvery === 0 || R.chart.length <= 16 ? c.l : ''}</small>
           </button>
         ))}
       </div>
+      {sel ? (
+        <div className="fr-drill">
+          <header><b>{sel.k}</b><span>In {sel.tin} · Out {sel.tout}</span><button type="button" className="td-x" onClick={() => setPick(-1)} aria-label="Close">×</button></header>
+          {sel.items.length ? <ul>{sel.items.map(e => <li key={e.id}><span><b>{e.cat}</b><small>{e.party} · {e.at}</small></span><em className={e.dir === 'in' ? 'is-green' : 'is-red'}>{e.dir === 'in' ? '+' : '−'} {e.amt}</em></li>)}</ul> : <p className="k-sub">Nothing on this day.</p>}
+        </div>
+      ) : <p className="k-sub fr-hint">Tap a bar to see every payment behind it.</p>}
     </section>
   );
 }

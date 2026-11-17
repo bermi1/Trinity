@@ -105,7 +105,7 @@ export function pageVals2(s, IC, ST, narrow) {
   };
 
   // Reception / office front portal
-  const VS = {in:['On site','#E9EFFA','#3559A8'], out:['Left','#F1EEF6','#6E6A7C'], waiting:['Waiting','#FBF1DD','#8A6414']};
+  const VS = {in:['On site','#E9EFFA','#3559A8'], out:['Left','#F1EEF6','#6E6A7C'], waiting:['Waiting','#FBF1DD','#8A6414'], expected:['Expected','#FBF1DD','#8A6414']};
   V.RC = {
     visitors:s.visitors.map(v => Object.assign({name:v.name, co:v.co, purpose:v.purpose, host:this.av(v.host).n, time:v.time, canOut:v.st !== 'out', checkout:() => { this.setState(x => ({visitors:x.visitors.map(y => y.id === v.id ? Object.assign({}, y, {st:'out'}) : y)})); this.toast(v.name + ' checked out'); }}, (a => ({stl:a[0], stbg:a[1], stfg:a[2]}))(VS[v.st]))),
     deliveries:s.deliveries.map(d => ({from:d.from, items:d.items, time:d.time, canArrive:d.st === 'expected', arrived:d.st === 'arrived', arrive:() => { this.setState(x => ({deliveries:x.deliveries.map(y => y.id === d.id ? Object.assign({}, y, {st:'arrived'}) : y)})); this.toast(d.id + ' marked arrived'); this.notify({ic:'truck', t:'Delivery arrived · ' + d.from, s:d.items, go:'reception'}); }}))

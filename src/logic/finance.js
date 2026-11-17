@@ -237,8 +237,9 @@ const key = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.get
 const parse = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-export function periodRange(p, now = new Date()) {
+export function periodRange(p, now = new Date(), from, to) {
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (p === 'custom' && from && to && from <= to) { const days = Math.round((parse(to) - parse(from)) / 864e5) + 1; return { from, to, label: from + ' → ' + to, unit: days > 93 ? 'month' : 'day', custom: true }; }
   if (p === 'today') return { from: key(d), to: key(d), label: 'Today', unit: 'day' };
   if (p === 'week') { const m = new Date(d); m.setDate(d.getDate() - ((d.getDay() + 6) % 7)); const e = new Date(m); e.setDate(m.getDate() + 6); return { from: key(m), to: key(e), label: 'This week', unit: 'day' }; }
   if (p === 'lastmonth') { const a = new Date(d.getFullYear(), d.getMonth() - 1, 1), b = new Date(d.getFullYear(), d.getMonth(), 0); return { from: key(a), to: key(b), label: MON[a.getMonth()] + ' ' + a.getFullYear(), unit: 'day' }; }
@@ -285,7 +286,7 @@ export const OUT_CATS = ['Suppliers & production', 'Salaries', 'Statutory (NSSF,
 
 export function reportVals(s) {
   if (!this.canInvoice()) return { REP: null };
-  const per = s.repPeriod || 'month', R = periodRange(per), P = prevRange(R), all = this.cashEntries();
+  const per = s.repPeriod || 'month', R = periodRange(per, new Date(), s.repFrom, s.repTo), P = prevRange(R), all = this.cashEntries();
   const inR = e => e.at >= R.from && e.at <= R.to, inP = e => e.at >= P.from && e.at <= P.to;
   const rows = all.filter(inR), prev = all.filter(inP);
   const sum = (l, d) => l.filter(e => e.dir === d).reduce((a, e) => a + e.amt, 0);
@@ -293,10 +294,10 @@ export function reportVals(s) {
   const delta = (a, b) => (b ? Math.round((a - b) / b * 100) : null);
   // Buckets for the chart: days (week, month) or months (year).
   const buckets = [];
-  if (R.unit === 'month') { for (let m = 0; m < 12; m++) buckets.push({ k: R.from.slice(0, 4) + '-' + pad(m + 1), l: MON[m] }); }
+  if (R.unit === 'month') { const a = parse(R.from), b = parse(R.to); for (let d = new Date(a.getFullYear(), a.getMonth(), 1); d <= b; d.setMonth(d.getMonth() + 1)) buckets.push({ k: d.getFullYear() + '-' + pad(d.getMonth() + 1), l: MON[d.getMonth()] }); }
   else { const a = parse(R.from), b = parse(R.to); for (let d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) buckets.push({ k: key(d), l: per === 'week' ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] : String(d.getDate()) }); }
   const bk = e => (R.unit === 'month' ? e.at.slice(0, 7) : e.at);
-  const chart = buckets.map(b => { const l = rows.filter(e => bk(e) === b.k); return { l: b.l, k: b.k, in: sum(l, 'in'), out: sum(l, 'out') }; });
+  const chart = buckets.map(b => { const l = rows.filter(e => bk(e) === b.k); return { l: b.l, k: b.k, in: sum(l, 'in'), out: sum(l, 'out'), items: l.map(e => ({ id: e.id + e.at, at: e.at, dir: e.dir, cat: e.cat, party: e.party, amt: this.fmtT(e.amt) })) }; });
   const max = Math.max(1, ...chart.map(c => Math.max(c.in, c.out)));
   const group = (l, d, f) => { const m = {}; l.filter(e => e.dir === d).forEach(e => { const k = f(e); m[k] = (m[k] || 0) + e.amt; }); return Object.keys(m).map(k => ({ l: k, v: m[k] })).sort((a, b) => b.v - a.v); };
   const outCat = group(rows, 'out', e => e.cat.replace(/^Staff requests · .*/, 'Staff requests (floats)')), inCli = group(rows, 'in', e => e.party || e.cat);
@@ -317,8 +318,8 @@ export function reportVals(s) {
   const f = this.fmtT.bind(this);
   return {
     REP: {
-      per, label: R.label, setPer: k => this.setState({ repPeriod: k }),
-      periods: [['today', 'Today'], ['week', 'This week'], ['month', 'This month'], ['lastmonth', 'Last month'], ['year', 'This year']],
+      per, label: R.label, setPer: k => this.setState({ repPeriod: k }), from: s.repFrom || R.from, to: s.repTo || R.to, setRange: (a, b) => this.setState({ repPeriod: 'custom', repFrom: a, repTo: b }),
+      periods: [['today', 'Today'], ['week', 'This week'], ['month', 'This month'], ['lastmonth', 'Last month'], ['year', 'This year'], ['custom', 'Custom']],
       kpis: [
         { l: 'Money in', v: f(tin), d: delta(tin, pin), good: true, tone: 'green' },
         { l: 'Money out', v: f(tout), d: delta(tout, pout), good: false, tone: 'red' },

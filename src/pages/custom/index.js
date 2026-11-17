@@ -8,6 +8,7 @@ import TodayPage from './TodayPage';
 import CompanyPage from './CompanyPage';
 import DeptPage from './DeptPage';
 import ClientsPage from './ClientsPage';
+import MeetingsPage from './MeetingsPage';
 
 export default {
   requisitions: RequisitionsPage,
@@ -18,5 +19,6 @@ export default {
   today: TodayPage,
   company: CompanyPage,
   dept: DeptPage,
-  clients: ClientsPage
+  clients: ClientsPage,
+  meetings: MeetingsPage
 };

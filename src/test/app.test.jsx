@@ -20,7 +20,7 @@ describe('sign in', () => {
     fireEvent.click(screen.getByText('SIGN IN'));
     expect(screen.getByText('Set a PIN for quick sign-in')).toBeTruthy();
     fireEvent.click(screen.getByText('Not now'));
-    expect(screen.getByText('COMPANY COMMAND CENTER')).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /^Good (morning|afternoon|evening),/ })).toBeTruthy();
   });
 
   it('opens a demo portal with one tap, without a password or PIN prompt', () => {
@@ -212,7 +212,7 @@ describe('PIN unlock', () => {
     await act(async () => { fireEvent.click(screen.getByText('Next')); });
     type('2580');
     await act(async () => { fireEvent.click(screen.getByText('Save PIN')); });
-    expect(await screen.findByText('COMPANY COMMAND CENTER')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening),/ })).toBeTruthy();
     first.unmount();
 
     sessionStorage.clear();                 // the browser was closed
@@ -223,7 +223,7 @@ describe('PIN unlock', () => {
     expect(await screen.findByText('Wrong PIN · 4 tries left')).toBeTruthy();
     type('2580');
     await act(async () => { fireEvent.click(screen.getByText('Unlock')); });
-    expect(await screen.findByText('COMPANY COMMAND CENTER')).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening),/ })).toBeTruthy();
   });
 
   it('five wrong PINs sign the person out', async () => {
