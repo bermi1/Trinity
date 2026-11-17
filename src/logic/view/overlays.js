@@ -19,7 +19,7 @@ export function overlayVals(s, IC) {
     {l:'Ask Trinity Intelligence', s:'AI assistant', ic:IC.sparkle, run:() => this.setState({cmd:false, ai:true})},
     ...pg.filter(([k]) => !this.isOff(k)).map(([k,l,ic]) => ({l:'Go to ' + l, s:'Page', ic:IC[ic], run:() => this.go(k)})),
     ...s.projects.map(p => ({l:p.client + ' · ' + p.name, s:p.id, ic:IC.folder, run:() => this.go('project',{projectId:p.id})})),
-    ...s.stock.map(i => ({l:i.n, s:'Stock · ' + i.q + ' ' + i.u, ic:IC.package, run:() => this.go('store',{stockQ:i.n})}))
+    ...(this.isOff('store') ? [] : s.stock).map(i => ({l:i.n, s:'Stock · ' + i.q + ' ' + i.u, ic:IC.package, run:() => this.go('store',{stockQ:i.n})}))
   ];
   const q = s.cmdQ.trim().toLowerCase();
   if (q) items = items.filter(i => (i.l + ' ' + i.s).toLowerCase().indexOf(q) >= 0); else items = items.slice(0, 9);

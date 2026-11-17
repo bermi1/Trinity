@@ -234,7 +234,8 @@ export function pageVals2(s, IC, ST, narrow) {
     V.devTabs = cp(mr, 'mobileRole', Object.keys(this.ROLES).map(k => [k, this.ROLES[k].label]));
     const DI = {gm:['General Manager app','The General Manager follows every department from the phone: requests waiting for approval, projects and alerts.'], ceo:['Management app','Daniel runs the whole company from his phone: approvals, cash, projects at risk and every module one tap away.'], staff:['Staff app','Grace’s day in her pocket: tasks, money requests, daily reports, projects and meetings.'], finance:['Finance app','Rose verifies requests, chases invoices and reconciles floats from anywhere.'], reception:['Reception app','Aisha checks visitors in, logs deliveries and books rooms from a tablet or phone.'], store:['Store app','Fatma issues and receives stock, reorders low items and receives deliveries on the store floor.'], production:['Printing app','Juma runs the print floor: job stages, materials from the store, returns and wastage.']};
     const tabsR = this.TABS[mr];
-    V.dev = {title:DI[mr][0], d:DI[mr][1], tabs:tabsR.map(t => ({l:t[1]})).concat([{l:'More'}]), more:this.navFor(mr).filter(it => !tabsR.some(t => t[0] === it[0]) && it[0] !== 'ceomobile').map(it => ({l:it[1]}))};
+    const di = DI[mr] || [this.ROLES[mr].label + ' app', this.ROLES[mr].label + ' on the phone: its dashboard, to-do, tasks and alerts.'];
+    V.dev = {title:di[0], d:di[1], tabs:tabsR.map(t => ({l:t[1]})).concat([{l:'More'}]), more:this.navFor(mr).filter(it => !tabsR.some(t => t[0] === it[0]) && it[0] !== 'ceomobile').map(it => ({l:it[1]}))};
   }
   V.greeting = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
   return V;

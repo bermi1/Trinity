@@ -16,6 +16,10 @@ export function seed() {
     {id:'PRJ-0224',name:'Corporate Calendar 2027',client:'Nyota Insurance',pm:'RT',st:'on',prog:64,val:36,bud:22,spent:12.4,stage:7,due:'20 Oct',team:['RT','RS']}
   ],
   tasks:[
+    // Design briefs from Client Service to Creative (kind 'brief').
+    {id:'B1',kind:'brief',t:'Stage backdrop and 3 roll-up banners',p:'PRJ-0235',who:'RS',from:'NL',place:'Indoor event',note:'Gala dinner, gold and black theme. Backdrop 6 m wide.',due:'Fri 21',st:'todo',pri:'high'},
+    {id:'B2',kind:'brief',t:'Truck wrap artwork · 22 trucks',p:'PRJ-0231',who:'DS',from:'NL',place:'Outdoor event',note:'Use the new logo lock-up; client wants two options.',due:'Mon 24',st:'prog',pri:'med'},
+    {id:'B3',kind:'brief',t:'Outlet wall branding layouts',p:'PRJ-0228',who:'DS',from:'KM',place:'Outdoor event',note:'8 outlets, measurements in the site photos.',due:'Wed 19',st:'review',pri:'med'},
     {id:'T1',t:'Load display units + gazebo for Mwanza',p:'PRJ-0231',who:'AJ',due:'Today 14:00',st:'prog',pri:'high'},
     {id:'T2',t:'Confirm venue permits · Musoma & Bukoba',p:'PRJ-0231',who:'GM',due:'Today 17:00',st:'todo',pri:'high'},
     {id:'T3',t:'Crew briefing pack + brand guidelines',p:'PRJ-0231',who:'SK',due:'Wed 23',st:'review',pri:'med'},
@@ -88,7 +92,10 @@ export function seed() {
     {id:'L8',c:'Mlimani Bank',t:'Expo stand 2026',v:126,s:4,src:'Tender'}
   ],
   staff:[
-    {k:'SK',role:'Project Manager',dept:'Projects',rep:true,fl:0},{k:'MM',role:'Operations Manager',dept:'Operations',rep:true,fl:0},{k:'NL',role:'Account Manager',dept:'Commercial',rep:true,fl:0},{k:'RT',role:'Finance Officer',dept:'Finance',rep:true,fl:0},{k:'JM',role:'Field Supervisor',dept:'Field',rep:true,fl:300000},{k:'GM',role:'Field Officer',dept:'Field',rep:true,fl:180000},{k:'AJ',role:'Driver',dept:'Logistics',rep:true,fl:450000},{k:'PL',role:'Installer',dept:'Field',rep:false,fl:250000},{k:'RS',role:'Graphic Designer',dept:'Creative',rep:false,fl:0},{k:'JA',role:'Printer Operator',dept:'Production',rep:false,fl:0},{k:'FH',role:'Storekeeper',dept:'Store',rep:false,fl:0}
+    {k:'SK',role:'Project Manager',dept:'operations',rep:true,fl:0},{k:'MM',role:'Operations Manager',dept:'operations',rep:true,fl:0},{k:'NL',role:'Client Service Manager',dept:'clientservice',rep:true,fl:0},{k:'RT',role:'Finance Officer',dept:'finance',rep:true,fl:0},
+    {k:'JM',role:'Field Supervisor',dept:'operations',rep:true,fl:300000},{k:'GM',role:'Field Officer',dept:'operations',rep:true,fl:180000},{k:'AJ',role:'Driver',dept:'operations',rep:true,fl:450000},{k:'PL',role:'Installer',dept:'operations',rep:false,fl:250000},
+    {k:'RS',role:'Creative Lead',dept:'creative',rep:false,fl:0},{k:'DS',role:'Graphic Designer',dept:'creative',rep:false,fl:0},{k:'KM',role:'Client Service Executive',dept:'clientservice',rep:false,fl:0},
+    {k:'JA',role:'Printer Operator',dept:'production',rep:false,fl:0},{k:'FH',role:'Storekeeper',dept:'store',rep:false,fl:0},{k:'AM',role:'Front Office',dept:'reception',rep:false,fl:0}
   ],
   invoices:[
     {id:'INV-0187',c:'Kivuko Foods',p:'PRJ-0226',v:18.6,st:'overdue',due:'21 days late'},
@@ -135,7 +142,7 @@ export function seed() {
   ],
   reportsSub:44, reportsToday:{}, reportText:'', fieldReq:{amt:'',purpose:'',p:'PRJ-0231',cat:'Team'},
   // Company-wide setup: requests up to smallLimit (TZS) need only the PM and Finance; `off` hides sections.
-  company:{smallLimit:200000, off:['ceomobile']},
+  company:{smallLimit:200000, off:['ceomobile'], managers:{}, csTarget:500},
   // Daily to-do: what each person did today and plans to do.
   todos:[
     {id:'TD-1',k:'GM',t:'Delivered branded tents to Mwanza site',st:'done',d:dayKey(0),doneOn:dayKey(0)},

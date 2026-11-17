@@ -101,8 +101,9 @@ test('forms open as a bottom sheet; a small drag snaps back, a long one closes',
 });
 
 test('typing never zooms the page: every field uses 16px text', async ({ page }) => {
-  await openAs(page, 'ceo', 'store');
-  await btn(page, 'Issue').first().click();
+  await openAs(page, 'staff', 'staffportal');
+  await btn(page, 'Request money').click();
+  await chooseRequest(page, 'Project request');
   const sizes = await page.evaluate(() => [...document.querySelectorAll('input, select, textarea')].map(el => parseFloat(getComputedStyle(el).fontSize)));
   expect(sizes.length).toBeGreaterThan(1);
   expect(Math.min(...sizes)).toBeGreaterThanOrEqual(16);

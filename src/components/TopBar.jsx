@@ -116,6 +116,24 @@ export default function TopBar({ v }) {
                   </svg>
                   General Manager
                 </div>
+                <div className="tm-h3" onClick={v.asCs} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={v.ic.users} />
+                  </svg>
+                  Client Service
+                </div>
+                <div className="tm-h3" onClick={v.asCreative} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={v.ic.sparkle} />
+                  </svg>
+                  Creative
+                </div>
+                <div className="tm-h3" onClick={v.asOps} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d={v.ic.folder} />
+                  </svg>
+                  Operations
+                </div>
                 <div className="tm-h3" onClick={v.asCeoMobile} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer" }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d={v.ic.phone} />

@@ -6,6 +6,7 @@ import PrintFloorPage from './PrintFloorPage';
 import UsersPage from './UsersPage';
 import TodayPage from './TodayPage';
 import CompanyPage from './CompanyPage';
+import DeptPage from './DeptPage';
 
 export default {
   requisitions: RequisitionsPage,
@@ -14,5 +15,6 @@ export default {
   printshop: PrintFloorPage,
   users: UsersPage,
   today: TodayPage,
-  company: CompanyPage
+  company: CompanyPage,
+  dept: DeptPage
 };

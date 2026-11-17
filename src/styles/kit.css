@@ -166,3 +166,29 @@
 .co-switch i { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .2); transition: transform .2s; }
 .co-switch.is-on { background: #2E9B63; }
 .co-switch.is-on i { transform: translateX(18px); }
+
+/* Department dashboards */
+.dp-kpis { margin: 4px 0 0; }
+.dp-target { height: 8px; border-radius: 4px; background: #EDE9F3; overflow: hidden; margin: -4px 0 4px; }
+.dp-target i { display: block; height: 100%; background: linear-gradient(90deg, #B49A5A, #6D3CC2); border-radius: 4px; }
+.dp-list, .dp-briefs, .dp-team, .dp-tasks { list-style: none; margin: 0; padding: 0; }
+.dp-list li { border-top: 1px solid #F0EDF5; }
+.dp-list li:first-child { border-top: none; }
+.dp-list li > button, .dp-list li > span { width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border: none; background: none; text-align: left; font: inherit; font-size: 14px; color: inherit; cursor: pointer; }
+.dp-list li > span { cursor: default; }
+.dp-list li > button:hover b { color: #5A2FA8; }
+.dp-briefs li { display: flex; justify-content: space-between; gap: 14px; padding: 12px 0; border-top: 1px solid #F0EDF5; flex-wrap: wrap; }
+.dp-briefs li:first-child { border-top: none; }
+.dp-brief-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1 1 260px; font-size: 14px; }
+.dp-note { background: #F7F5FB; border-radius: 8px; padding: 7px 10px; font-size: 13px; color: #4A4560; margin: 3px 0; }
+.dp-brief-side { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dp-team li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #F0EDF5; flex-wrap: wrap; }
+.dp-team li:first-child { border-top: none; }
+.dp-team-who { display: flex; flex-direction: column; min-width: 120px; flex: 1 1 140px; font-size: 14px; }
+.dp-team-nums { display: flex; gap: 10px; font-size: 12.5px; font-weight: 700; color: #4A4560; align-items: center; }
+.dp-sent { color: #1F7549; background: #E6F4EC; padding: 2px 8px; border-radius: 10px; }
+.dp-team-acts { display: flex; gap: 6px; }
+.dp-tasks li { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid #F0EDF5; font-size: 14px; }
+.dp-tasks li:first-child { border-top: none; }
+.dp-tasks li > span { display: flex; flex-direction: column; min-width: 0; }
+@media (max-width: 699px) { .dp-team-acts { width: 100%; } .dp-team-acts .k-btn { flex: 1; height: 42px; } .dp-brief-side { width: 100%; } .dp-brief-side .k-btn { flex: 1; height: 42px; } }

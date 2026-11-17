@@ -1,12 +1,14 @@
 import { expect } from '@playwright/test';
 
-// Opens the app already signed in to a portal and page, on fresh demo data.
-export async function openAs(page, role = 'ceo', where, extra = {}) {
+// Opens the app already signed in to a portal and page, on fresh demo data
+// (fresh = false keeps the data, to follow work from one portal to the next).
+export async function openAs(page, role = 'ceo', where, extra = {}, fresh = true) {
+  if (!fresh) await page.waitForTimeout(450);
   await page.goto('/');
-  await page.evaluate(([role, where, extra]) => {
-    localStorage.clear();
+  await page.evaluate(([role, where, extra, fresh]) => {
+    if (fresh) localStorage.clear();
     localStorage.setItem('tm360', JSON.stringify(Object.assign({ auth: true, role, page: where, projectId: 'PRJ-0231' }, extra)));
-  }, [role, where, extra]);
+  }, [role, where, extra, fresh]);
   await page.reload();
   await expect(page.locator('main')).toBeVisible();
 }

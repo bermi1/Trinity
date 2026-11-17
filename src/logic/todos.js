@@ -2,7 +2,7 @@
 // Managers see the whole team. Also the company setup (small-request limit, sections on/off).
 // Mixed into TrinityApp, so `this` is the app.
 import { dayKey } from './seed';
-import { PARKED } from './constants';
+import { PARKED, DEPTS } from './constants';
 
 // Sections the administrator can switch off. Home pages, approvals, tasks, projects,
 // notifications, settings and accounts always stay.
@@ -52,8 +52,9 @@ export const todoMethods = {
   // Marks today's daily report as sent (Staff & Reports sees it).
   sendDay() {
     const k = this.me().k, list = this.state.todos || [], today = this.today();
-    const n = list.filter(i => i.k === k && i.st === 'done' && i.doneOn === today).length;
-    this.submitReport(k, n + ' done today');
+    const done = list.filter(i => i.k === k && i.st === 'done' && i.doneOn === today), plan = list.filter(i => i.k === k && i.st === 'todo');
+    this.submitReport(k, done.length + ' done today');
+    this.sendDayToManager(k, done, plan);
   },
 
   setCompany(changes) {
@@ -75,7 +76,9 @@ export function todayVals(s) {
   const mine = list.filter(i => i.k === me);
   const day = s.teamDay === 'yesterday' ? yesterday : today;
   // Everyone on the staff list, plus anyone else who has written a to-do.
-  const keys = [...new Set([...(s.staff || []).map(p => p.k), ...list.map(i => i.k)])];
+  // Management and the GM see everyone; a department manager sees their own team.
+  const dept = this.myDept(), mgr = !this.isTop() && this.isManagerOf(dept);
+  const keys = mgr ? this.teamOf(dept).filter(k => k !== me) : [...new Set([...(s.staff || []).map(p => p.k), ...list.map(i => i.k)])];
   const team = keys.map(k => {
     const a = this.av(k), done = list.filter(i => i.k === k && i.st === 'done' && i.doneOn === day), plan = list.filter(i => i.k === k && i.st === 'todo');
     return { k, n: a.n, i: a.i, c: a.c, done: done.map(item), plan: plan.map(item), empty: !done.length && !plan.length, sent: !!(s.reportsToday || {})[k],
@@ -84,7 +87,7 @@ export function todayVals(s) {
   const company = Object.assign({ smallLimit: 200000, off: [] }, s.company || {});
   return {
     TD: {
-      dayLabel: dayName(today), isTeam: s.todoTab === 'team', canTeam: ['ceo', 'gm'].includes(s.role || 'ceo'),
+      dayLabel: dayName(today), isTeam: s.todoTab === 'team', canTeam: this.isTop() || mgr,
       showMine: () => this.setState({ todoTab: 'mine' }), showTeam: () => this.setState({ todoTab: 'team' }),
       done: mine.filter(i => i.st === 'done' && i.doneOn === today).map(item),
       plan: mine.filter(i => i.st === 'todo').sort((a, b) => (a.d < b.d ? 1 : -1)).map(item),
@@ -96,7 +99,11 @@ export function todayVals(s) {
     },
     CO: {
       can: this.canSetup(), limit: company.smallLimit, setLimit: n => { this.setCompany({ smallLimit: Math.max(0, Math.round(+n || 0)) }); this.toast(+n > 0 ? 'Small requests: up to ' + this.fmtT(Math.round(+n)) : 'Every request now takes all approval steps'); },
-      sections: SECTIONS.map(([k, l]) => ({ k, l, on: !company.off.includes(k), toggle: () => this.toggleSection(k) }))
+      sections: SECTIONS.map(([k, l]) => ({ k, l, on: !company.off.includes(k), toggle: () => this.toggleSection(k) })),
+      csTarget: company.csTarget == null ? 500 : company.csTarget, setTarget: n => { this.setCompany({ csTarget: Math.max(0, +n || 0) }); this.toast('Client Service target: ' + this.fmtM(Math.max(0, +n || 0)) + ' a month'); },
+      depts: ['clientservice', 'creative', 'operations', 'production', 'finance', 'reception'].map(d => ({ d, l: DEPTS[d].l, mgr: this.managerOf(d),
+        set: k => { this.setCompany({ managers: Object.assign({}, company.managers || {}, { [d]: k }) }); this.toast(DEPTS[d].l + ' manager: ' + this.av(k).n); } })),
+      people: this.everyone().map(k => ({ v: k, l: this.av(k).n })).sort((a, b) => a.l.localeCompare(b.l))
     }
   };
 }

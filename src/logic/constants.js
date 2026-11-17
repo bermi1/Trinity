@@ -46,10 +46,13 @@ export const IC = {
   download:'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3',
   shield:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'
 };
-export const PPL = {SK:['Sarah Kimaro','#6D3CC2'],MM:['Michael Mushi','#2B1459'],NL:['Neema Lyimo','#4C78D0'],DK:['Daniel K.','#B49A5A'],JM:['John Mwakyusa','#2E9B63'],GM:['Grace Mrema','#C2476F'],AJ:['Amani Juma','#8A6414'],RT:['Rose Temba','#5A2FA8'],PL:['Peter Laizer','#3E7C8C'],RS:['Rehema Said','#9A4FB8'],JA:['Juma Ally','#4F6B3A'],FH:['Fatma Hassan','#B0663A'],AM:['Aisha Mbwana','#C27A2E'],GN:['Joseph Ngowi','#3E7C8C']};
+export const PPL = {SK:['Sarah Kimaro','#6D3CC2'],MM:['Michael Mushi','#2B1459'],NL:['Neema Lyimo','#4C78D0'],DK:['Daniel K.','#B49A5A'],JM:['John Mwakyusa','#2E9B63'],GM:['Grace Mrema','#C2476F'],AJ:['Amani Juma','#8A6414'],RT:['Rose Temba','#5A2FA8'],PL:['Peter Laizer','#3E7C8C'],RS:['Rehema Said','#9A4FB8'],JA:['Juma Ally','#4F6B3A'],FH:['Fatma Hassan','#B0663A'],AM:['Aisha Mbwana','#C27A2E'],GN:['Joseph Ngowi','#3E7C8C'],KM:['Khadija Mussa','#B0663A'],DS:['David Shayo','#4C78D0']};
 export const ROLES = {
   ceo:{k:'DK',n:'Daniel K.',t:'Managing Director',label:'Management',home:'dashboard',email:'daniel.k@trinitymark.co.tz'},
   gm:{k:'GN',n:'Joseph Ngowi',t:'General Manager',label:'General Manager',home:'dashboard',email:'gm@trinitymark.co.tz'},
+  clientservice:{k:'NL',n:'Neema Lyimo',t:'Client Service Manager',label:'Client Service',home:'dept',email:'clientservice@trinitymark.co.tz'},
+  creative:{k:'RS',n:'Rehema Said',t:'Creative Lead',label:'Creative',home:'dept',email:'creative@trinitymark.co.tz'},
+  operations:{k:'MM',n:'Michael Mushi',t:'Operations Manager',label:'Operations',home:'dept',email:'operations@trinitymark.co.tz'},
   staff:{k:'GM',n:'Grace Mrema',t:'Field Officer',label:'Staff',home:'staffportal',email:'grace.m@trinitymark.co.tz'},
   finance:{k:'RT',n:'Rose Temba',t:'Finance Officer',label:'Finance',home:'financeportal',email:'rose.t@trinitymark.co.tz'},
   reception:{k:'AM',n:'Aisha Mbwana',t:'Front Office',label:'Reception',home:'reception',email:'reception@trinitymark.co.tz'},
@@ -59,6 +62,9 @@ export const ROLES = {
 export const TABS = {
   ceo:[['dashboard','Home','home'],['requests','Approvals','banknote'],['projects','Projects','folder'],['notifications','Alerts','bell']],
   gm:[['dashboard','Home','home'],['requests','Approvals','banknote'],['projects','Projects','folder'],['notifications','Alerts','bell']],
+  clientservice:[['dept','Home','home'],['crm','Clients','users'],['today','To-do','clipboard'],['notifications','Alerts','bell']],
+  creative:[['dept','Home','home'],['today','To-do','clipboard'],['tasks','Tasks','checkSquare',0,{taskFilter:'mine'}],['notifications','Alerts','bell']],
+  operations:[['dept','Home','home'],['projects','Projects','folder'],['today','To-do','clipboard'],['notifications','Alerts','bell']],
   staff:[['staffportal','My Day','home'],['today','To-do','clipboard'],['tasks','Tasks','checkSquare',0,{taskFilter:'mine'}],['notifications','Alerts','bell']],
   finance:[['financeportal','Queue','wallet'],['requests','Requests','banknote'],['finance','Finance','chart'],['notifications','Alerts','bell']],
   reception:[['reception','Desk','message'],['rooms','Rooms','calendar'],['calendar','Calendar','calendar'],['notifications','Alerts','bell']],
@@ -81,6 +87,18 @@ export const REQ_TYPES = {
 // Parked for now: hidden from every menu, search and portal list until the company is ready for them.
 export const PARKED = ['logistics','production','store','requisitions','movements','storekeeper','reports','documents','procurement'];
 export const HIDDEN_ROLES = ['store'];
+// Departments: who leads each (Company setup can change it) and the portal of its people.
+export const DEPTS = {
+  clientservice:{l:'Client Service', mgr:'NL'},
+  creative:{l:'Creative', mgr:'RS'},
+  operations:{l:'Operations', mgr:'MM'},
+  production:{l:'Printing', mgr:'JA'},
+  finance:{l:'Finance', mgr:'RT'},
+  reception:{l:'Reception', mgr:'AM'},
+  store:{l:'Store', mgr:'FH'}
+};
+// Department names saved before the departments existed.
+export const OLD_DEPT = {Projects:'operations', Operations:'operations', Commercial:'clientservice', Finance:'finance', Field:'operations', Logistics:'operations', Creative:'creative', Production:'production', Store:'store', Reception:'reception'};
 export const CH = {
   '12W':{labels:['W28','W29','W30','W31','W32','W33','W34','W35','W36','W37','W38','W39'],rev:[52,61,48,70,66,58,74,80,62,77,85,46],exp:[34,40,36,44,47,39,50,52,45,49,55,30]},
   '6M':{labels:['Apr','May','Jun','Jul','Aug','Sep'],rev:[210,236,254,228,281,262],exp:[150,161,178,166,190,172]},

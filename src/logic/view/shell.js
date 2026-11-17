@@ -4,7 +4,7 @@ import { pinFor } from '../pin';
 import { colorFor } from '../admin';
 import { HIDDEN_ROLES } from '../constants';
 
-const ROLES_LABEL = {ceo:'Management', gm:'General Manager', staff:'Staff', finance:'Finance', reception:'Reception', store:'Store', production:'Printing'};
+const ROLES_LABEL = {ceo:'Management', gm:'General Manager', clientservice:'Client Service', creative:'Creative', operations:'Operations', staff:'Staff', finance:'Finance', reception:'Reception', store:'Store', production:'Printing'};
 export function renderVals() {
   const s = this.state, IC = this.IC, ST = this.ST;
   const narrow = s.w < 960, wide = s.w >= 1240;
@@ -97,12 +97,12 @@ export function renderVals() {
     pageTitle, mobileTabs, moreOpen:phone && !!s.more, closeMore:() => this.setState({more:false}), moreItems, portalChips,
     me:(() => { const R = this.ROLES[s.role || 'ceo']; return {i:R.k, n:R.n, t:R.t, c:this.av(R.k).c, label:R.label.toUpperCase(), first:R.n.split(' ')[0]}; })(),
     loginRoles:Object.keys(this.ROLES).filter(k => !HIDDEN_ROLES.includes(k)).map(k => { const on = false; return {l:this.ROLES[k].label, on:() => this.quickSignIn(k), bg:on ? '#2B1459' : '#fff', c:on ? '#fff' : '#17152A', bd:on ? '#2B1459' : '#E8E4EF'}; }),
-    asCeo:this.asRole('ceo'), asGm:this.asRole('gm'), asStaff:this.asRole('staff'), asFinance:this.asRole('finance'), asReception:this.asRole('reception'), asStore:this.asRole('store'), asProduction:this.asRole('production'), asStaffMobile:this.asRole('staff','field'), asCeoMobile:this.asRole(s.role || 'ceo','ceomobile',{mobileRole:s.role || 'ceo'}), showSidebar:!narrow || s.drawer, drawerOpen:narrow && s.drawer, sb:{pos:narrow ? 'fixed' : 'sticky', z:narrow ? 50 : 1},
+    asCeo:this.asRole('ceo'), asGm:this.asRole('gm'), asCs:this.asRole('clientservice'), asCreative:this.asRole('creative'), asOps:this.asRole('operations'), asStaff:this.asRole('staff'), asFinance:this.asRole('finance'), asReception:this.asRole('reception'), asStore:this.asRole('store'), asProduction:this.asRole('production'), asStaffMobile:this.asRole('staff','field'), asCeoMobile:this.asRole(s.role || 'ceo','ceomobile',{mobileRole:s.role || 'ceo'}), showSidebar:!narrow || s.drawer, drawerOpen:narrow && s.drawer, sb:{pos:narrow ? 'fixed' : 'sticky', z:narrow ? 50 : 1},
     openDrawer:() => this.setState({drawer:true}), closeDrawer:() => this.setState({drawer:false}),
     dateLabel, unread, hasUnread:unread > 0, menu:s.menu, toggleMenu:() => this.setState({menu:!s.menu}),
     goHome:() => this.go(this.ROLES[s.role || 'ceo'].home), goField:() => this.go('field'), goStaffPortal:() => this.go('staffportal'), goFinancePortal:() => this.go('financeportal'), goReception:() => this.go('reception'), goStorekeeper:() => this.go('storekeeper'), goNotes:() => this.go('notifications'), goBrief:() => this.go('briefing'), goProjects:e => { e && e.preventDefault && e.preventDefault(); this.go('projects',{projFilter:'all'}); }, goReq:e => { e && e.preventDefault && e.preventDefault(); this.go('requests'); }, goProc:() => this.go('procurement'), goStaff:() => this.go('staff'), goTasks:() => this.go('tasks'),
     openCmd:() => this.setState({cmd:true,cmdQ:''}), openAI:() => this.setState({ai:true,drawer:false,more:false}),
     greeting:hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening',
     kpis, chart, tip, chartLeave:() => this.setState({tip:-1}), rangeBtns, donut, attention, activity, pipe, procPipe, reports, quick
-  }, this.pageVals(s, IC, ST, narrow), this.overlayVals(s, IC), this.storeVals(s, IC), this.todayVals(s));
+  }, this.pageVals(s, IC, ST, narrow), this.overlayVals(s, IC), this.storeVals(s, IC), this.todayVals(s), this.deptVals(s));
 }

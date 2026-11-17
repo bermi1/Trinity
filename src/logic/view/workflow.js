@@ -61,7 +61,7 @@ export function pageVals(s, IC, ST, narrow) {
     }, pill([ST[P.st].l, ST[P.st].bg, ST[P.st].fg]));
   } else V.P = {stages:[], tasks:[], reqs:[], team:[]};
   // Staff, Reception and Printing see projects without money figures.
-  if (['staff','reception','production'].includes(s.role || 'ceo')) {
+  if (['staff','reception','production','creative'].includes(s.role || 'ceo')) {
     const hide = {val:'—', margin:'—', spent:'—', bud:'—', remaining:'—', over:false, overBy:'—', spentW:'0%', usedPct:'—', profit:'—', invoiced:'—', budLine:'—'};
     V.P = Object.assign({}, V.P, hide, {reqs:(V.P.reqs || []).filter(r => r.who === this.av(this.me().k).n)});
     V.projRows = V.projRows.map(r => Object.assign({}, r, {val:'—', used:'—'}));
@@ -82,7 +82,7 @@ export function pageVals(s, IC, ST, narrow) {
   const rf = s.reqFilter;
   const role = s.role || 'ceo';
   // Staff, Reception and Printing see only their own requests; they never approve.
-  const ownOnly = ['staff','reception','production'].includes(role), mine = r => !ownOnly || r.who === this.me().k;
+  const ownOnly = ['staff','reception','production','clientservice','creative','operations'].includes(role), mine = r => !ownOnly || r.who === this.me().k;
   const RF = {me:r => mine(r) && (ownOnly ? r.st === 'pending' : this.canAct(r) && (role !== 'ceo' || r.step === 4)), all:r => mine(r), approved:r => mine(r) && (r.st === 'approved' || r.st === 'paid'), rejected:r => mine(r) && r.st === 'rejected'};
   V.reqTabs = [['me','Awaiting me'],['all','All'],['approved','Approved'],['rejected','Rejected']].map(([k,l]) => ({l:l + ' · ' + s.reqs.filter(RF[k]).length, on:() => this.setState({reqFilter:k}), bg:rf === k ? '#2B1459' : 'transparent', c:rf === k ? '#fff' : '#6E6A7C'}));
   const rl = s.reqs.filter(RF[rf]);

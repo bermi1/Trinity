@@ -70,10 +70,9 @@ test('command palette searches pages, projects, stock and runs actions', async (
   await openAs(page, 'ceo', 'dashboard');
   await page.keyboard.press('Control+k');
   const input = page.getByPlaceholder('Search pages, projects, stock, or type an action…');
+  // Stock is parked, so store items are not offered.
   await input.fill('gazebo');
-  await input.press('Enter');
-  await expect(page.getByPlaceholder('Search items, SKU, category')).toHaveValue('Gazebo tent 3×3');
-  await page.keyboard.press('Control+k');
+  await expect(page.getByText('No results')).toBeVisible();
   await input.fill('zzzz');
   await expect(page.getByText('No results')).toBeVisible();
   await input.fill('add task');
@@ -82,7 +81,7 @@ test('command palette searches pages, projects, stock and runs actions', async (
   await page.keyboard.press('Escape');
   await page.keyboard.press('Control+k');
   await input.fill('Expo Stand');
-  await page.getByText('Mlimani Bank · Expo Stand 2026').click();
+  await page.getByText('Mlimani Bank · Expo Stand 2026').last().click();
   await expect(page.getByText(/Stage 3 of 5 · Production/)).toBeVisible();
 });
 

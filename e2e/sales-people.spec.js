@@ -45,16 +45,17 @@ test('proposals: stages, print to PDF, rejection, and conversion to a project', 
 test('staff: reminders reach the person, who sees them and reports back', async ({ page }) => {
   await openAs(page, 'ceo', 'staff');
   await btn(page, 'Remind missing staff').click();
-  await toast(page, 'Reminder sent to 4 staff');
+  await toast(page, 'Reminder sent to 7 staff');
   await btn(rowOf(page, 'Peter Laizer'), 'Remind').click();
   const notes = (await saved(page)).notes.filter(n => n.to);
-  expect(notes.map(n => n.to).sort()).toEqual(['FH', 'JA', 'PL', 'PL', 'RS']);
+  expect(notes.map(n => n.to).sort()).toEqual(['AM', 'DS', 'FH', 'JA', 'KM', 'PL', 'PL', 'RS']);
 });
 
 test('notifications: open one, then mark all read', async ({ page }) => {
   await openAs(page, 'ceo', 'notifications');
+  // This alert points at the store, which is parked: it opens Management's home instead.
   await page.getByText('Low stock · Vinyl 1.37m gloss').click();
-  await expect(page.getByPlaceholder('Search items, SKU, category')).toBeVisible();
+  await expect(page.getByText('COMPANY COMMAND CENTER')).toBeVisible();
   await side(page, 'Notifications');
   await btn(page, 'Mark all as read').click();
   expect((await saved(page)).notes.every(n => n.read)).toBe(true);

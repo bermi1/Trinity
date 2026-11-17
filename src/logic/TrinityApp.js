@@ -2,7 +2,7 @@
 // State lives here; the view modules turn it into the flat values the
 // components render (see src/logic/view).
 import Logic from './Logic';
-import { IC, PPL, ROLES, TABS, ST, STAGES, OLD_STAGE, CHAIN, CH, REQ_TYPES } from './constants';
+import { IC, PPL, ROLES, TABS, ST, STAGES, OLD_STAGE, CHAIN, CH, REQ_TYPES, PARKED } from './constants';
 import { seed } from './seed';
 import { renderVals } from './view/shell';
 import { pageVals } from './view/workflow';
@@ -16,6 +16,7 @@ import { adminMethods, emptyLike } from './admin';
 import { pinFor, savePin, checkPin, clearPin, clearUnlocked, isUnlocked, isValidPin, markUnlocked, LOCK_AFTER_MS } from './pin';
 import { storeVals } from './view/storeops';
 import { todoMethods, todayVals } from './todos';
+import { deptMethods, deptVals } from './depts';
 
 // Password of the demo accounts, so they open with one tap (see .env). Leave it out to require passwords.
 const demoPassword = () => import.meta.env.VITE_DEMO_PASSWORD || '';
@@ -57,7 +58,7 @@ export default class TrinityApp extends Logic {
     let emb = false, er = null; try { const qp = new URLSearchParams(location.search); emb = qp.get('embed') === '1'; er = qp.get('role'); } catch (e) {}
     if (emb) { const rr = this.ROLES[er] ? er : 'ceo'; sv = {auth:true, role:rr, page:this.ROLES[rr].home, projectId:'PRJ-0231'}; }
     const data = this.seed(); Object.keys(data).forEach(k => { if (saved && saved[k] !== undefined) data[k] = saved[k]; });
-    return Object.assign({embed:emb,more:false,navMore:!!sv.navMore,colSel:{tasks:1,proc:0,crm:0},mobileRole:sv.role||'ceo',docType:'all',docQ:'',propFilter:'all',prefs:sv.prefs||{push:true,email:true,sms:false,digest:true},auth:!!sv.auth,pinUser:sv.pinUser||'',remember:sv.remember !== false,online:typeof navigator === 'undefined' ? true : navigator.onLine !== false,navDir:'tab',role:sv.role||'ceo',loginRole:sv.role||'ceo',mTab:'home',page:sv.page||'dashboard',projectId:sv.projectId||'PRJ-0231',jobId:sv.jobId||'JOB-0313',email:'',pw:'',loginErr:'',range:'12W',tip:-1,menu:false,drawer:false,w:typeof window!=='undefined'?window.innerWidth:1440,reqSel:'REQ-0418',reqFilter:'me',taskFilter:'all',projFilter:'all',stockQ:'',leadQ:'',modal:null,form:{},modalErr:'',cmd:false,cmdQ:'',ai:false,aiQ:'',aiBusy:false,aiMsgs:[{r:'ai',t:'Habari. Ask me about projects, money, stock or staff — I read the live Trinity Mark 360 data.'}],toasts:[],fieldTab:'home',newAct:{d:'',a:'',o:'SK',dl:''}}, data); })();
+    return Object.assign({embed:emb,more:false,navMore:!!sv.navMore,colSel:{tasks:1,proc:0,crm:0},mobileRole:sv.role||'ceo',docType:'all',docQ:'',propFilter:'all',prefs:sv.prefs||{push:true,email:true,sms:false,digest:true},auth:!!sv.auth,pinUser:sv.pinUser||'',remember:sv.remember !== false,online:typeof navigator === 'undefined' ? true : navigator.onLine !== false,navDir:'tab',role:sv.role||'ceo',loginRole:sv.role||'ceo',mTab:'home',page:this.allowedPage(sv.role || 'ceo', sv.page),projectId:sv.projectId||'PRJ-0231',jobId:sv.jobId||'JOB-0313',email:'',pw:'',loginErr:'',range:'12W',tip:-1,menu:false,drawer:false,w:typeof window!=='undefined'?window.innerWidth:1440,reqSel:'REQ-0418',reqFilter:'me',taskFilter:'all',projFilter:'all',stockQ:'',leadQ:'',modal:null,form:{},modalErr:'',cmd:false,cmdQ:'',ai:false,aiQ:'',aiBusy:false,aiMsgs:[{r:'ai',t:'Habari. Ask me about projects, money, stock or staff — I read the live Trinity Mark 360 data.'}],toasts:[],fieldTab:'home',newAct:{d:'',a:'',o:'SK',dl:''}}, data); })();
 
   componentDidMount() {
     this._key = e => {
@@ -344,8 +345,13 @@ export default class TrinityApp extends Logic {
       production:[['Printing',[['printshop','Print floor','printer',waitN],['today','Daily to-do','checkSquare'],['production','Production jobs','checkSquare'],['requisitions','Store requisitions','clipboard']]],
         ['More',[['store','Inventory','package'],['procurement','Procurement','cart'],...company], true]]
     };
+    // Department portals: their dashboard first, then what that department works with.
+    const myReqs = ['requests','My requests','banknote'], deptMore = [['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['rooms','Meeting rooms','calendar'],['settings','Settings','settings']];
+    N.clientservice = [['Client Service',[['dept','Client Service','home'],['today','Daily to-do','checkSquare'],['crm','Clients & leads','users'],['proposals','Proposals','clipboard'],['projects','Projects','folder'],['tasks','Tasks','checkSquare',myOpen,{taskFilter:'mine'}],myReqs]],['More',deptMore,true]];
+    N.creative = [['Creative',[['dept','Creative','home'],['today','Daily to-do','checkSquare'],['tasks','Tasks','checkSquare',myOpen,{taskFilter:'mine'}],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
+    N.operations = [['Operations',[['dept','Operations','home'],['today','Daily to-do','checkSquare'],['projects','Projects','folder'],['tasks','Tasks','checkSquare',myOpen,{taskFilter:'mine'}],myReqs]],['More',[['field','Field capture app','camera'], ...deptMore],true]];
     // The General Manager sees what Management sees, without company setup and accounts.
-    N.gm = N.ceo.map(([t, items, more]) => [t, items.filter(i => i[0] !== 'company' && i[0] !== 'users').map(i => (i[0] === 'requests' ? ['requests','Approvals','banknote',s.reqs.filter(q => q.st === 'pending' && q.step === 2).length] : i)), more]);
+    N.gm = N.ceo.map(([t, items, more]) => [t, items.filter(i => !['company','users','field','ceomobile'].includes(i[0])).map(i => (i[0] === 'requests' ? ['requests','Approvals','banknote',s.reqs.filter(q => q.st === 'pending' && q.step === 2).length] : i)), more]);
     let G = N[role] || N.ceo;
     // Sections the administrator switched off are hidden everywhere.
     // Notifications open from the bell (and the Alerts tab on phones), not from the side menu.
@@ -365,7 +371,15 @@ export default class TrinityApp extends Logic {
   av(k) { const p = this.PPL[k] || (this.people && this.people[k]) || [String(k || '—'),'#6E6A7C']; return {i:k,n:p[0],c:p[1],first:p[0].split(' ')[0]}; }
   proj(id) { return this.state.projects.find(p => p.id === id) || {id:'',name:'General',client:'Company'}; }
   tone(t) { return ({amber:['#FBF1DD','#8A6414'],purple:['#EFE8FA','#5A2FA8'],green:['#E6F4EC','#1F7549'],blue:['#E9EFFA','#3559A8'],dark:['#EDE8F6','#2B1459'],red:['#FBEDEE','#B23A46']})[t] || ['#F4F1FA','#2B1459']; }
+  // Pages a portal may open: parked sections and (outside Management, the GM and Finance) the company dashboard send people to their own home.
+  allowedPage(role, page) {
+    const home = (this.ROLES[role] || ROLES.ceo).home;
+    if (!page || PARKED.includes(page) || (this.state && this.isOff(page))) return home;
+    if (page === 'dashboard' && !['ceo','gm','finance'].includes(role)) return home;
+    return page;
+  }
   go(page, extra) {
+    page = this.allowedPage(this.state.role || 'ceo', page);
     const s = this.state, x = extra || {}, same = page === s.page && (!x.projectId || x.projectId === s.projectId);
     this.setState(Object.assign({page,menu:false,drawer:false,cmd:false,more:false,tip:-1,navDir:this.isTab(page) ? 'tab' : 'push'}, x));
     if (!same || (x.jobId && x.jobId !== s.jobId)) this.pushHistory({page, projectId:x.projectId || s.projectId, jobId:x.jobId || s.jobId});
@@ -414,8 +428,9 @@ export default class TrinityApp extends Logic {
     const PP = Object.keys(this.PPL).map(k => ({v:k,l:this.PPL[k][0]}));
     const O = a => a.map(x => ({v:x,l:x}));
     const defs = {
-      task:{title:'New task',sub:'Every task is linked to a project, an owner and a deadline.',submit:'Create task',fields:[{k:'t',l:'Task',ph:'e.g. Print 500 flyers',req:1},{k:'p',l:'Project',opts:PO},{k:'who',l:'Assign to',opts:PP},{k:'due',l:'Deadline',ph:'e.g. Fri 25'},{k:'pri',l:'Priority',opts:[{v:'high',l:'High'},{v:'med',l:'Medium'},{v:'low',l:'Low'}]}]},
+      task:{title:'New task',sub:'Every task is linked to a project, an owner and a deadline. The person is notified.',submit:'Create task',fields:[{k:'t',l:'Task',ph:'e.g. Print 500 flyers',req:1},{k:'p',l:'Project',opts:PO},{k:'who',l:'Assign to',opts:this.assignable().map(k => ({v:k, l:this.av(k).n}))},{k:'due',l:'Deadline',ph:'e.g. Fri 25'},{k:'pri',l:'Priority',opts:[{v:'high',l:'High'},{v:'med',l:'Medium'},{v:'low',l:'Low'}]}]},
       req:{title:'Request money',sub:'Choose the kind of request.',submit:'Continue',fields:[{k:'type',l:'Type of request',opts:[{v:'project',l:'Project request'},{v:'internal',l:'Internal office request'},{v:'emergency',l:'Emergency request'},...((this.state.role || 'ceo') === 'ceo' ? [{v:'management',l:'Management request'}] : [])]}]},
+      brief:{title:'Send brief to Creative',sub:'The Creative lead receives it and assigns a designer. You are told when artwork goes to the client.',submit:'Send brief',fields:[{k:'t',l:'What is needed',ph:'e.g. Stage backdrop and 3 roll-up banners',req:1},{k:'p',l:'Project',opts:PO},{k:'place',l:'For',opts:O(['Indoor event','Outdoor event','Print','Digital'])},{k:'note',l:'Brief memo',ph:'Theme, sizes, client wishes, deadlines'},{k:'due',l:'Needed by',ph:'e.g. Fri 21'}]},
       reqProject:{title:'Project request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'amt',l:'Amount (TZS)',type:'number',ph:'300000',req:1},{k:'cat',l:'Category',opts:O(['Team','Operations','Supplies'])},{k:'p',l:'Project',opts:PO},{k:'purpose',l:'Purpose',ph:'What is the money for?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'}]},
       reqInternal:{title:'Internal office request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'title',l:'Title',ph:'e.g. Office internet, May',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'150000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for and why?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'}]},
       reqEmergency:{title:'Emergency request',sub:'Goes to GM → Management → Finance pays. Use only when it cannot wait.',submit:'Submit emergency',fields:[{k:'title',l:'Title',ph:'e.g. Generator repair on site',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'250000',req:1},{k:'p',l:'Project',opts:[{v:'',l:'Not for a project'}, ...PO]},{k:'purpose',l:'What happened, and what is it for?',ph:'Explain the emergency',req:1}]},
@@ -450,7 +465,8 @@ export default class TrinityApp extends Logic {
     if (m.act === 'issue') { const item = s.stock.find(i => i.sku === f.sku); if (item && +f.q > item.q) { this.setState({modalErr:'Only ' + item.q + ' ' + item.u + ' in store.'}); return; } }
     if (m.act === 'doc' && f._uploading) { this.setState({modalErr:'Please wait for the file to finish uploading.'}); return; }
     const P = this.proj(f.p);
-    if (m.act === 'task') { this.setState(x => ({tasks:[{id:'T'+Date.now(),t:f.t,p:f.p,who:f.who,due:f.due||'This week',st:'todo',pri:f.pri}, ...x.tasks]})); this.toast('Task created and assigned to ' + this.av(f.who).n); this.log('checkSquare','purple','Task created · ' + f.t, P.client + ' · assigned to ' + this.av(f.who).first); }
+    if (m.act === 'task') this.createTask(f);
+    if (m.act === 'brief') this.createBrief(f);
     if (m.act === 'req') { const next = {project:'reqProject', internal:'reqInternal', emergency:'reqEmergency', management:'reqMgmt'}[f.type] || 'reqProject'; const keep = Object.assign({who:f.who}, f.p ? {p:f.p} : {}); this.setState({modal:null}); setTimeout(() => this.openModal(next, keep), 0); return; }
     if (/^req(Project|Internal|Emergency|Mgmt)$/.test(m.act)) this.createRequest(Object.assign({}, f, {type:{reqProject:'project', reqInternal:'internal', reqEmergency:'emergency', reqMgmt:'management'}[m.act]}));
     if (m.act === 'lead') { this.setState(x => ({leads:[{id:'L'+Date.now(),c:f.c,t:f.t,v:+f.v||0,s:0,src:f.src}, ...x.leads]})); this.toast('Lead added · ' + f.c); this.log('users','blue','New lead · ' + f.c, f.t); }
@@ -557,4 +573,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals }, storeMethods, adminMethods, todoMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals }, storeMethods, adminMethods, todoMethods, deptMethods);
