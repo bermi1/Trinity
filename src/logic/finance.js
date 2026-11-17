@@ -195,7 +195,7 @@ export function financeVals(s) {
   const month = dayKey(0).slice(0, 7);
   const collected = (s.invoices || []).reduce((a, i) => a + (i.payments || []).filter(p => p.ok && (p.at || '').slice(0, 7) === month).reduce((x, p) => x + p.amt, 0), 0);
   const F = {
-    tab: s.finTab || 'overview', setTab: k => this.setState({ finTab: k, invSel: null }), moneyTop, isCeo: role === 'ceo', isFin: role === 'finance',
+    tab: ({ invoices: 'invoices', cashbook: 'cash', freports: 'reports', float: 'float' })[s.page] || (role === 'finance' ? 'overview' : s.finTab || 'overview'), showTabs: role !== 'finance', setTab: k => this.setState({ finTab: k, invSel: null }), moneyTop, isCeo: role === 'ceo', isFin: role === 'finance',
     kpis: [
       { l: 'Owed by clients', v: this.fmtT(unpaid.reduce((a, b) => a + b.due, 0)), n: unpaid.length + ' invoices open', tone: 'dark', pct: Math.round(unpaid.reduce((a, b) => a + b.paid, 0) / Math.max(1, unpaid.reduce((a, b) => a + b.total, 0)) * 100) },
       { l: 'Overdue', v: this.fmtT(inv.filter(i => i.st === 'overdue').reduce((a, b) => a + b.due, 0)), n: inv.filter(i => i.st === 'overdue').length + ' invoices', tone: 'red', pct: Math.round(inv.filter(i => i.st === 'overdue').length / Math.max(1, unpaid.length) * 100) },
@@ -204,9 +204,9 @@ export function financeVals(s) {
     ],
     attention: [
       ...inv.filter(i => i.canSign).map(i => ({ t: 'Sign ' + i.id + ' · ' + i.c, s: i.totalT, act: 'Sign', on: i.sign })),
-      ...(role === 'ceo' ? inv.filter(i => i.payments.some(p => p.canOk)).map(i => ({ t: 'Confirm payment · ' + i.id, s: i.c + ' · ' + i.payments.filter(p => p.canOk).map(p => p.amt).join(', '), act: 'Review', on: () => this.setState({ finTab: 'invoices', invSel: i.id }) })) : []),
-      ...inv.filter(i => i.st === 'overdue').map(i => ({ t: i.c + ' · ' + i.id + ' overdue', s: i.dueT + ' · ' + i.dueOn, act: 'Open', on: () => this.setState({ finTab: 'invoices', invSel: i.id }) })),
-      ...(role === 'ceo' ? this.fl().asks.filter(a => a.st === 'open').map(a => ({ t: 'Finance asks for float · ' + this.fmtT(a.amt), s: a.note || '', act: 'Give', on: () => this.setState({ finTab: 'float' }) })) : [])
+      ...(role === 'ceo' ? inv.filter(i => i.payments.some(p => p.canOk)).map(i => ({ t: 'Confirm payment · ' + i.id, s: i.c + ' · ' + i.payments.filter(p => p.canOk).map(p => p.amt).join(', '), act: 'Review', on: () => this.finGo('invoices', { invSel: i.id }) })) : []),
+      ...inv.filter(i => i.st === 'overdue').map(i => ({ t: i.c + ' · ' + i.id + ' overdue', s: i.dueT + ' · ' + i.dueOn, act: 'Open', on: () => this.finGo('invoices', { invSel: i.id }) })),
+      ...(role === 'ceo' ? this.fl().asks.filter(a => a.st === 'open').map(a => ({ t: 'Finance asks for float · ' + this.fmtT(a.amt), s: a.note || '', act: 'Give', on: () => this.finGo('float') })) : [])
     ].slice(0, 8),
     invoices: inv, filter: s.invFilter || 'open', setFilter: k => this.setState({ invFilter: k }),
     canInvoice: this.canInvoice(), newInvoice: () => this.setState({ invEdit: 'new' }),
@@ -214,7 +214,7 @@ export function financeVals(s) {
     draft: (() => { const i = s.invEdit && s.invEdit !== 'new' ? s.invoices.find(x => x.id === s.invEdit) : null; if (!i) return null;
       if (i.lines && i.lines.length) return i;
       const T = invTotals(i); return Object.assign({}, i, { admin: 0, lines: [{ item: this.proj(i.p).name || 'Services as agreed', n: 1, rate: T.net, days: 1, events: 1 }] }); })(),
-    save: d => { const e = this.saveInvoice(d); if (!e) this.setState({ invEdit: null, finTab: 'invoices' }); return e; },
+    save: d => { const e = this.saveInvoice(d); if (!e) { this.setState({ invEdit: null }); if (s.page !== 'invoices') this.finGo('invoices'); } return e; },
     customers: (s.customers || []).map(c => ({ v: c.n, l: c.n, tin: c.tin || '' })),
     projects: s.projects.filter(p => p.st !== 'done').map(p => ({ v: p.id, l: p.client + ' · ' + p.name, c: p.client })),
     totals: invTotals
@@ -301,7 +301,10 @@ export function reportVals(s) {
   else { const a = parse(R.from), b = parse(R.to); for (let d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) buckets.push({ k: key(d), l: per === 'week' ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] : String(d.getDate()) }); }
   const bk = e => (R.unit === 'month' ? e.at.slice(0, 7) : e.at);
   const chart = buckets.map(b => { const l = rows.filter(e => bk(e) === b.k); return { l: b.l, k: b.k, in: sum(l, 'in'), out: sum(l, 'out'), items: l.map(e => ({ id: e.id + e.at, at: e.at, dir: e.dir, cat: e.cat, party: e.party, amt: this.fmtT(e.amt) })) }; });
-  const max = Math.max(1, ...chart.map(c => Math.max(c.in, c.out)));
+  const peak = Math.max(1, ...chart.map(c => Math.max(c.in, c.out)));
+  // A round scale: 1, 2 or 5 × 10ⁿ steps, four of them.
+  const step = (() => { const raw = peak / 4, p = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 5, 10].map(m => m * p).find(v => v >= raw); })(), max = step * 4;
+  const short = v => (v >= 1e6 ? (v / 1e6).toFixed(v % 1e6 ? 1 : 0) + 'M' : v >= 1e3 ? Math.round(v / 1e3) + 'K' : String(v));
   const group = (l, d, f) => { const m = {}; l.filter(e => e.dir === d).forEach(e => { const k = f(e); m[k] = (m[k] || 0) + e.amt; }); return Object.keys(m).map(k => ({ l: k, v: m[k] })).sort((a, b) => b.v - a.v); };
   const outCat = group(rows, 'out', e => e.cat.replace(/^Staff requests · .*/, 'Staff requests (floats)')), inCli = group(rows, 'in', e => e.party || e.cat);
   // Projects: what each brought in and cost, all time.
@@ -329,7 +332,7 @@ export function reportVals(s) {
         { l: 'Net cash', v: (tin - tout < 0 ? '−' : '') + f(Math.abs(tin - tout)), tone: tin - tout < 0 ? 'red' : 'dark' },
         { l: 'Daily average spend', v: f(tout / Math.max(1, Math.min(Math.round((parse(R.to) - parse(R.from)) / 864e5) + 1, Math.round((parse(dayKey(0)) - parse(R.from)) / 864e5) + 1))), tone: 'gold' }
       ],
-      chart: chart.map(c => Object.assign(c, { hi: Math.round(c.in / max * 100), ho: Math.round(c.out / max * 100), tin: f(c.in), tout: f(c.out) })), maxT: f(max), showEvery: chart.length > 16 ? 5 : 1,
+      chart: chart.map(c => Object.assign(c, { hi: Math.round(c.in / max * 100), ho: Math.round(c.out / max * 100), tin: f(c.in), tout: f(c.out) })), maxT: f(peak), ticks: [4, 3, 2, 1, 0].map(i => ({ l: short(step * i), pct: i * 25 })), showEvery: chart.length > 16 ? 5 : 1,
       outCat: outCat.map(x => Object.assign(x, { t: f(x.v), pct: tout ? Math.round(x.v / tout * 100) : 0 })),
       inCli: inCli.slice(0, 8).map(x => Object.assign(x, { t: f(x.v), pct: tin ? Math.round(x.v / tin * 100) : 0 })),
       projects: projects.map(p => ({ id: p.id, n: p.n, c: p.c, value: f(p.value), invoiced: f(p.invoiced), got: f(p.got), spent: f(p.spent), profit: (p.profit < 0 ? '−' : '') + f(Math.abs(p.profit)), neg: p.profit < 0, margin: p.got ? Math.round(p.profit / p.got * 100) + '%' : '—' })),

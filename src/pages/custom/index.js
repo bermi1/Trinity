@@ -9,6 +9,7 @@ import CompanyPage from './CompanyPage';
 import DeptPage from './DeptPage';
 import ClientsPage from './ClientsPage';
 import MeetingsPage from './MeetingsPage';
+import FinanceHub from './FinanceHub';
 
 export default {
   requisitions: RequisitionsPage,
@@ -20,5 +21,9 @@ export default {
   company: CompanyPage,
   dept: DeptPage,
   clients: ClientsPage,
-  meetings: MeetingsPage
+  meetings: MeetingsPage,
+  invoices: FinanceHub,
+  cashbook: FinanceHub,
+  freports: FinanceHub,
+  float: FinanceHub
 };

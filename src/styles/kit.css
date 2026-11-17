@@ -868,3 +868,25 @@
   .mr-row { padding: 10px 0; }
   .mr-left, .mr-right { font-size: 13px; }
 }
+/* Company purple sidebar */
+.sn { background: #2B1459; border-right: none; }
+.sn-brand b { color: #fff; }
+.sn-brand small { color: #CBB98A; }
+.sn-item { color: rgba(255,255,255,.74); }
+.sn-item svg { color: rgba(255,255,255,.5); }
+.sn-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+.sn-item.is-on { background: rgba(255,255,255,.12); color: #fff; }
+.sn-item.is-on svg { color: #E2CE98; }
+.sn-n { background: rgba(226,206,152,.2); color: #E2CE98; }
+.sn-more { color: rgba(255,255,255,.45); }
+/* Bar chart with a scale */
+.fr-plot { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; }
+.fr-axis { position: relative; height: 210px; font-size: 11px; color: #8A8D99; text-align: right; }
+.fr-axis span { position: absolute; right: 0; transform: translateY(50%); }
+.fr-plot .fr-bars { position: relative; border-bottom: 1px solid #D9DBE3; }
+.fr-grid { position: absolute; inset: 6px 0 18px 0; pointer-events: none; }
+.fr-grid i { position: absolute; left: 0; right: 0; border-top: 1px dashed #ECEDF2; }
+.fr-pair i { max-width: 14px; border-radius: 3px 3px 0 0; }
+.fr-pair i.is-in { background: #2E9B63; } .fr-pair i.is-out { background: #E07A84; }
+.fr-col.is-on .fr-pair i.is-in { background: #1F7549; } .fr-col.is-on .fr-pair i.is-out { background: #C9505C; }
+@media (max-width: 600px) { .fr-plot { grid-template-columns: 44px minmax(0, 1fr); } .fr-axis { height: 170px; } }

@@ -44,13 +44,17 @@ export function CashChart({ R }) {
         <span className="fr-legend"><i className="is-in" />In <i className="is-out" />Out</span>
       </header>
       <div className="fr-tip">{h ? <><b>{h.k}</b> · In {h.tin} · Out {h.tout}</> : <span className="k-sub">Highest: {R.maxT}</span>}</div>
+      <div className="fr-plot">
+      <div className="fr-axis" aria-hidden="true">{R.ticks.map(t => <span key={t.pct} style={{ bottom: 'calc(18px + (100% - 24px) * ' + t.pct / 100 + ')' }}>{t.l}</span>)}</div>
       <div className="fr-bars" onMouseLeave={() => setHover(-1)}>
+        <div className="fr-grid" aria-hidden="true">{R.ticks.map(t => <i key={t.pct} style={{ bottom: t.pct + '%' }} />)}</div>
         {R.chart.map((c, i) => (
           <button key={c.k} type="button" className={'fr-col' + (hover === i || pick === i ? ' is-on' : '')} onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onClick={() => setPick(pick === i ? -1 : i)} aria-pressed={pick === i} aria-label={c.k + ': in ' + c.tin + ', out ' + c.tout}>
             <span className="fr-pair"><i className="is-in" style={{ height: c.hi + '%' }} /><i className="is-out" style={{ height: c.ho + '%' }} /></span>
             <small>{i % R.showEvery === 0 || R.chart.length <= 16 ? c.l : ''}</small>
           </button>
         ))}
+      </div>
       </div>
       {sel ? (
         <div className="fr-drill">

@@ -209,14 +209,15 @@ function FloatTab({ F }) {
 // Finance: the overview, invoices (create, sign, send, payments) and the float ledger.
 export default function FinanceHub({ v }) {
   const F = v.FH, R = v.REP;
-  const tabs = [['overview', 'Overview'], ...(R ? [['cash', 'Cash book'], ['reports', 'Reports']] : []), ['invoices', 'Invoices'], ...(F.float ? [['float', 'Float']] : [])];
+  const HEAD = { overview: ['Finance', 'Money in and out, who owes us and what needs attention.'], invoices: ['Invoices', 'Create, sign, send and record payments.'], cash: ['Cash book', 'Every shilling in and out, with a running balance.'], reports: ['Reports', 'Income and spending by period, category, client and project.'], float: ['Float', 'The float from Management, allocated to projects and office purposes.'] }[F.tab];
+  const openInv = F.invoices.filter(i => i.st !== 'paid').slice(0, 6);
   const list = F.invoices.filter(i => (F.filter === 'open' ? i.st !== 'paid' : F.filter === 'paid' ? i.st === 'paid' : F.filter === 'sign' ? i.needsSign : true));
   return (
     <>
-      <PageHead kicker="Finance" title="Finance" sub="Money in and out every day, who owes us, invoices and the float, in one place.">
-        {F.canInvoice ? <Btn kind="dark" onClick={F.newInvoice}>New invoice</Btn> : null}
+      <PageHead kicker="Finance" title={F.showTabs ? 'Finance & Invoices' : HEAD[0]} sub={F.showTabs ? 'Money in and out, invoices, the cash book, reports and the float.' : HEAD[1]}>
+        {F.canInvoice && (F.tab === 'overview' || F.tab === 'invoices') ? <Btn kind="dark" onClick={F.newInvoice}>New invoice</Btn> : null}
       </PageHead>
-      <div className="rc-smart fh-tabs" role="tablist">{tabs.map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={F.tab === k} className={F.tab === k ? 'is-on' : ''} onClick={() => F.setTab(k)}><span>{l}</span></button>)}</div>
+      {F.showTabs ? <div className="rc-smart fh-tabs" role="tablist">{[['overview', 'Overview'], ...(R ? [['cash', 'Cash book'], ['reports', 'Reports']] : []), ['invoices', 'Invoices'], ...(F.float ? [['float', 'Float']] : [])].map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={F.tab === k} className={F.tab === k ? 'is-on' : ''} onClick={() => F.setTab(k)}><span>{l}</span></button>)}</div> : null}
 
       {F.tab === 'overview' ? (
         <>
@@ -225,6 +226,10 @@ export default function FinanceHub({ v }) {
           <section className="fh-card">
             <h3>Needs attention</h3>
             {F.attention.length ? <ul className="fh-att">{F.attention.map((a, i) => <li key={i}><span><b>{a.t}</b><small>{a.s}</small></span><Btn kind="ghost" onClick={a.on}>{a.act}</Btn></li>)}</ul> : <Empty>All clear.</Empty>}
+          </section>
+          <section className="fh-card">
+            <h3>Open invoices</h3>
+            {openInv.length ? <ul className="fh-invs">{openInv.map(i => <InvoiceRow key={i.id} i={i} F={F} />)}</ul> : <Empty>No open invoices.</Empty>}
           </section>
         </>
       ) : null}
