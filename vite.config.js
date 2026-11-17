@@ -5,6 +5,8 @@ export default defineConfig({
   plugins: [react()],
   build: {
     rollupOptions: {
+      // Two pages: the public website at / and the staff portal (Trinity Mark 360) at /app/.
+      input: { site: 'index.html', app: 'app/index.html' },
       output: {
         // Libraries change rarely, so they get their own long-cached files.
         manualChunks(id) {

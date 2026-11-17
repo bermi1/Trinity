@@ -43,6 +43,8 @@ test('dashboard: figures, chart, shortcuts and every quick action', async ({ pag
     await modal(page).locator('button').last().click();
     await toast(page, done);
     await expect(modal(page)).toHaveCount(0);
+    // A new project opens its own page straight after saving.
+    if (label === 'Create project') await expect(page.getByRole('heading', { name: 'Azam Media — Studio launch' })).toBeVisible();
   }
   // A created project opens on its own page.
   const data = await saved(page);

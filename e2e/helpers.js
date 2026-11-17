@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 
 // Opens the app already signed in to a portal and page, on fresh demo data.
 export async function openAs(page, role = 'ceo', where, extra = {}) {
-  await page.goto('/');
+  await page.goto('/app/');
   await page.evaluate(([role, where, extra]) => {
     localStorage.clear();
     localStorage.setItem('tm360', JSON.stringify(Object.assign({ auth: true, role, page: where, projectId: 'PRJ-0231' }, extra)));

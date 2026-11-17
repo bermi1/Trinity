@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { watchErrors, btn } from './helpers';
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/app/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 });
@@ -42,13 +42,13 @@ test('"Remember me" off ends the session when the browser closes', async ({ page
   await expect(page.getByText('COMPANY COMMAND CENTER')).toBeVisible();
   // A new tab starts a new browser session.
   const fresh = await context.newPage();
-  await fresh.goto('/');
+  await fresh.goto('/app/');
   await expect(btn(fresh, 'SIGN IN')).toBeVisible();
 });
 
 test('sign-in persists across reloads when remembered', async ({ page }) => {
   await page.locator('input[type=password]').fill('demo1234');
   await btn(page, 'SIGN IN').click();
-  await page.goto('/');
+  await page.goto('/app/');
   await expect(page.getByText('COMPANY COMMAND CENTER')).toBeVisible();
 });

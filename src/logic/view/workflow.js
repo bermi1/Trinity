@@ -46,7 +46,7 @@ export function pageVals(s, IC, ST, narrow) {
   if (P.id) {
     const pm = this.av(P.pm), u = P.bud ? P.spent / P.bud : 0;
     const ptasks = s.tasks.filter(t => t.p === P.id);
-    V.P = Object.assign({id:P.id, name:P.name, client:P.client, pmName:pm.n, due:P.due, prog:P.prog + '%', val:this.fmtM(P.val), margin:Math.round((P.val - Math.max(P.bud, P.spent)) / P.val * 100) + '%',
+    V.P = Object.assign({id:P.id, name:P.name, client:P.client, pmName:pm.n, due:P.due, prog:P.prog + '%', val:this.fmtM(P.val), margin:P.val ? Math.round((P.val - Math.max(P.bud, P.spent)) / P.val * 100) : 0 + '%',
       stageLabel:'Stage ' + P.stage + ' of 15 · ' + this.STAGES[P.stage - 1],
       stages:this.STAGES.map((l,i) => ({l, col:i + 1 < P.stage || P.st === 'done' ? '#2B1459' : i + 1 === P.stage ? '#B49A5A' : '#EDE9F3', c:i + 1 === P.stage ? '#17152A' : '#6E6A7C', fw:i + 1 === P.stage ? 700 : 500})),
       spent:this.fmtM(P.spent), bud:this.fmtM(P.bud), remaining:this.fmtM(Math.max(0, P.bud - P.spent)), over:P.spent > P.bud, overBy:this.fmtM(P.spent - P.bud), spentW:Math.min(100, u*100) + '%', barC:u > 1 ? '#D9535F' : '#2B1459', usedPct:Math.round(u*100) + '% used',

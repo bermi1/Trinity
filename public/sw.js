@@ -1,8 +1,9 @@
 // Trinity Mark 360 service worker: the app opens instantly and works without a connection.
+// It runs only for the staff portal (/app/); the public website at / is a normal page.
 // Pages: network first, falling back to the saved copy. Built files (hashed names) and icons: saved copy first.
 // Database calls (Supabase) always go to the network.
-const CACHE = 'tm360-v1';
-const SHELL = ['/', '/manifest.webmanifest', '/trinity-mark-logo.svg', '/icon-192.png', '/icon-512.png'];
+const CACHE = 'tm360-v2';
+const SHELL = ['/app/', '/manifest.webmanifest', '/trinity-mark-logo.svg', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -20,9 +21,9 @@ self.addEventListener('fetch', e => {
   if (req.mode === 'navigate') {
     e.respondWith(fetch(req).then(res => {
       const copy = res.clone();
-      caches.open(CACHE).then(c => c.put('/', copy));
+      caches.open(CACHE).then(c => c.put('/app/', copy));
       return res;
-    }).catch(() => caches.match('/')));
+    }).catch(() => caches.match('/app/')));
     return;
   }
 

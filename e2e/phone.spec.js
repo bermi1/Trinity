@@ -10,7 +10,7 @@ const title = page => page.locator('.m-header-title b');
 const PAGES = ['dashboard', 'briefing', 'projects', 'project', 'tasks', 'requests', 'finance', 'store', 'procurement', 'crm', 'staff', 'notifications', 'field', 'staffportal', 'financeportal', 'reception', 'storekeeper', 'rooms', 'proposals', 'production', 'logistics', 'documents', 'reports', 'calendar', 'settings', 'requisitions', 'movements', 'job', 'printshop'];
 
 test('sign-in screen works like an app: show password, portal picker, remember switch', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/app/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
@@ -157,18 +157,18 @@ test('search and the assistant are one tap away', async ({ page }) => {
 
 test('home-screen shortcuts open straight to the right place', async ({ page }) => {
   await openAs(page, 'ceo', 'dashboard');
-  await page.goto('/?go=requests');
+  await page.goto('/app/?go=requests');
   await expect(title(page)).toHaveText('Requests & Floats');
   await expect(page).toHaveURL(/\/$/);
-  await page.goto('/?go=newreq');
+  await page.goto('/app/?go=newreq');
   await expect(page.getByRole('dialog', { name: 'Request money' })).toBeVisible();
 });
 
 test('installable: manifest, icons and offline support are in place', async ({ page, request }) => {
-  await page.goto('/');
+  await page.goto('/app/');
   const manifest = await (await request.get('/manifest.webmanifest')).json();
-  expect(manifest).toMatchObject({ display: 'standalone', start_url: '/', short_name: 'TM 360' });
-  expect(manifest.shortcuts.map(s => s.url)).toContain('/?go=newreq');
+  expect(manifest).toMatchObject({ display: 'standalone', start_url: '/app/', short_name: 'TM 360' });
+  expect(manifest.shortcuts.map(s => s.url)).toContain('/app/?go=newreq');
   for (const icon of manifest.icons) expect((await request.get(icon.src)).ok()).toBe(true);
   await expect.poll(() => page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration())), { timeout: 10000 }).toBe(true);
 });
@@ -203,7 +203,7 @@ test('printing on the phone: request materials, the store issues them', async ({
 });
 
 test('PIN unlock: set a PIN after signing in, unlock with it next time', async ({ page, context }) => {
-  await page.goto('/');
+  await page.goto('/app/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   await page.locator('input[autocomplete="current-password"]').fill('demo1234');
@@ -216,7 +216,7 @@ test('PIN unlock: set a PIN after signing in, unlock with it next time', async (
   await expect(page.locator('.m-header')).toBeVisible();
   // Reopening the app (a new browser session) asks for the PIN, not the password.
   const again = await context.newPage();
-  await again.goto('/');
+  await again.goto('/app/');
   await expect(again.getByRole('heading', { name: 'Enter your PIN' })).toBeVisible();
   for (const d of '1111') await again.getByRole('button', { name: d, exact: true }).click();
   await again.getByRole('button', { name: 'Unlock' }).click();

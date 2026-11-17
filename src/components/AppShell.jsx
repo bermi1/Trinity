@@ -33,6 +33,7 @@ import CommandPalette from './CommandPalette';
 import AssistantPanel from './AssistantPanel';
 import MobileNav from './MobileNav';
 import Toasts from './Toasts';
+import WebEnquiries from './WebEnquiries';
 
 export default function AppShell({ v }) {
   return (
@@ -56,6 +57,7 @@ export default function AppShell({ v }) {
             {v.is.finance ? <FinancePage v={v} /> : null}
             {v.is.store ? <StorePage v={v} /> : null}
             {v.is.procurement ? <ProcurementPage v={v} /> : null}
+            {v.is.crm ? <WebEnquiries v={v} /> : null}
             {v.is.crm ? <CrmPage v={v} /> : null}
             {v.is.staff ? <StaffPage v={v} /> : null}
             {v.is.notifications ? <NotificationsPage v={v} /> : null}
