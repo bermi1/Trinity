@@ -196,10 +196,10 @@ export function financeVals(s) {
   const F = {
     tab: s.finTab || 'overview', setTab: k => this.setState({ finTab: k, invSel: null }), moneyTop, isCeo: role === 'ceo', isFin: role === 'finance',
     kpis: [
-      { l: 'Owed by clients', v: this.fmtT(unpaid.reduce((a, b) => a + b.due, 0)), n: unpaid.length + ' invoices open', tone: 'dark' },
-      { l: 'Overdue', v: this.fmtT(inv.filter(i => i.st === 'overdue').reduce((a, b) => a + b.due, 0)), n: inv.filter(i => i.st === 'overdue').length + ' invoices', tone: 'red' },
-      { l: 'Collected this month', v: this.fmtT(collected), n: 'confirmed payments', tone: 'green' },
-      ...(moneyTop ? [{ l: 'Float not allocated', v: this.fmtT(this.floatLeft()), n: 'of ' + this.fmtT(this.floatTotal()) + ' given', tone: 'gold' }] : [{ l: 'Waiting for signature', v: String(inv.filter(i => i.needsSign).length), n: 'invoices', tone: 'gold' }])
+      { l: 'Owed by clients', v: this.fmtT(unpaid.reduce((a, b) => a + b.due, 0)), n: unpaid.length + ' invoices open', tone: 'dark', pct: Math.round(unpaid.reduce((a, b) => a + b.paid, 0) / Math.max(1, unpaid.reduce((a, b) => a + b.total, 0)) * 100) },
+      { l: 'Overdue', v: this.fmtT(inv.filter(i => i.st === 'overdue').reduce((a, b) => a + b.due, 0)), n: inv.filter(i => i.st === 'overdue').length + ' invoices', tone: 'red', pct: Math.round(inv.filter(i => i.st === 'overdue').length / Math.max(1, unpaid.length) * 100) },
+      { l: 'Collected this month', v: this.fmtT(collected), n: 'confirmed payments', tone: 'green', pct: Math.min(100, Math.round(collected / Math.max(1, collected + unpaid.reduce((a, b) => a + b.due, 0)) * 100)) },
+      ...(moneyTop ? [{ l: 'Float not allocated', v: this.fmtT(this.floatLeft()), n: 'of ' + this.fmtT(this.floatTotal()) + ' given', tone: 'gold', pct: this.floatTotal() ? Math.round(this.floatLeft() / this.floatTotal() * 100) : 0 }] : [{ l: 'Waiting for signature', v: String(inv.filter(i => i.needsSign).length), n: 'invoices', tone: 'gold' }])
     ],
     attention: [
       ...inv.filter(i => i.canSign).map(i => ({ t: 'Sign ' + i.id + ' · ' + i.c, s: i.totalT, act: 'Sign', on: i.sign })),

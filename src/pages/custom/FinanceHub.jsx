@@ -7,7 +7,7 @@ const n = v => Math.round(+v || 0).toLocaleString('en-US');
 const digits = v => String(v || '').replace(/\D/g, '');
 
 function Kpis({ items }) {
-  return <div className="fh-kpis">{items.map(k => <div key={k.l} className={'fh-kpi is-' + k.tone}><span>{k.l}</span><b>{k.v}</b><small>{k.n}</small></div>)}</div>;
+  return <div className="fh-kpis">{items.map(k => <div key={k.l} className={'fh-kpi is-' + k.tone}>{k.pct != null ? <i className="ring" style={{ '--p': k.pct }}><em>{k.pct}%</em></i> : null}<span>{k.l}</span><b>{k.v}</b><small>{k.n}</small></div>)}</div>;
 }
 
 function Amount({ value, set, label, placeholder }) {

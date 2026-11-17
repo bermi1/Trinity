@@ -39,9 +39,13 @@ function Item({ it }) {
 }
 
 function Mine({ T }) {
-  const open = T.assigned.length + T.plan.length;
+  const open = T.assigned.length + T.plan.length, all = open + T.done.length, pct = all ? Math.round(T.done.length / all * 100) : 0;
   return (
     <div className="mw">
+      <section className="mw-hero">
+        <i className="ring is-light" style={{ '--p': pct }}><em>{pct}%</em></i>
+        <div><small>Today</small><b>{T.done.length} done · {open} to do</b><span>{T.assigned.length} from others · {T.plan.length} your own</span></div>
+      </section>
       <section className="mw-card mw-main">
         <QuickAdd label="Plan" placeholder="Add something to do…" onAdd={t => T.add(t, false)} />
         <h3 className="mw-h">To do <span>{open}</span></h3>
