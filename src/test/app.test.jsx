@@ -97,7 +97,7 @@ describe('workflows', () => {
 
   it('saves data to the browser', async () => {
     signIn('ceo');
-    fireEvent.click(screen.getAllByText('Requests & Floats')[0]);
+    fireEvent.click(screen.getAllByText('Approvals')[0]);
     await act(async () => {
       fireEvent.click(screen.getAllByRole('button', { name: 'Approve' })[0]);
       await new Promise(r => setTimeout(r, 400));

@@ -47,7 +47,7 @@ describe('live database', () => {
     window.innerWidth = 1024;
     expect(db.tables.app_records.get('reqs|REQ-0418').data.st).toBe('pending');
 
-    fireEvent.click(screen.getAllByText('Requests & Floats')[0]);
+    fireEvent.click(screen.getAllByText('Approvals')[0]);
     fireEvent.click(screen.getAllByRole('button', { name: 'Approve' })[0]);
     await waitFor(() => expect(db.tables.app_records.get('reqs|REQ-0418').data.st).toBe('approved'));
   });
@@ -82,6 +82,7 @@ describe('administrator', () => {
     signInAs('admin@tm.co.tz', 'admin12345');
     await skipPin();
     await screen.findByText('COMPANY COMMAND CENTER');
+    fireEvent.click(screen.getByRole('button', { name: /More/ }));
     fireEvent.click(screen.getByText('Users & access'));
     await screen.findByText('Accounts · 3');
   };
@@ -93,6 +94,8 @@ describe('administrator', () => {
     signInAs('daniel@tm.co.tz', 'secret123');
     await skipPin();
     await screen.findByText('COMPANY COMMAND CENTER');
+    fireEvent.click(screen.getByRole('button', { name: /More/ }));
+    expect(screen.getByText('Settings')).toBeTruthy();
     expect(screen.queryByText('Users & access')).toBeNull();
   });
 
