@@ -31,8 +31,11 @@ export const deptMethods = {
   // Management and the GM assign to anyone, a manager to their own team, everyone else only to themselves.
   assignable() {
     if (this.isTop()) return this.everyone();
-    const d = this.myDept();
-    return d && this.isManagerOf(d) ? this.teamOf(d) : [this.me().k];
+    const d = this.myDept(), me = this.me().k;
+    const own = d && this.isManagerOf(d) ? this.teamOf(d) : [me];
+    // A Project Manager (or the Operations Manager) tasks the department heads, who task their own people.
+    const pm = this.isManagerOf('operations') || (this.state.projects || []).some(p => p.pm === me && this.flowOf(p) === 'execution');
+    return pm ? [...new Set([...own, ...['clientservice', 'creative', 'operations', 'finance', 'production', 'reception'].map(x => this.managerOf(x)).filter(Boolean)])] : own;
   },
 
   createTask(f) {
@@ -49,6 +52,7 @@ export const deptMethods = {
     const brief = { id: 'B' + Date.now().toString(36), kind: 'brief', t: f.t, p: f.p, who: to, from: this.me().k, place: f.place || 'Indoor event', note: (f.note || '').trim(), due: f.due || 'This week', st: 'todo', pri: f.pri || 'med' };
     this.setState(x => ({ tasks: [brief, ...x.tasks] }));
     this.remind(to, 'New design brief: ' + f.t, 'dept', 'clipboard', 'From ' + this.me().n + (P.client ? ' · ' + P.client : '') + ' · ' + brief.place);
+    this.afterBrief(f.p);
     this.toast('Brief sent to Creative · ' + this.av(to).n);
     this.log('clipboard', 'purple', 'Brief sent to Creative · ' + f.t, (P.client || '') + ' · ' + brief.place);
   },
@@ -63,6 +67,7 @@ export const deptMethods = {
       [this.ROLES.gm.k, this.ROLES.ceo.k, b.from, b.who].filter((k, i, a) => k && k !== me && a.indexOf(k) === i)
         .forEach(k => this.remind(k, 'Design approved: ' + b.t, 'project', 'clipboard', (this.proj(b.p).client || '') + ' · approved by ' + this.me().n));
     }
+    if (st === 'done') setTimeout(() => this.afterDesignApproved(b.p), 0);
     this.toast(b.t + ' · ' + BRIEF[st]);
     this.log('clipboard', st === 'done' ? 'green' : 'purple', 'Design · ' + BRIEF[st], b.t);
   },
@@ -102,7 +107,7 @@ export const deptMethods = {
   // projects they work on (PM, team, a task or a design brief on it, or the client lead they own).
   involvedIn(p, k) {
     k = k || this.me().k;
-    return p.pm === k || (p.team || []).includes(k) || (this.state.tasks || []).some(t => t.p === p.id && (t.who === k || t.from === k)) ||
+    return p.pm === k || p.cs === k || (p.team || []).includes(k) || (this.state.tasks || []).some(t => t.p === p.id && (t.who === k || t.from === k)) ||
       (this.state.leads || []).some(l => l.job === p.id && l.owner === k);
   },
   seesAllProjects() {
@@ -186,6 +191,10 @@ export function deptVals(s) {
     ];
     V.targetPct = target ? Math.min(100, Math.round(won / target * 100)) : 0;
     V.clients = Object.values(clients).sort((a, b) => b.active - a.active || a.n.localeCompare(b.n)).slice(0, 12);
+    V.flowTodo = [
+      ...s.projects.filter(p => this.flowOf(p) === 'brief').map(p => ({ t: p.client + ' · ' + p.name, s: 'Send the design brief to Creative', go: () => this.go('project', { projectId: p.id }) })),
+      ...s.projects.filter(p => this.flowOf(p) === 'proposal').map(p => ({ t: p.client + ' · ' + p.name, s: 'Designs approved · upload the proposal', go: () => this.go('project', { projectId: p.id }) }))
+    ];
     V.followUps = [
       ...s.projects.filter(p => p.st === 'risk' || p.st === 'late').map(p => ({ t: p.client + ' · ' + p.name, s: (p.st === 'late' ? 'Delayed' : 'At risk') + ' · due ' + p.due, go: () => this.go('project', { projectId: p.id }) })),
       ...s.leads.filter(l => st(l) < 5 && (st(l) >= 3 || l.next === 'Today')).map(l => ({ t: l.c + ' · ' + l.t, s: (st(l) >= 3 ? 'Proposal with the client' : 'Follow up today') + ' · ' + this.av(l.owner).n, go: () => this.setState({ page: 'clients', leadSel: l.id }) }))
@@ -200,14 +209,16 @@ export function deptVals(s) {
     V.designers = this.teamOf('creative').map(k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c }; });
   }
   if (dept === 'operations') {
-    const live = s.projects.filter(p => p.st !== 'done' && [3, 4].includes(this.stageOf(p)));
+    const live = s.projects.filter(p => this.flowOf(p) === 'execution'), toBudget = s.projects.filter(p => this.flowOf(p) === 'budget'), waiting = s.projects.filter(p => this.flowOf(p) === 'approval');
+    V.toBudget = toBudget.map(p => ({ id: p.id, t: p.client + ' · ' + p.name, s: (p.budget && p.budget.st === 'returned' ? 'Sent back: ' + p.budget.note : 'Proposal in · prepare PM and internal budget'), go: () => this.go('project', { projectId: p.id }) }));
+    V.waitingAppr = waiting.map(p => ({ id: p.id, t: p.client + ' · ' + p.name, s: p.budget && p.budget.st === 'mgmt' ? 'Waiting for Management' : 'Waiting for the GM', go: () => this.go('project', { projectId: p.id }) }));
     V.kpis = [
-      { l: 'In production', v: String(s.projects.filter(p => p.st !== 'done' && this.stageOf(p) === 3).length) },
-      { l: 'On site', v: String(s.projects.filter(p => p.st !== 'done' && this.stageOf(p) === 4).length) },
+      { l: 'Budgets to prepare', v: String(toBudget.length), warn: toBudget.length > 0 },
+      { l: 'In execution', v: String(live.length) },
       { l: 'Delayed', v: String(s.projects.filter(p => p.st === 'late').length), warn: s.projects.some(p => p.st === 'late') },
       { l: 'Open team tasks', v: String(this.teamOf('operations').reduce((a, k) => a + openTasks(k), 0)) }
     ];
-    V.delivering = live.map(p => ({ id: p.id, t: p.name, client: p.client, pm: this.av(p.pm).n, due: p.due, stage: this.STAGES[this.stageOf(p) - 1], late: p.st === 'late', risk: p.st === 'risk', go: () => this.go('project', { projectId: p.id }) }));
+    V.delivering = live.map(p => ({ id: p.id, t: p.name, client: p.client, pm: this.av(p.pm).n, due: p.due, stage: p.pm ? 'PM ' + this.av(p.pm).first : 'No PM', late: p.st === 'late', risk: p.st === 'risk', go: () => this.go('project', { projectId: p.id }) }));
     V.request = () => this.openModal('req');
   }
   return { DP: V };

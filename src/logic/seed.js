@@ -20,19 +20,24 @@ function ledgerSeed() {
 export function seed() {
   return {
   projects:[
-    {id:'PRJ-0231',name:'Lake Zone Roadshow',client:'Serengeti Telecom',pm:'SK',st:'on',prog:58,val:168,bud:116,spent:71.4,stage:9,due:'10 Oct',team:['SK','MM','JM','GM','AJ']},
-    {id:'PRJ-0228',name:'Outlet Branding · 8 outlets',client:'Pwani Beverages',pm:'SK',st:'risk',prog:72,val:94,bud:62,spent:69.4,stage:10,due:'23 Sep',team:['SK','JM','AJ']},
-    {id:'PRJ-0233',name:'Expo Stand 2026',client:'Mlimani Bank',pm:'NL',st:'late',prog:44,val:126,bud:88,spent:41.2,stage:7,due:'25 Sep',team:['NL','MM','AJ','JA']},
-    {id:'PRJ-0226',name:'Product Activation',client:'Kivuko Foods',pm:'MM',st:'on',prog:86,val:58,bud:39,spent:31.8,stage:12,due:'30 Sep',team:['MM','JM','FH']},
-    {id:'PRJ-0235',name:'Brand Launch Gala',client:'Safari Mobile',pm:'NL',st:'on',prog:18,val:210,bud:148,spent:12.6,stage:3,due:'14 Nov',team:['NL','SK','RT','RS']},
-    {id:'PRJ-0219',name:'Staff Uniforms · 1,200 pcs',client:'Bahari Logistics',pm:'MM',st:'done',prog:100,val:42,bud:28,spent:26.1,stage:15,due:'12 Sep',team:['MM','JA']},
-    {id:'PRJ-0230',name:'Billboard Campaign · 12 sites',client:'Kilimo Bank',pm:'SK',st:'risk',prog:51,val:132,bud:90,spent:58.3,stage:8,due:'06 Oct',team:['SK','AJ','GM','PL']},
-    {id:'PRJ-0224',name:'Corporate Calendar 2027',client:'Nyota Insurance',pm:'RT',st:'on',prog:64,val:36,bud:22,spent:12.4,stage:7,due:'20 Oct',team:['RT','RS']}
+    {id:'PRJ-0231',flow:'execution',cs:'NL',name:'Lake Zone Roadshow',client:'Serengeti Telecom',pm:'SK',st:'on',prog:58,val:168,bud:116,spent:71.4,stage:9,due:'10 Oct',team:['SK','MM','JM','GM','AJ']},
+    {id:'PRJ-0228',flow:'execution',cs:'KM',name:'Outlet Branding · 8 outlets',client:'Pwani Beverages',pm:'SK',st:'risk',prog:72,val:94,bud:62,spent:69.4,stage:10,due:'23 Sep',team:['SK','JM','AJ']},
+    {id:'PRJ-0233',flow:'execution',cs:'NL',name:'Expo Stand 2026',client:'Mlimani Bank',pm:'NL',st:'late',prog:44,val:126,bud:88,spent:41.2,stage:7,due:'25 Sep',team:['NL','MM','AJ','JA']},
+    {id:'PRJ-0226',flow:'execution',cs:'KM',name:'Product Activation',client:'Kivuko Foods',pm:'MM',st:'on',prog:86,val:58,bud:39,spent:31.8,stage:12,due:'30 Sep',team:['MM','JM','FH']},
+    {id:'PRJ-0235',flow:'design',cs:'NL',name:'Brand Launch Gala',client:'Safari Mobile',pm:'',st:'on',prog:15,val:0,bud:0,spent:0,due:'14 Dec',team:[]},
+    {id:'PRJ-0219',flow:'closed',cs:'NL',name:'Staff Uniforms · 1,200 pcs',client:'Bahari Logistics',pm:'MM',st:'done',prog:100,val:42,bud:28,spent:26.1,stage:15,due:'12 Sep',team:['MM','JA']},
+    {id:'PRJ-0230',flow:'execution',cs:'KM',name:'Billboard Campaign · 12 sites',client:'Kilimo Bank',pm:'SK',st:'risk',prog:51,val:132,bud:90,spent:58.3,stage:8,due:'06 Oct',team:['SK','AJ','GM','PL']},
+    {id:'PRJ-0224',flow:'approval',cs:'KM',name:'Corporate Calendar 2027',client:'Nyota Insurance',pm:'MM',st:'on',prog:40,val:0,bud:0,spent:0,due:'20 Dec',team:['MM','RS'],proposal:{name:'Nyota calendar proposal.pdf',url:'',by:'KM',at:dayKey(-6)},
+      budget:{lines:[{item:'Calendar printing · 2,000 pcs',qty:2000,cost:6500},{item:'Design & layout',qty:1,cost:1800000},{item:'Packaging & delivery',qty:1,cost:950000}],value:24000000,st:'gm',by:'MM',at:dayKey(-2)},
+      notes:[{by:'KM',at:dayKey(-6),t:'Proposal uploaded · sent to Operations for the budget',sys:true},{by:'MM',at:dayKey(-2),t:'Budget submitted · waiting for the GM',sys:true}]},
+    {id:'PRJ-0237',flow:'proposal',cs:'NL',name:'Year-end Staff Party',client:'CRDB Bank PLC',pm:'',st:'on',prog:30,val:0,bud:0,spent:0,due:'19 Dec',team:[]},
+    {id:'PRJ-0238',flow:'brief',cs:'KM',name:'Store Opening · Mwanza',client:'Kilimo Bank',pm:'',st:'on',prog:0,val:0,bud:0,spent:0,due:'15 Jan',team:[]}
   ],
   tasks:[
     // Design briefs from Client Service to Creative (kind 'brief').
     {id:'B1',kind:'brief',t:'Stage backdrop and 3 roll-up banners',p:'PRJ-0235',who:'RS',from:'NL',place:'Indoor event',note:'Gala dinner, gold and black theme. Backdrop 6 m wide.',due:'Fri 21',st:'todo',pri:'high'},
     {id:'B2',kind:'brief',t:'Truck wrap artwork · 22 trucks',p:'PRJ-0231',who:'DS',from:'NL',place:'Outdoor event',note:'Use the new logo lock-up; client wants two options.',due:'Mon 24',st:'prog',pri:'med',files:[{name:'Truck wrap · option A.svg',url:'/mockups/truck.svg',mime:'image/svg+xml',by:'DS',at:'2026-11-16'}]},
+    {id:'B4',kind:'brief',t:'Party stage, backdrop and invitations',p:'PRJ-0237',who:'DS',from:'NL',place:'Indoor event',note:'Black and gold, 300 guests.',due:'Fri 28',st:'done',pri:'med',files:[{name:'Party backdrop.svg',url:'/mockups/backdrop.svg',mime:'image/svg+xml',by:'DS',at:dayKey(-3)}]},
     {id:'B3',kind:'brief',t:'Outlet wall branding layouts',p:'PRJ-0228',who:'DS',from:'KM',place:'Outdoor event',note:'8 outlets, measurements in the site photos.',due:'Wed 19',st:'review',pri:'med',files:[{name:'Outlet wall · layout.svg',url:'/mockups/stand.svg',mime:'image/svg+xml',by:'DS',at:'2026-11-15'},{name:'Roll-up 85x200.svg',url:'/mockups/rollup.svg',mime:'image/svg+xml',by:'DS',at:'2026-11-15'}]},
     {id:'T1',by:'MM',t:'Load display units + gazebo for Mwanza',p:'PRJ-0231',who:'AJ',due:'Today 14:00',st:'prog',pri:'high'},
     {id:'T2',by:'MM',t:'Confirm venue permits · Musoma & Bukoba',p:'PRJ-0231',who:'GM',due:'Today 17:00',st:'todo',pri:'high'},

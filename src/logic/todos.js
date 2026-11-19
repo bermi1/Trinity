@@ -80,7 +80,7 @@ export function todayVals(s) {
   // Tasks someone gave you sit in the same list as your own to-dos.
   const taskItem = t => { const P = this.proj(t.p); return { id: t.id, t: t.t, task: true, done: t.st === 'done', started: t.st === 'prog' || t.st === 'review',
     from: t.by && t.by !== t.who ? this.av(t.by).n : '', where: P.id ? P.client : '', due: t.due || '', pri: PRI[t.pri] || '', since: '',
-    go: P.id ? () => this.go('project', { projectId: P.id }) : null, toggle: () => this.toggleTask(t.id), start: () => this.startTask(t.id) }; };
+    go: P.id ? () => this.go('project', { projectId: P.id }) : null, toggle: () => this.toggleTask(t.id), report: r => this.reportTask(t.id, r), start: () => this.startTask(t.id), reported: t.report || '' }; };
   const myTasks = s.tasks.filter(t => t.who === me && t.kind !== 'brief');
   const given = s.tasks.filter(t => t.by === me && t.who !== me && t.kind !== 'brief');
   const day = s.teamDay === 'yesterday' ? yesterday : today;

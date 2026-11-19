@@ -3,6 +3,7 @@
 // Operations the PM, team and internal budget, Finance and Management the money.
 // Mixed into TrinityApp, so `this` is the app.
 import { ST } from './constants';
+import { FLOW, FLOW_L, FLOW_OWNER, sumLines } from './flow';
 
 export function projectVals(s) {
   const P = (s.projects || []).find(p => p.id === s.projectId);
@@ -38,26 +39,42 @@ export function projectVals(s) {
 
   // Delivery: everyone sees who runs it; the Operations Manager chooses the Project Manager.
   V.team = [...new Set([P.pm, ...(P.team || [])].filter(Boolean))].map(face);
-  if (can.canPM) {
-    V.pmOpts = [...new Set([...this.teamOf('operations'), P.pm].filter(Boolean))].map(face);
-    V.setPM = k => {
-      if (k === P.pm) return;
-      this.setState(x => ({ projects: x.projects.map(p => (p.id === P.id ? Object.assign({}, p, { pm: k, team: [...new Set([k, ...(p.team || [])])] }) : p)) }));
-      if (k !== me) this.remind(k, 'You are Project Manager · ' + P.name, 'project', 'folder', P.client + ' · chosen by ' + this.me().n);
-      this.toast(this.av(k).n + ' is Project Manager');
-      this.log('folder', 'purple', 'Project Manager chosen · ' + P.name, this.av(k).n);
-    };
+  // What happens now: the current step, who is responsible, and the action for the person looking.
+  const flow = this.flowOf(P), B = P.budget || {}, role = s.role || 'ceo';
+  const briefs = (s.tasks || []).filter(t => t.kind === 'brief' && t.p === P.id);
+  const openTasks = (s.tasks || []).filter(t => t.p === P.id && t.kind !== 'brief' && t.st !== 'done').length;
+  const N = { flow, title: FLOW_L[FLOW.indexOf(flow)], owner: FLOW_OWNER[flow] };
+  if (flow === 'brief') { N.text = 'Client Service sends the design brief to Creative.'; if (this.canCS()) N.brief = () => this.openModal('brief', { p: P.id }); }
+  if (flow === 'design') { const done = briefs.filter(b => b.st === 'done').length; N.text = 'Creative is designing · ' + done + ' of ' + briefs.length + ' design(s) approved by the Creative Manager.'; N.goDesigns = () => this.setState({ pvTab: 'designs' }); if (this.canCS()) N.brief = () => this.openModal('brief', { p: P.id }); }
+  if (flow === 'proposal') { N.text = 'Designs approved. Client Service uploads the proposal; it then goes to Operations for the budget.'; if (this.canCS()) N.upload = (f, note) => this.uploadProposal(P.id, f, note); }
+  if (flow === 'budget') {
+    N.text = B.st === 'returned' ? 'Sent back: ' + B.note : 'Operations chooses the Project Manager and prepares the internal budget and the project value.';
+    N.returned = B.st === 'returned';
+    if (this.canOps()) N.budgetForm = { pm: P.pm || '', lines: (B.lines || []).map(l => ({ item: l.item, qty: String(l.qty), cost: String(l.cost) })), value: B.value ? String(B.value) : '', file: B.file || null,
+      people: [...new Set([...this.teamOf('operations'), ...this.teamOf('clientservice'), P.pm].filter(Boolean))].map(face),
+      save: b => this.saveBudget(P.id, b), submit: b => this.submitBudget(P.id, b), attach: f => this.attachBudgetFile(P.id, f) };
   }
-  if (can.canAdvance && P.st !== 'done') {
-    V.advance = () => {
-      const last = this.STAGES.length, ns = Math.min(last, stage + 1);
-      this.setState(x => ({ projects: x.projects.map(p => (p.id === P.id ? Object.assign({}, p, { stage: ns, sv: 2, prog: Math.max(p.prog || 0, Math.round(ns / last * 100)), st: ns === last ? 'done' : p.st }) : p)) }));
-      this.toast(ns === last ? P.name + ' closed' : 'Moved to ' + this.STAGES[ns - 1]);
-      this.log('folder', 'purple', P.client + ' · ' + this.STAGES[ns - 1], P.name);
-    };
-    V.nextStage = stage < this.STAGES.length ? this.STAGES[stage] : '';
+  if (flow === 'approval') {
+    N.text = B.st === 'gm' ? 'Waiting for the General Manager to approve the budget.' : 'Approved by the GM · waiting for Management.';
+    if (this.canApproveBudget(P)) { N.approve = () => this.approveBudget(P.id); N.sendBack = note => this.returnBudget(P.id, note); }
   }
-  if (can.budget) {
+  if (flow === 'execution') {
+    N.text = openTasks ? openTasks + ' task(s) open. Heads and the PM assign work; people finish tasks with a short report.' : 'All tasks done. The PM can close the project.';
+    const canRun = this.isTop() || P.pm === me || this.isManagerOf('operations') || (this.myDept() && this.isManagerOf(this.myDept()));
+    if (canRun) N.assign = () => this.openModal('task', { p: P.id });
+    if ((this.isTop() || P.pm === me || this.isManagerOf('operations')) && !openTasks) N.close = () => this.closeProject(P.id);
+  }
+  if (flow === 'closed') N.text = 'Closed.';
+  V.now = N;
+  // The budget as Operations prepared it (for those who see money).
+  if ((can.budget || (role === 'gm')) && B.lines) {
+    const internal = sumLines(B.lines);
+    V.budgetSheet = { lines: B.lines.map(l => ({ item: l.item, qty: l.qty, cost: this.fmtT(l.cost), total: this.fmtT(l.qty * l.cost) })), internal: this.fmtT(internal), value: this.fmtT(B.value || 0), margin: B.value ? Math.round((B.value - internal) / B.value * 100) + '%' : '—',
+      st: { draft: 'Draft', gm: 'Waiting for the GM', mgmt: 'Waiting for Management', approved: 'Approved', returned: 'Sent back' }[B.st] || '', gm: B.gm ? this.av(B.gm.by).n + ' · ' + B.gm.at : '', mgmt: B.mgmt ? this.av(B.mgmt.by).n + ' · ' + B.mgmt.at : '',
+      file: B.file ? { name: B.file.name, open: () => this.openDoc({ n: B.file.name, url: B.file.url, path: B.file.path }) } : null };
+  }
+  V.proposalFile = P.proposal ? { name: P.proposal.name, by: this.av(P.proposal.by).n, at: P.proposal.at, note: P.proposal.note || '', open: () => this.openDoc({ n: P.proposal.name, url: P.proposal.url, path: P.proposal.path }) } : null;
+  if (can.budget && P.bud) {
     const u = P.bud ? P.spent / P.bud : 0;
     V.budget = { bud: this.fmtM(P.bud || 0), spent: this.fmtM(P.spent || 0), left: this.fmtM(Math.max(0, (P.bud || 0) - (P.spent || 0))), pct: Math.round(u * 100), over: u > 1 };
   }

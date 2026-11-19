@@ -8,16 +8,17 @@ export function homeVals(s) {
   const unpaid = (s.invoices || []).filter(i => i.st !== 'paid' && i.st !== 'draft');
   const owed = unpaid.reduce((a, i) => a + i.v * 1e6 - (i.payments || []).filter(p => p.ok).reduce((x, p) => x + p.amt, 0), 0);
   const att = [
+    ...live.filter(p => this.canApproveBudget(p)).map(p => ({ tag: 'Budget', tone: 'purple', t: 'Approve budget · ' + p.client, s: p.name + ' · ' + this.fmtT((p.budget || {}).value || 0), on: () => this.go('project', { projectId: p.id }) })),
     ...myAppr.slice(0, 4).map(r => ({ tag: 'Approve', tone: 'amber', t: this.reqWhat(r) + ' · ' + this.fmtT(r.amt), s: this.av(r.who).n, on: () => this.go('requests', { reqSel: r.id, reqFilter: 'me' }) })),
     ...(s.invoices || []).filter(i => i.lines && !i.signed && this.canSign(i)).map(i => ({ tag: 'Sign', tone: 'purple', t: 'Invoice ' + i.id + ' · ' + i.c, s: this.fmtM(i.v), on: () => this.finGo('invoices', { invSel: i.id }) })),
     ...(role === 'ceo' ? (s.invoices || []).filter(i => (i.payments || []).some(p => !p.ok)).map(i => ({ tag: 'Confirm', tone: 'green', t: 'Payment received · ' + i.c, s: i.id, on: () => this.finGo('invoices', { invSel: i.id }) })) : []),
     ...unpaid.filter(i => i.st === 'overdue').map(i => ({ tag: 'Overdue', tone: 'red', t: i.c + ' · ' + this.fmtM(i.v), s: i.id + ' · ' + i.due, on: () => this.finGo('invoices', { invSel: i.id }) })),
     ...live.filter(p => p.st === 'late' || p.st === 'risk').map(p => ({ tag: p.st === 'late' ? 'Delayed' : 'At risk', tone: 'red', t: p.client + ' · ' + p.name, s: 'Due ' + p.due + ' · PM ' + (p.pm ? this.av(p.pm).n : 'not chosen'), on: () => this.go('project', { projectId: p.id }) })),
-    ...live.filter(p => !p.pm).map(p => ({ tag: 'No PM', tone: 'amber', t: p.client + ' · ' + p.name, s: 'Operations to choose a Project Manager', on: () => this.go('project', { projectId: p.id }) }))
+    ...live.filter(p => this.flowOf(p) === 'budget').map(p => ({ tag: 'Budget', tone: 'amber', t: p.client + ' · ' + p.name, s: 'With Operations for the budget', on: () => this.go('project', { projectId: p.id }) }))
   ].slice(0, 7);
   const stages = ['New', 'Contacted', 'Meeting', 'Proposal sent', 'Negotiation'].map((l, i) => { const ls = open.filter(x => this.leadStage(x) === i); return { l, n: ls.length, v: ls.reduce((a, b) => a + (b.v || 0), 0) }; });
   const pmax = Math.max(1, ...stages.map(x => x.n));
-  const pstages = this.STAGES.slice(0, 4).map((l, i) => ({ l, n: live.filter(p => this.stageOf(p) === i + 1).length }));
+  const pstages = [['Brief & design', ['brief', 'design']], ['Proposal & budget', ['proposal', 'budget']], ['Approval', ['approval']], ['Execution', ['execution']]].map(([l, fs]) => ({ l, n: live.filter(p => fs.includes(this.flowOf(p))).length }));
   const hr = new Date().getHours();
   return {
     HD: {

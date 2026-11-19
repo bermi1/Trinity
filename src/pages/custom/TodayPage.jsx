@@ -14,10 +14,22 @@ function QuickAdd({ placeholder, label, onAdd, done }) {
 }
 
 // One row: a task someone gave you, or something you wrote yourself.
+// Finishing a task asks for one line on what was done; it goes to whoever gave the task.
 function Item({ it }) {
+  const [rep, setRep] = useState(false);
+  const [txt, setTxt] = useState('');
+  if (rep) return (
+    <li className="td-item td-report">
+      <form onSubmit={e => { e.preventDefault(); it.report(txt); setRep(false); }}>
+        <b>{it.t}</b>
+        <input autoFocus value={txt} onChange={e => setTxt(e.target.value)} placeholder="What was done? (goes to the person who gave the task)" aria-label={'Report: ' + it.t} />
+        <div className="fh-row"><button type="button" className="me-cancel" onClick={() => setRep(false)}>Cancel</button><button type="submit" className="me-save">Mark done</button></div>
+      </form>
+    </li>
+  );
   return (
     <li className={'td-item' + (it.done ? ' is-done' : '') + (it.task ? ' is-task' : '')}>
-      <button type="button" className="td-tick" onClick={it.toggle} aria-pressed={it.done} aria-label={(it.done ? 'Not done: ' : 'Done: ') + it.t}>
+      <button type="button" className="td-tick" onClick={it.task && !it.done ? () => setRep(true) : it.toggle} aria-pressed={it.done} aria-label={(it.done ? 'Not done: ' : 'Done: ') + it.t}>
         {it.done ? '✓' : ''}
       </button>
       <span className="td-text">
@@ -29,6 +41,7 @@ function Item({ it }) {
             {it.where ? (it.go ? <button type="button" onClick={it.go}>{it.where}</button> : <span>{it.where}</span>) : null}
             {it.due && !it.done ? <span>Due {it.due}</span> : null}
             {it.started && !it.done ? <span className="td-going">In progress</span> : null}
+            {it.done && it.reported ? <span className="td-rep">“{it.reported}”</span> : null}
           </span>
         ) : it.since ? <small>{it.since}</small> : null}
       </span>

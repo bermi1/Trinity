@@ -1,0 +1,99 @@
+import { useState } from 'react';
+import { Btn } from '../../ui/kit';
+
+const n = v => Math.round(+v || 0).toLocaleString('en-US');
+const digits = v => String(v || '').replace(/\D/g, '');
+
+function Upload({ N }) {
+  const [f, setF] = useState(null); const [note, setNote] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
+  return (
+    <div className="pn-form">
+      <label className="bi-up"><input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" onChange={e => setF(e.target.files[0] || null)} aria-label="Proposal file" />{f ? '✓ ' + f.name : '↑ Choose the proposal file'}</label>
+      <input className="me-who" value={note} onChange={e => setNote(e.target.value)} placeholder="Note for Operations (optional)" aria-label="Note for Operations" />
+      {err ? <div className="fm-err" role="alert">{err}</div> : null}
+      <div><button type="button" className="me-save" disabled={busy} onClick={async () => { setBusy(true); const m = await N.upload(f, note); setBusy(false); if (m) setErr(m); }}>{busy ? 'Uploading…' : 'Upload proposal · send to Operations'}</button></div>
+    </div>
+  );
+}
+
+function Budget({ B }) {
+  const [pm, setPm] = useState(B.pm);
+  const [lines, setLines] = useState(B.lines.length ? B.lines : [{ item: '', qty: '1', cost: '' }]);
+  const [value, setValue] = useState(B.value);
+  const [err, setErr] = useState(''); const [ok, setOk] = useState('');
+  const set = (i, k, v) => setLines(ls => ls.map((l, j) => (j === i ? Object.assign({}, l, { [k]: v }) : l)));
+  const internal = lines.reduce((a, l) => a + (+l.qty || 0) * (+l.cost || 0), 0);
+  const data = () => ({ pm, lines, value });
+  return (
+    <div className="pn-form">
+      <div className="ff" data-field="Project Manager"><span className="ff-l">Project Manager</span>
+        <div className="ff-people" role="radiogroup" aria-label="Project Manager">{B.people.map(p => <button key={p.k} type="button" role="radio" aria-checked={pm === p.k} aria-label={p.n} className={pm === p.k ? 'is-on' : ''} onClick={() => setPm(p.k)}><span className="ff-face" style={{ background: p.c }}>{p.i}</span><span className="ff-name">{p.n.split(' ')[0]}</span></button>)}</div>
+      </div>
+      <div className="ff"><span className="ff-l">Internal budget</span>
+        <div className="pn-lines">
+          <div className="pn-line pn-head"><span>Item</span><span>Qty</span><span>Unit cost (TZS)</span><span>Total</span><span /></div>
+          {lines.map((l, i) => (
+            <div key={i} className="pn-line">
+              <input value={l.item} onChange={e => set(i, 'item', e.target.value)} placeholder="e.g. Stage truss hire" aria-label={'Budget item ' + (i + 1)} />
+              <input inputMode="numeric" value={l.qty} onChange={e => set(i, 'qty', digits(e.target.value))} aria-label={'Quantity ' + (i + 1)} />
+              <input inputMode="numeric" value={l.cost ? n(l.cost) : ''} onChange={e => set(i, 'cost', digits(e.target.value))} placeholder="0" aria-label={'Unit cost ' + (i + 1)} />
+              <b>{n((+l.qty || 0) * (+l.cost || 0))}</b>
+              {lines.length > 1 ? <button type="button" className="td-x" onClick={() => setLines(ls => ls.filter((_, j) => j !== i))} aria-label={'Remove line ' + (i + 1)}>×</button> : <span />}
+            </div>
+          ))}
+          <button type="button" className="fh-addline" onClick={() => setLines(ls => [...ls, { item: '', qty: '1', cost: '' }])}>+ Add line</button>
+        </div>
+      </div>
+      <label className="bi-up"><input type="file" accept=".xlsx,.xls,.csv,.pdf" onChange={async e => { const f = e.target.files[0]; if (f) { const m = await B.attach(f); setErr(m); setOk(m ? '' : 'Budget file attached'); } }} aria-label="Budget file" />{B.file ? '✓ ' + B.file.name : '↑ Attach the budget file (Excel or PDF, optional)'}</label>
+      <div className="pn-totals">
+        <span>Internal budget <b>TZS {n(internal)}</b></span>
+        <label className="fh-amt"><span>Project value TZS</span><input inputMode="numeric" value={value ? n(value) : ''} onChange={e => setValue(digits(e.target.value))} placeholder="What the client pays" aria-label="Project value" /></label>
+        {+value > 0 ? <span>Margin <b>{Math.round((value - internal) / value * 100)}%</b></span> : null}
+      </div>
+      {err ? <div className="fm-err" role="alert">{err}</div> : ok ? <div className="td-sent">{ok}</div> : null}
+      <div className="fh-row">
+        <button type="button" className="me-cancel" onClick={() => { const m = B.save(data()); setErr(m); setOk(m ? '' : 'Draft saved'); }}>Save draft</button>
+        <button type="button" className="me-save" onClick={() => { const m = B.submit(data()); if (m) { setErr(m); setOk(''); } }}>Submit for approval</button>
+      </div>
+    </div>
+  );
+}
+
+function Approve({ N }) {
+  const [back, setBack] = useState(false); const [note, setNote] = useState(''); const [err, setErr] = useState('');
+  return back ? (
+    <div className="pn-form">
+      <input className="me-who" autoFocus value={note} onChange={e => setNote(e.target.value)} placeholder="What should Operations change?" aria-label="Reason" />
+      {err ? <div className="fm-err" role="alert">{err}</div> : null}
+      <div className="fh-row"><button type="button" className="me-cancel" onClick={() => setBack(false)}>Cancel</button><button type="button" className="me-save" onClick={() => { const m = N.sendBack(note); if (m) setErr(m); }}>Send back</button></div>
+    </div>
+  ) : (
+    <div className="fh-row"><button type="button" className="me-save" onClick={N.approve}>Approve budget</button><Btn kind="ghost" onClick={() => setBack(true)}>Send back</Btn></div>
+  );
+}
+
+function Close({ N }) {
+  const [err, setErr] = useState('');
+  return <>{err ? <div className="fm-err">{err}</div> : null}<Btn kind="dark" onClick={() => { const m = N.close(); if (m) setErr(m); }}>Close project</Btn></>;
+}
+
+// The current step of the project: who is responsible and, for that person, the action itself.
+export default function ProjectNow({ N }) {
+  return (
+    <section className={'pn is-' + N.flow} aria-label="Current step">
+      <header><span className="pn-step">Now · {N.title}</span>{N.owner ? <span className="pn-owner">{N.owner}</span> : null}</header>
+      <p className={N.returned ? 'pn-back' : ''}>{N.text}</p>
+      {N.brief || N.goDesigns || N.assign || N.close ? (
+        <div className="fh-row">
+          {N.brief ? <Btn kind={N.flow === 'brief' ? 'dark' : 'ghost'} onClick={N.brief}>{N.flow === 'brief' ? 'Send design brief to Creative' : 'Send another brief'}</Btn> : null}
+          {N.goDesigns ? <Btn kind="ghost" onClick={N.goDesigns}>See designs</Btn> : null}
+          {N.assign ? <Btn kind="dark" onClick={N.assign}>Assign a task</Btn> : null}
+          {N.close ? <Close N={N} /> : null}
+        </div>
+      ) : null}
+      {N.upload ? <Upload N={N} /> : null}
+      {N.budgetForm ? <Budget B={N.budgetForm} /> : null}
+      {N.approve ? <Approve N={N} /> : null}
+    </section>
+  );
+}

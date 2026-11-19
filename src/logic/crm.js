@@ -79,17 +79,13 @@ export const crmMethods = {
   },
   // A won lead becomes a customer (if new) and a job, and Operations, the GM and Management are told.
   wonToJob(l) {
-    const id = this.nextId('PRJ', this.state.projects), v = l.v || 0;
-    const job = { id, name: l.t, client: l.c, pm: '', st: 'on', prog: 0, val: v, bud: +(v * 0.7).toFixed(1), spent: 0, stage: 1, sv: 2, due: 'TBC', team: [], lead: l.id };
+    const id = this.newProject({ client: l.c, name: l.t, cs: l.owner, lead: l.id });
     this.setState(x => ({
-      projects: [job, ...x.projects],
       leads: x.leads.map(y => (y.id === l.id ? Object.assign({}, y, { job: id }) : y)),
       customers: (x.customers || []).some(c => c.n.toLowerCase() === l.c.toLowerCase()) ? x.customers : [{ id: 'C' + Date.now().toString(36), n: l.c, contact: l.contact || '', phone: '', email: '', tin: '', city: '', owner: l.owner }, ...(x.customers || [])]
     }));
-    const om = this.managerOf('operations');
-    [om, this.ROLES.gm.k, this.ROLES.ceo.k].filter((k, i, a) => k && a.indexOf(k) === i && k !== this.me().k)
-      .forEach(k => this.remind(k, 'New job won · ' + l.c, k === om ? 'dept' : 'projects', 'trendUp', l.t + (k === om ? ' · choose a Project Manager' : ' · ' + id)));
-    this.toast('Won · ' + l.c + ' · job ' + id + ' created');
+    [this.ROLES.gm.k, this.ROLES.ceo.k].filter(k => k !== this.me().k).forEach(k => this.remind(k, 'New job won · ' + l.c, 'project', 'trendUp', l.t + ' · ' + id));
+    this.toast('Won · ' + l.c + ' · project ' + id + ' created · next: send the design brief');
   },
   setLeadOwner(id, k) {
     const l = this.state.leads.find(x => x.id === id); if (!l || l.owner === k) return;

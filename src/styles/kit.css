@@ -927,3 +927,26 @@
 .fl-items { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
 .fl-items button { width: 100%; text-align: left; border: none; background: #F7F7FA; border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 12.5px; color: #17152A; cursor: pointer; }
 .fl-items small { display: block; color: #6E7180; }
+/* Project: current step */
+.pn { background: #fff; border: 1px solid #ECEDF2; border-left: 4px solid #6D3CC2; border-radius: 14px; padding: 16px 18px; display: grid; gap: 10px; }
+.pn.is-approval { border-left-color: #B49A5A; } .pn.is-execution { border-left-color: #2E9B63; } .pn.is-closed { border-left-color: #8A8D99; }
+.pn header { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; }
+.pn-step { font-weight: 800; font-size: 15px; color: #2B1459; }
+.pn-owner { font-size: 12px; font-weight: 700; color: #8A7239; background: #FBF6EA; padding: 3px 9px; border-radius: 10px; }
+.pn p { margin: 0; color: #4B4F5C; font-size: 14px; }
+.pn p.pn-back { color: #B23A46; font-weight: 600; }
+.pn-form { display: grid; gap: 10px; max-width: 760px; }
+.pn-lines { display: grid; gap: 6px; }
+.pn-line { display: grid; grid-template-columns: minmax(0, 2.4fr) 70px minmax(0, 1.2fr) 110px 30px; gap: 8px; align-items: center; }
+.pn-line input { height: 38px; border: 1px solid #E6E7ED; border-radius: 9px; padding: 0 10px; font: inherit; font-size: 13.5px; min-width: 0; background: #fff; }
+.pn-line b { text-align: right; font-size: 13.5px; }
+.pn-head span { font-size: 11px; font-weight: 700; color: #8A8D99; text-transform: uppercase; letter-spacing: .05em; }
+.pn-totals { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; font-size: 14px; }
+.pn-totals .fh-amt { flex: 0 1 320px; height: 44px; }
+.pn-totals .fh-amt span { white-space: nowrap; }
+@media (max-width: 600px) { .pn-line { grid-template-columns: 1fr 56px 1fr 30px; } .pn-line b { display: none; } .pn-head span:nth-child(4) { display: none; } }
+.dp-flow li button b::before { content: '● '; color: #6D3CC2; }
+.td-report form { display: grid; gap: 8px; width: 100%; padding: 4px 0; }
+.td-report input { height: 42px; border: 1px solid #E6E7ED; border-radius: 10px; padding: 0 12px; font: inherit; font-size: 14px; }
+.td-report input:focus { outline: none; border-color: #6D3CC2; }
+.td-rep { color: #1F7549; font-style: italic; }

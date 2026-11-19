@@ -76,6 +76,7 @@ export default function DeptPage({ v }) {
         <>
           <div className="k-row">
             <Card title="Follow up">
+              {D.flowTodo && D.flowTodo.length ? <ul className="dp-list dp-flow">{D.flowTodo.map((f, i) => <li key={'f' + i}><button type="button" onClick={f.go}><b>{f.t}</b><span className="k-sub">{f.s}</span></button></li>)}</ul> : null}
               {D.followUps.length ? <ul className="dp-list">{D.followUps.map((f, i) => <li key={i}><button type="button" onClick={f.go}><b>{f.t}</b><span className="k-sub">{f.s}</span></button></li>)}</ul> : <Empty>Nothing to follow up.</Empty>}
             </Card>
             <Card title={'Clients · ' + D.clients.length} aside={<Btn kind="ghost" onClick={D.actions.proposals}>Proposals</Btn>}>
@@ -93,18 +94,24 @@ export default function DeptPage({ v }) {
       ) : null}
 
       {D.dept === 'operations' ? (
-        <Card title={'Being delivered · ' + D.delivering.length}>
+        <>
+        <Card title={'Budgets to prepare · ' + D.toBudget.length}>
+          {D.toBudget.length ? <ul className="dp-list">{D.toBudget.map(f => <li key={f.id}><button type="button" onClick={f.go}><b>{f.t}</b><span className="k-sub">{f.s}</span></button></li>)}</ul> : <Empty>No budgets waiting.</Empty>}
+          {D.waitingAppr.length ? <ul className="dp-list">{D.waitingAppr.map(f => <li key={f.id}><button type="button" onClick={f.go}><b>{f.t}</b><span className="k-sub">{f.s}</span></button></li>)}</ul> : null}
+        </Card>
+        <Card title={'In execution · ' + D.delivering.length}>
           {D.delivering.length ? (
             <ul className="dp-list">
               {D.delivering.map(p => (
                 <li key={p.id}><button type="button" onClick={p.go}>
                   <b>{p.client} · {p.t}</b>
-                  <span className="k-sub">{p.stage} · PM {p.pm} · due {p.due}{p.late ? ' · Delayed' : p.risk ? ' · At risk' : ''}</span>
+                  <span className="k-sub">{p.stage} · due {p.due}{p.late ? ' · Delayed' : p.risk ? ' · At risk' : ''}</span>
                 </button></li>
               ))}
             </ul>
-          ) : <Empty>No projects in production or on site.</Empty>}
+          ) : <Empty>No projects in execution.</Empty>}
         </Card>
+        </>
       ) : null}
 
       <div className="k-row">

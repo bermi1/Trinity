@@ -22,6 +22,7 @@ import { projectMethods, projectVals, reqFlowMethods } from './projectview';
 import { financeMethods, financeVals, reportMethods, reportVals } from './finance';
 import { homeVals } from './home';
 import { officeMethods, officeVals } from './office';
+import { flowMethods, FLOW } from './flow';
 
 // Password of the demo accounts, so they open with one tap (see .env). Leave it out to require passwords.
 const demoPassword = () => import.meta.env.VITE_DEMO_PASSWORD || '';
@@ -470,7 +471,7 @@ export default class TrinityApp extends Logic {
       reqEmergency:{title:'Emergency request',sub:'Goes to GM → Management → Finance pays. Use only when it cannot wait.',submit:'Submit emergency',fields:[{k:'title',l:'Title',ph:'e.g. Generator repair on site',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'250000',req:1},{k:'p',l:'Project',opts:[{v:'',l:'Not for a project'}, ...PO]},{k:'purpose',l:'What happened, and what is it for?',ph:'Explain the emergency',req:1}]},
       reqMgmt:{title:'Management request',sub:'Finance checks, then pays.',submit:'Submit request',fields:[{k:'title',l:'Title',ph:'e.g. Client meeting expenses',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'500000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for?',req:1}]},
       lead:{title:'New lead',sub:'Leads move Lead → Qualified → Proposal → Negotiation → Won.',submit:'Add lead',fields:[{k:'c',l:'Client',ph:'Company name',req:1},{k:'t',l:'Opportunity',ph:'e.g. Product launch event',req:1},{k:'v',l:'Estimated value (TZS M)',type:'number',ph:'80'},{k:'src',l:'Source',opts:O(['Website','Referral','Tender','Existing client','Walk-in'])}]},
-      project:{title:'New project',sub:'Creates the project record, workflow and budget shell.',submit:'Create project',fields:[{k:'client',l:'Client',ph:'Client name',req:1},{k:'name',l:'Project name',ph:'e.g. Brand activation',req:1},{k:'pm',l:'Project manager',opts:PP},{k:'val',l:'Contract value (TZS M)',type:'number',ph:'120'},{k:'due',l:'Deadline',ph:'e.g. 30 Oct'}]},
+      project:{title:'New project',sub:'Starts at the brief. Operations sets the Project Manager, budget and value later.',submit:'Create project',fields:[{k:'client',l:'Client',opts:(this.state.customers || []).map(c => ({v:c.n,l:c.n})),req:1},{k:'name',l:'Project name',ph:'e.g. Brand activation',req:1},{k:'due',l:'Deadline',ph:'e.g. 30 Oct'}]},
       issue:{title:'Issue stock',sub:'',submit:'Issue from store',fields:[{k:'q',l:'Quantity',type:'number',ph:'1',req:1},{k:'p',l:'For project',opts:PO},{k:'who',l:'Collected by',opts:PP}]},
       receive:{title:'Receive stock',sub:'',submit:'Receive into store',fields:[{k:'q',l:'Quantity received',type:'number',ph:'10',req:1},{k:'sup',l:'Supplier',ph:'e.g. Chapa Supplies'}]},
       invoice:{title:'New invoice',sub:'Saved as a draft until you send it.',submit:'Create invoice',fields:[{k:'p',l:'Project',opts:PO},{k:'v',l:'Amount (TZS M)',type:'number',ph:'25',req:1},{k:'due',l:'Due date',ph:'e.g. 15 Oct'}]},
@@ -506,7 +507,7 @@ export default class TrinityApp extends Logic {
     if (m.act === 'req') { const next = {project:'reqProject', internal:'reqInternal', emergency:'reqEmergency', management:'reqMgmt'}[f.type] || 'reqProject'; const keep = Object.assign({who:f.who}, f.p ? {p:f.p} : {}); this.setState({modal:null}); setTimeout(() => this.openModal(next, keep), 0); return; }
     if (/^req(Project|Internal|Emergency|Mgmt)$/.test(m.act)) this.createRequest(Object.assign({}, f, {type:{reqProject:'project', reqInternal:'internal', reqEmergency:'emergency', reqMgmt:'management'}[m.act]}));
     if (m.act === 'lead') { this.setState(x => ({leads:[{id:'L'+Date.now(),c:f.c,t:f.t,v:+f.v||0,s:0,src:f.src}, ...x.leads]})); this.toast('Lead added · ' + f.c); this.log('users','blue','New lead · ' + f.c, f.t); }
-    if (m.act === 'project') { const id = this.nextId('PRJ', s.projects); const val = +f.val || 0; this.setState(x => ({projects:[{id,name:f.name,client:f.client,pm:f.pm,st:'on',prog:0,val,bud:+(val*0.7).toFixed(1),spent:0,stage:1,sv:2,due:f.due||'TBC',team:[f.pm]}, ...x.projects]})); this.toast('Project ' + id + ' created'); this.log('folder','purple','Project created · ' + f.client, f.name); setTimeout(() => this.go('project',{projectId:id}), 50); }
+    if (m.act === 'project') { const id = this.newProject(f); if (typeof id === 'string' && id.indexOf('PRJ') === 0) setTimeout(() => this.go('project',{projectId:id}), 50); }
     if (m.act === 'issue') { const q = Math.max(0, +f.q || 0); this.setState(this.stockChange([{sku:f.sku, qty:-q, type:'issue'}], 'Direct issue · ' + this.av(f.who).n, f.p, '')); this.toast('Issued ' + q + ' ' + f.u + ' of ' + f.n + ' to ' + P.client); this.log('package','dark','Store issued ' + q + ' ' + f.u + ' · ' + f.n, P.name + ' · ' + this.av(f.who).first); }
     if (m.act === 'receive') { const q = Math.max(0, +f.q || 0); this.setState(this.stockChange([{sku:f.sku, qty:q, type:'receipt'}], 'Received' + (f.sup ? ' · ' + f.sup : ''), '', '')); this.toast('Received ' + q + ' ' + f.u + ' · ' + f.n); this.log('package','green','Stock received · ' + f.n, q + ' ' + f.u + (f.sup ? ' from ' + f.sup : '')); }
     if (m.act === 'invoice') { const id = this.nextId('INV', s.invoices); this.setState(x => ({invoices:[{id,c:P.client,p:f.p,v:+f.v||0,st:'draft',due:f.due||'—'}, ...x.invoices]})); this.toast('Invoice ' + id + ' saved as draft'); }
@@ -541,7 +542,7 @@ export default class TrinityApp extends Logic {
   canPay() { const role = this.state.role || 'ceo'; return role === 'ceo' || role === 'finance'; }
   // Requests up to this amount need only the Project Manager and Finance (0 = every request takes all steps).
   // Project stage 1–5 (older projects stored 1–15).
-  stageOf(p) { const n = +p.stage || 1; return p.sv === 2 ? Math.min(Math.max(n, 1), STAGES.length) : OLD_STAGE[Math.min(n, 15)]; }
+  stageOf(p) { return FLOW.indexOf(this.flowOf(p)) + 1; }
   smallLimit() { const c = this.state.company || {}; return c.smallLimit == null ? 200000 : +c.smallLimit || 0; }
   isSmall(r) { const lim = this.smallLimit(); return lim > 0 && r.amt <= lim; }
   // Positions this request does not go through: by its type, and Management for small project or office requests.
@@ -609,4 +610,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, officeVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, officeVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods);

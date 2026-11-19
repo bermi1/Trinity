@@ -73,7 +73,7 @@ export const TABS = {
 };
 export const ST = {on:{l:'On track',c:'#2E9B63',bg:'#E6F4EC',fg:'#1F7549'},risk:{l:'At risk',c:'#D89B2B',bg:'#FBF1DD',fg:'#8A6414'},late:{l:'Delayed',c:'#D9535F',bg:'#FBEDEE',fg:'#B23A46'},done:{l:'Completed',c:'#2B1459',bg:'#EDE8F6',fg:'#2B1459'}};
 // Five project stages. Projects saved before this change used 15 stages (no `sv`); OLD_STAGE maps them.
-export const STAGES = ['Brief','Approved','Production','On site','Closed'];
+export const STAGES = ['Brief','Design','Proposal','Budget','Approval','Execution','Closed'];
 export const OLD_STAGE = [1,1,1,2,2,2,3,3,3,3,4,4,4,5,5,5];
 // Approval positions. Each request type skips the ones it does not use (see TrinityApp.skipsFor);
 // position 1 (Project Manager) only appears on requests made before the request types existed.

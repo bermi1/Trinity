@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Btn, Pill, Empty } from '../../ui/kit';
 import BriefItem from '../../components/BriefItem';
+import ProjectNow from './ProjectNow';
 
 const TONE = { amber: ['#FBF1DD', '#8A6414'], green: ['#E6F4EC', '#1F7549'], red: ['#FBEDEE', '#B23A46'], blue: ['#E9EFFA', '#3559A8'] };
 const Face = ({ p, size = 28 }) => <span className="pv-face" style={{ background: p.c, width: size, height: size, fontSize: size < 26 ? 9.5 : 11 }} title={p.n}>{p.i}</span>;
@@ -79,6 +80,22 @@ function Overview({ P }) {
         ) : null}
       </section>
 
+      {P.proposalFile ? (
+        <section className="rc-sec">
+          <h3><span className="rc-dot" style={{ background: '#3559A8' }} />Proposal</h3>
+          <button type="button" className="cr-file" onClick={P.proposalFile.open}><span className="cr-doc">PDF</span><span><b>{P.proposalFile.name}</b><small>Uploaded by {P.proposalFile.by} · {P.proposalFile.at}{P.proposalFile.note ? ' · ' + P.proposalFile.note : ''}</small></span></button>
+        </section>
+      ) : null}
+      {P.budgetSheet ? (
+        <section className="rc-sec">
+          <h3><span className="rc-dot" style={{ background: '#B49A5A' }} />Internal budget · {P.budgetSheet.st}</h3>
+          <div className="fr-table-wrap"><table className="fr-table"><thead><tr><th>Item</th><th className="r">Qty</th><th className="r">Unit cost</th><th className="r">Total</th></tr></thead>
+            <tbody>{P.budgetSheet.lines.map((l, i) => <tr key={i}><td>{l.item}</td><td className="r">{l.qty}</td><td className="r">{l.cost}</td><td className="r">{l.total}</td></tr>)}</tbody></table></div>
+          <div className="pv-budnums"><span><small>Internal budget</small><b>{P.budgetSheet.internal}</b></span><span><small>Project value</small><b>{P.budgetSheet.value}</b></span><span><small>Margin</small><b>{P.budgetSheet.margin}</b></span></div>
+          {P.budgetSheet.gm || P.budgetSheet.mgmt ? <p className="k-sub">{P.budgetSheet.gm ? 'GM: ' + P.budgetSheet.gm : ''}{P.budgetSheet.mgmt ? ' · Management: ' + P.budgetSheet.mgmt : ''}</p> : null}
+          {P.budgetSheet.file ? <button type="button" className="cr-file" onClick={P.budgetSheet.file.open}><span className="cr-doc">XLS</span><span><b>{P.budgetSheet.file.name}</b><small>Budget file</small></span></button> : null}
+        </section>
+      ) : null}
       {P.money ? (
         <section className="rc-sec">
           <h3><span className="rc-dot" style={{ background: '#2E9B63' }} />Finance</h3>
@@ -105,7 +122,6 @@ export default function ProjectView({ v }) {
       <div className="rc-bar">
         <nav className="rc-crumbs" aria-label="Breadcrumb"><button type="button" onClick={P.back}>Projects</button><span>/</span><b>{P.id}</b></nav>
         <div className="rc-acts">
-          {P.advance ? <Btn kind="dark" onClick={P.advance}>{P.nextStage ? 'Move to ' + P.nextStage : 'Close project'}</Btn> : null}
           {P.addTask ? <Btn kind="ghost" onClick={P.addTask}>Assign task</Btn> : null}
           <Btn kind="ghost" onClick={P.reqMoney}>Request money</Btn>
           {P.newBrief ? <Btn kind="ghost" onClick={P.newBrief}>Send design brief</Btn> : null}
@@ -117,6 +133,7 @@ export default function ProjectView({ v }) {
         {P.stages.map(s => <li key={s.l} className={s.done ? 'is-done' : s.cur ? 'is-cur' : ''} aria-current={s.cur ? 'step' : undefined}>{s.l}</li>)}
       </ol>
 
+      {P.now ? <ProjectNow key={P.now.flow + (P.now.returned ? 'r' : '')} N={P.now} /> : null}
       <div className="rc-body">
         <article className="rc-sheet">
           <header className="rc-title">
