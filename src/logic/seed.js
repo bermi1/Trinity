@@ -180,7 +180,7 @@ export function seed() {
   outbox:[],
   memos:[],
   reports:[],
-  petty:{open:300000,entries:[],counts:[]},
+  petty:{open:300000,entries:[{id:'PC1',at:dayKey(-2),dir:'out',amt:15000,cat:'Transport',what:'Bajaji to TRA office',who:'Amani Juma',voucher:'PCV-0002',by:'RT'},{id:'PC2',at:dayKey(-4),dir:'in',amt:200000,cat:'Top-up from bank',what:'',who:'',voucher:'',by:'RT'},{id:'PC3',at:dayKey(-5),dir:'out',amt:42000,cat:'Refreshments',what:'Client meeting water and snacks',who:'Aisha Mbwana',voucher:'PCV-0001',by:'RT'}],counts:[]},
   cal:[{id:'CE1',title:'Staff meeting · monthly',date:dayKey(2),time:'08:30',kind:'Staff meeting',by:'GN'},{id:'CE2',title:'Q4 results presentation to the board',date:dayKey(6),time:'10:00',kind:'Presentation',by:'DK'},{id:'CE3',title:'Public holiday · Independence Day',date:dayKey(23),time:'',kind:'Holiday',by:'GN'}],
   meetings:[
     {id:'MT1',title:'Gala planning with Safari Mobile',date:dayKey(0),time:'16:00',place:'Boardroom',kind:'client',to:{all:false,depts:['clientservice'],people:['GN']},guest:{name:'Halima Juma',co:'Safari Mobile',phone:'+255 767 300 900'},by:'DK',at:dayKey(-1)},

@@ -27,5 +27,6 @@ export default {
   cashbook: FinanceHub,
   freports: FinanceHub,
   float: FinanceHub,
-  reporting: ReportingPage
+  reporting: ReportingPage,
+  petty: FinanceHub
 };

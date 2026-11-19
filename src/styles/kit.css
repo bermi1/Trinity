@@ -976,3 +976,12 @@
 .rp-body p { margin: 0; white-space: pre-line; line-height: 1.5; }
 .rp-issue { color: #B23A46; }
 @media (max-width: 600px) { .rp-body { padding: 0 12px 12px; } .rp-kinds { grid-template-columns: 1fr 1fr; } }
+.ob-list { list-style: none; margin: 0; padding: 0; }
+.ob-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid #F1F2F5; }
+.ob-list li:first-child { border-top: none; }
+.ob-list li > span:first-child { display: flex; flex-direction: column; font-size: 14px; }
+.ob-list small { color: #8A8D99; }
+.ob-list li.is-late small { color: #B23A46; font-weight: 600; }
+.ob-pay { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.ob-pay .fh-amt { height: 40px; flex: 0 1 180px; }
+.ob-pay .ff-search { width: 140px; }

@@ -24,6 +24,7 @@ import { homeVals } from './home';
 import { officeMethods, officeVals } from './office';
 import { flowMethods, FLOW } from './flow';
 import { reportChannel, reportingVals } from './reports';
+import { pettyMethods, pettyVals } from './petty';
 
 // Password of the demo accounts, so they open with one tap (see .env). Leave it out to require passwords.
 const demoPassword = () => import.meta.env.VITE_DEMO_PASSWORD || '';
@@ -344,7 +345,7 @@ export default class TrinityApp extends Logic {
         ['More',[['calendar','Calendar','calendar'],['notifications','Notifications','bell',unread],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['procurement','Procurement','cart'],['store','Store & Inventory','package'],['requisitions','Store requisitions','clipboard',srqN],['movements','Stock ledger','receipt'],['logistics','Logistics','truck'],['staff','Staff & Reports','user'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['ceomobile','Mobile apps','phone',0,{mobileRole:'ceo'}],['field','Field capture app','camera'],...(this.canSetup() ? [['company','Company setup','settings']] : []),...(this.isAdmin() ? [['users','Users & access','shield']] : []),['settings','Settings','settings']], true]],
       staff:[['My work',[['staffportal','My Day','home'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['today','My work','checkSquare',myOpen],['requests','My requests','banknote'],['field','Field capture','camera']]],
         ['More',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
-      finance:[['Finance',[['financeportal','My queue','wallet',finQ],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['today','My work','checkSquare',myOpen],['finance','Finance','chart'],['invoices','Invoices','fileText'],['cashbook','Cash book','receipt'],['freports','Reports','pie'],['float','Float','wallet'],['requests','Requests & Floats','banknote']]],
+      finance:[['Finance',[['financeportal','My queue','wallet',finQ],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['today','My work','checkSquare',myOpen],['finance','Finance','chart'],['invoices','Invoices','fileText'],['cashbook','Cash book','receipt'],['petty','Petty cash','wallet'],['freports','Reports','pie'],['float','Float','wallet'],['requests','Requests & Floats','banknote']]],
         ['More',[['proposals','Proposals','clipboard'],['procurement','Procurement','cart'],...company], true]],
       reception:[['Front office',[['reception','Front desk','message'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['today','My work','checkSquare',myOpen],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['clients','Client enquiries','users']]],
         ['More',[['staff','Staff directory','user'],['briefing','Monday Briefing','presentation'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
@@ -390,12 +391,12 @@ export default class TrinityApp extends Logic {
     // Finance tools: Float for Management and Finance; the rest also for the GM.
     if (page === 'finance' && !['ceo','gm','finance'].includes(role)) return home;
     // Separate finance pages belong to the Finance portal; Management and the GM use the tabs on Finance.
-    if (['invoices','cashbook','freports','float'].includes(page) && role !== 'finance') return ['ceo','gm'].includes(role) ? 'finance' : home;
+    if (['invoices','cashbook','freports','float','petty'].includes(page) && role !== 'finance') return ['ceo','gm'].includes(role) ? 'finance' : home;
     return page;
   }
   // Opens a finance tool: its own page in the Finance portal, a tab on Finance for Management and the GM.
   finGo(tab, extra) {
-    if ((this.state.role || 'ceo') === 'finance') this.go({ invoices: 'invoices', cash: 'cashbook', reports: 'freports', float: 'float' }[tab] || 'finance', extra);
+    if ((this.state.role || 'ceo') === 'finance') this.go({ invoices: 'invoices', cash: 'cashbook', reports: 'freports', float: 'float', petty: 'petty' }[tab] || 'finance', extra);
     else this.go('finance', Object.assign({ finTab: tab }, extra || {}));
   }
   go(page, extra) {
@@ -612,4 +613,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, officeVals, reportingVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, officeVals, reportingVals, pettyVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods);

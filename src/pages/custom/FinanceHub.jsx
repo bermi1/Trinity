@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PageHead, Btn, Pill, Empty } from '../../ui/kit';
 import { Reports, CashBook, CashChart, Periods } from './FinanceReports';
+import { PettyCash, Obligations } from './PettyCash';
 
 const ST = { draft: ['Draft', '#F1EEF6', '#6E6A7C'], sent: ['Sent', '#E9EFFA', '#3559A8'], partial: ['Part paid', '#FBF1DD', '#8A6414'], overdue: ['Overdue', '#FBEDEE', '#B23A46'], paid: ['Paid', '#E6F4EC', '#1F7549'] };
 const n = v => Math.round(+v || 0).toLocaleString('en-US');
@@ -210,7 +211,7 @@ function FloatTab({ F }) {
 // Finance: the overview, invoices (create, sign, send, payments) and the float ledger.
 export default function FinanceHub({ v }) {
   const F = v.FH, R = v.REP;
-  const HEAD = { overview: ['Finance', 'Money in and out, who owes us and what needs attention.'], invoices: ['Invoices', 'Create, sign, send and record payments.'], cash: ['Cash book', 'Every shilling in and out, with a running balance.'], reports: ['Reports', 'Income and spending by period, category, client and project.'], float: ['Float', 'The float from Management, allocated to projects and office purposes.'] }[F.tab];
+  const HEAD = { overview: ['Finance', 'Money in and out, who owes us and what needs attention.'], invoices: ['Invoices', 'Create, sign, send and record payments.'], cash: ['Cash book', 'Every shilling in and out, with a running balance.'], reports: ['Reports', 'Income and spending by period, category, client and project.'], float: ['Float', 'The float from Management, allocated to projects and office purposes.'], petty: ['Petty cash', 'The office cash box: vouchers, top-ups and cash counts.'] }[F.tab];
   const openInv = F.invoices.filter(i => i.st !== 'paid').slice(0, 6);
   const list = F.invoices.filter(i => (F.filter === 'open' ? i.st !== 'paid' : F.filter === 'paid' ? i.st === 'paid' : F.filter === 'sign' ? i.needsSign : true));
   return (
@@ -218,11 +219,12 @@ export default function FinanceHub({ v }) {
       <PageHead kicker="Finance" title={F.showTabs ? 'Finance & Invoices' : HEAD[0]} sub={F.showTabs ? 'Money in and out, invoices, the cash book, reports and the float.' : HEAD[1]}>
         {F.canInvoice && (F.tab === 'overview' || F.tab === 'invoices') ? <Btn kind="dark" onClick={F.newInvoice}>New invoice</Btn> : null}
       </PageHead>
-      {F.showTabs ? <div className="rc-smart fh-tabs" role="tablist">{[['overview', 'Overview'], ...(R ? [['cash', 'Cash book'], ['reports', 'Reports']] : []), ['invoices', 'Invoices'], ...(F.float ? [['float', 'Float']] : [])].map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={F.tab === k} className={F.tab === k ? 'is-on' : ''} onClick={() => F.setTab(k)}><span>{l}</span></button>)}</div> : null}
+      {F.showTabs ? <div className="rc-smart fh-tabs" role="tablist">{[['overview', 'Overview'], ...(R ? [['cash', 'Cash book'], ['reports', 'Reports']] : []), ['invoices', 'Invoices'], ...(F.float ? [['float', 'Float']] : []), ...(v.PT ? [['petty', 'Petty cash']] : [])].map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={F.tab === k} className={F.tab === k ? 'is-on' : ''} onClick={() => F.setTab(k)}><span>{l}</span></button>)}</div> : null}
 
       {F.tab === 'overview' ? (
         <>
           <Kpis items={F.kpis} />
+          {v.PT ? <Obligations P={v.PT} /> : null}
           {R ? <><Periods R={R} /><CashChart R={R} /></> : null}
           <section className="fh-card">
             <h3>Needs attention</h3>
@@ -245,6 +247,7 @@ export default function FinanceHub({ v }) {
       ) : null}
 
       {F.tab === 'float' && F.float ? <FloatTab F={F} /> : null}
+      {F.tab === 'petty' && v.PT ? <PettyCash P={v.PT} /> : null}
       {F.editing ? <Editor key={F.editing} F={F} /> : null}
     </>
   );

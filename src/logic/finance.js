@@ -196,7 +196,7 @@ export function financeVals(s) {
   const month = dayKey(0).slice(0, 7);
   const collected = (s.invoices || []).reduce((a, i) => a + (i.payments || []).filter(p => p.ok && (p.at || '').slice(0, 7) === month).reduce((x, p) => x + p.amt, 0), 0);
   const F = {
-    tab: ({ invoices: 'invoices', cashbook: 'cash', freports: 'reports', float: 'float' })[s.page] || (role === 'finance' ? 'overview' : s.finTab || 'overview'), showTabs: role !== 'finance', setTab: k => this.setState({ finTab: k, invSel: null }), moneyTop, isCeo: role === 'ceo', isFin: role === 'finance',
+    tab: ({ invoices: 'invoices', cashbook: 'cash', freports: 'reports', float: 'float', petty: 'petty' })[s.page] || (role === 'finance' ? 'overview' : s.finTab || 'overview'), showTabs: role !== 'finance', setTab: k => this.setState({ finTab: k, invSel: null }), moneyTop, isCeo: role === 'ceo', isFin: role === 'finance',
     kpis: [
       { l: 'Owed by clients', v: this.fmtT(unpaid.reduce((a, b) => a + b.due, 0)), n: unpaid.length + ' invoices open', tone: 'dark', pct: Math.round(unpaid.reduce((a, b) => a + b.paid, 0) / Math.max(1, unpaid.reduce((a, b) => a + b.total, 0)) * 100) },
       { l: 'Overdue', v: this.fmtT(inv.filter(i => i.st === 'overdue').reduce((a, b) => a + b.due, 0)), n: inv.filter(i => i.st === 'overdue').length + ' invoices', tone: 'red', pct: Math.round(inv.filter(i => i.st === 'overdue').length / Math.max(1, unpaid.length) * 100) },
@@ -265,6 +265,8 @@ export const reportMethods = {
     (s.invoices || []).forEach(i => (i.payments || []).filter(p => p.ok && /^\d{4}-/.test(p.at || '')).forEach(p => out.push({ id: p.id, at: p.at, dir: 'in', amt: p.amt, cat: 'Client payment', party: i.c, p: i.p || '', ref: i.id + (p.ref ? ' · ' + p.ref : ''), src: 'invoice' })));
     (s.reqs || []).filter(r => r.st === 'paid' && r.paidOn).forEach(r => out.push({ id: r.id, at: r.paidOn, dir: 'out', amt: r.amt, cat: 'Staff requests · ' + (r.cat || 'Other'), party: this.av(r.who).n, p: r.p || '', ref: r.id, src: 'request' }));
     (s.ledger || []).forEach(l => out.push(Object.assign({ src: 'ledger' }, l)));
+    // Petty cash payments are company spending too (top-ups are only cash moving from the bank to the box).
+    ((s.petty || {}).entries || []).filter(e => e.dir === 'out').forEach(e => out.push({ id: e.id, at: e.at, dir: 'out', amt: e.amt, cat: 'Petty cash · ' + e.cat, party: e.who, p: '', ref: e.voucher, src: 'petty' }));
     return out.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
   },
   addEntry(f) {
