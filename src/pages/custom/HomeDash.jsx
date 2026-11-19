@@ -51,6 +51,11 @@ export default function HomeDash({ v }) {
           <footer className="hd-foot"><button type="button" className="hd-link" onClick={H.goTeam}><b>{H.team.sent}</b> of {H.team.total} sent their day today →</button></footer>
         </section>
 
+        <section className="hd-card" aria-label="Purchase orders">
+          <header><h3>Purchase orders</h3></header>
+          <div className="hd-stages"><div><b>{H.po.got}</b><span>PO received</span></div><div className={H.po.miss ? 'is-warn' : ''}><b>{H.po.miss}</b><span>PO not received</span></div></div>
+          {H.po.list.length ? <ul className="hd-att">{H.po.list.map((x, i) => <li key={i}><button type="button" onClick={x.on}><em style={{ background: '#FFF4E0', color: '#9A6200' }}>No PO</em><span><b>{x.t}</b><small>{x.s}</small></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg></button></li>)}</ul> : null}
+        </section>
         {v.REP ? <div className="hd-wide"><CashChart R={v.REP} /></div> : null}
 
         <section className="hd-card hd-wide">

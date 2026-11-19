@@ -33,9 +33,43 @@ function Feed({ P }) {
   );
 }
 
+function PurchaseOrder({ P }) {
+  const po = P.po;
+  const [edit, setEdit] = useState(false);
+  const [f, setF] = useState({ no: po.no, vendor: po.vendor, date: po.date, file: null });
+  const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
+  const set = (k, v) => setF(x => Object.assign({}, x, { [k]: v }));
+  return (
+    <section className="rc-sec" aria-label="Purchase order">
+      <h3><span className="rc-dot" style={{ background: po.has ? '#2E9B63' : '#D89B2B' }} />Purchase order · {po.has ? 'received' : 'not received'}</h3>
+      {po.early ? <p className="bi-ret">Work has started before the client’s PO. Follow it up.</p> : null}
+      {po.has && !edit ? (
+        <>
+          <dl className="rc-fields"><Field l="PO number">{po.no}</Field><Field l="Vendor number">{po.vendor || '—'}</Field><Field l="PO date">{po.date}</Field><Field l="Recorded by">{po.by}</Field></dl>
+          <div className="rc-row">{po.file ? <button type="button" className="cr-file" onClick={po.file.open}><span className="cr-doc">PO</span><span><b>{po.file.name}</b><small>Client purchase order</small></span></button> : null}{po.can ? <Btn kind="ghost" onClick={() => setEdit(true)}>Edit</Btn> : null}</div>
+        </>
+      ) : po.can ? (
+        edit || !po.has ? (
+          <div className="pn-form">
+            <div className="fh-three">
+              <label className="ff"><span className="ff-l">PO number</span><input value={f.no} onChange={e => set('no', e.target.value)} placeholder="e.g. PO-55821" /></label>
+              <label className="ff"><span className="ff-l">Vendor number</span><input value={f.vendor} onChange={e => set('vendor', e.target.value)} placeholder="Our number at the client" /></label>
+              <label className="ff"><span className="ff-l">PO date</span><input type="date" value={f.date} onChange={e => set('date', e.target.value)} /></label>
+            </div>
+            <label className="bi-up"><input type="file" accept=".pdf,image/*" onChange={e => set('file', e.target.files[0] || null)} aria-label="PO file" />{f.file ? '✓ ' + f.file.name : po.file ? '✓ ' + po.file.name : '↑ Attach the PO (PDF or photo)'}</label>
+            {err ? <div className="fm-err" role="alert">{err}</div> : null}
+            <div className="fh-row">{po.has ? <button type="button" className="me-cancel" onClick={() => setEdit(false)}>Cancel</button> : null}<button type="button" className="me-save" disabled={busy} onClick={async () => { setBusy(true); const m = await po.save(f); setBusy(false); if (m) setErr(m); else setEdit(false); }}>Save purchase order</button></div>
+          </div>
+        ) : null
+      ) : <p className="k-sub">Management or the PA records the client’s purchase order.</p>}
+    </section>
+  );
+}
+
 function Overview({ P }) {
   return (
     <div className="rc-sections">
+      {P.po && (P.po.can || P.po.has || P.money) ? <PurchaseOrder key={P.po.no + P.po.date} P={P} /> : null}
       {P.clientPart ? (
         <section className="rc-sec">
           <h3><span className="rc-dot" style={{ background: '#3559A8' }} />Client Service</h3>

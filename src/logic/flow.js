@@ -132,6 +132,24 @@ export const flowMethods = {
     return '';
   },
 
+  // Purchase order from the client: Management or the PA records it (number, vendor number, date, the
+  // PO file). Work may start before it arrives; Finance needs it to invoice.
+  canPO() { return ['ceo', 'gm', 'pa'].includes(this.state.role || 'ceo'); },
+  async recordPO(pid, f) {
+    const p = this.state.projects.find(x => x.id === pid); if (!p) return 'Project not found';
+    if (!this.canPO()) return 'Management or the PA records the purchase order';
+    if (!(f.no || '').trim()) return 'Enter the PO number';
+    if (!f.date) return 'Enter the PO date';
+    let file = (p.po || {}).file || null;
+    if (f.file) { try { file = await this.storeFile(f.file); } catch (e) { return 'Upload failed · ' + (e.message || e); } }
+    const po = { no: f.no.trim(), vendor: (f.vendor || '').trim(), date: f.date, file, by: this.me().k, at: dayKey(0) };
+    this.setProject(pid, { po });
+    this.pnote(pid, 'Purchase order received · ' + po.no + (po.vendor ? ' · vendor no. ' + po.vendor : ''));
+    [this.ROLES.finance.k, this.ROLES.ceo.k, p.pm].filter((k, i, a) => k && k !== this.me().k && a.indexOf(k) === i)
+      .forEach(k => this.remind(k, 'PO received · ' + p.client, 'project', 'fileText', po.no + ' · ' + p.name + (k === this.ROLES.finance.k ? ' · ready to invoice' : '')));
+    this.toast('Purchase order saved · ' + po.no);
+    return '';
+  },
   // A task finished with a short report: the person who gave it and the PM are told; the project keeps it.
   reportTask(id, report) {
     const t = this.state.tasks.find(x => x.id === id); if (!t) return;

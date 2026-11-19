@@ -79,6 +79,10 @@ export function projectVals(s) {
       st: { draft: 'Draft', gm: 'Waiting for the GM', mgmt: 'Waiting for Management', approved: 'Approved', returned: 'Sent back' }[B.st] || '', gm: B.gm ? this.av(B.gm.by).n + ' · ' + B.gm.at : '', mgmt: B.mgmt ? this.av(B.mgmt.by).n + ' · ' + B.mgmt.at : '',
       file: B.file ? { name: B.file.name, open: () => this.openDoc({ n: B.file.name, url: B.file.url, path: B.file.path }) } : null };
   }
+  const PO = P.po || null;
+  V.po = { has: !!PO, no: PO ? PO.no : '', vendor: PO ? PO.vendor : '', date: PO ? PO.date : '', by: PO ? this.av(PO.by).n : '',
+    file: PO && PO.file ? { name: PO.file.name, open: () => this.openDoc({ n: PO.file.name, url: PO.file.url, path: PO.file.path }) } : null,
+    can: this.canPO(), save: f => this.recordPO(P.id, f), early: !PO && flow === 'execution' };
   V.proposalFile = P.proposal ? { name: P.proposal.name, by: this.av(P.proposal.by).n, at: P.proposal.at, note: P.proposal.note || '', open: () => this.openDoc({ n: P.proposal.name, url: P.proposal.url, path: P.proposal.path }) } : null;
   if (can.budget && P.bud) {
     const u = P.bud ? P.spent / P.bud : 0;

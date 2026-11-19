@@ -20,6 +20,34 @@ function PersonPick({ value, people, onPick, label }) {
   );
 }
 
+// Signatures used on invoices once the signer approves them (a scan or photo on a white background).
+function Signatures({ C }) {
+  const [err, setErr] = useState('');
+  const pick = (k, e) => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+    if (!/^image\//.test(f.type)) { setErr('Choose an image (PNG or JPG)'); return; }
+    if (f.size > 400 * 1024) { setErr('Use an image under 400 KB'); return; }
+    const r = new FileReader(); r.onload = () => { setErr(''); C.setSig(k, r.result, f.name); }; r.readAsDataURL(f);
+  };
+  return (
+    <Card title="Invoice signatures">
+      <p className="k-sub" style={{ margin: '0 0 10px', fontSize: 13.5 }}>Upload each signer’s real signature. It prints on an invoice only after that person approves it in the system, with the company stamp.</p>
+      <ul className="co-sections">
+        {C.signatures.map(sg => (
+          <li key={sg.k}>
+            <span><b>{sg.l}</b>{sg.url ? <img className="co-sig" src={sg.url} alt={'Signature · ' + sg.l} /> : <small className="co-small">No signature yet</small>}</span>
+            <span className="fh-row">
+              <label className="bi-up"><input type="file" accept="image/png,image/jpeg" onChange={e => pick(sg.k, e)} aria-label={'Signature · ' + sg.l} />{sg.url ? 'Replace' : '↑ Upload'}</label>
+              {sg.url ? <button type="button" className="td-start" onClick={() => C.setSig(sg.k, '', '')}>Remove</button> : null}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {err ? <div className="fm-err" role="alert">{err}</div> : null}
+    </Card>
+  );
+}
+
 const Sw = ({ on, set, label }) => <button type="button" role="switch" aria-checked={on} aria-label={label} className={'co-switch' + (on ? ' is-on' : '')} onClick={set}><i /></button>;
 
 const EVENTS = [['clients', 'Client Service alerts', 'New work, enquiries, proposals, lost leads'], ['approvals', 'Approvals', 'A money request waiting for you'], ['designs', 'Designs', 'Designs to approve and approved designs'], ['payments', 'Invoices & payments', 'Invoices to sign, payments to confirm'], ['tasks', 'Tasks', 'A new task given to you']];
@@ -105,6 +133,7 @@ export default function CompanyPage({ v }) {
             <Btn kind="dark" type="submit">Save target</Btn>
           </form>
         </Card>
+        <Signatures C={C} />
         <Notify C={C} />
         <Card title="Sections">
           <p className="k-sub" style={{ margin: '0 0 10px', fontSize: 13.5 }}>Switched-off sections disappear from everyone’s menus. Nothing is deleted; switch them back on any time.</p>

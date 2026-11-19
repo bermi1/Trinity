@@ -112,7 +112,7 @@ export const deptMethods = {
   },
   seesAllProjects() {
     const role = this.state.role || 'ceo';
-    return ['ceo', 'gm', 'finance'].includes(role) || this.isManagerOf('operations') || this.isManagerOf('clientservice') || (role === 'creative' && this.isManagerOf('creative'));
+    return ['ceo', 'gm', 'finance', 'pa'].includes(role) || this.isManagerOf('operations') || this.isManagerOf('clientservice') || (role === 'creative' && this.isManagerOf('creative'));
   },
   visibleProjects() {
     const all = this.state.projects || [];

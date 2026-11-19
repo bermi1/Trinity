@@ -99,7 +99,51 @@ test('a project moves through every department, step by step', async ({ page }) 
   data = await saved(page);
   expect(data.notes.some(n => n.to === 'MM' && /finished: Set up the stage/.test(n.t) && n.s === 'Stage up and checked with the venue')).toBe(true);
 
-  // 7. Management sees the report in the project's activity; the PM side closes the project.
+  // 7. The PA records the client's purchase order; Finance is told it can invoice.
+  await openAs(page, 'pa', 'project', { projectId: P.id }, false);
+  const po = page.getByRole('region', { name: 'Purchase order' });
+  await expect(po).toContainText('not received');
+  await po.getByLabel('PO number').fill('MB/PO/2026/0777');
+  await po.getByLabel('Vendor number').fill('TMS-07');
+  await po.getByLabel('PO date').fill('2026-11-18');
+  await po.getByLabel('PO file').setInputFiles(file('Mlimani PO.pdf', 'application/pdf'));
+  await btn(po, 'Save purchase order').click();
+  await toast(page, 'Purchase order saved · MB/PO/2026/0777');
+  data = await saved(page);
+  expect(data.projects.find(x => x.id === P.id).po).toMatchObject({ no: 'MB/PO/2026/0777', vendor: 'TMS-07', date: '2026-11-18', by: 'UK' });
+  expect(data.notes.some(n => n.to === 'RT' && /PO received/.test(n.t) && /ready to invoice/.test(n.s))).toBe(true);
+  await expect(page.getByText('Margin', { exact: true })).toHaveCount(0);
+
+  // 8. Finance invoices the agreed value; Management uploads a signature and signs; the PDF carries the PO.
+  await openAs(page, 'ceo', 'company', {}, false);
+  await page.getByLabel('Signature · Executive Director').setInputFiles({ name: 'sig.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64') });
+  await toast(page, 'Signature saved');
+  await openAs(page, 'finance', 'invoices', {}, false);
+  await btn(page, 'New invoice').click();
+  const ed = page.getByRole('dialog');
+  await ed.getByRole('button', { name: 'Mlimani Bank', exact: true }).click();
+  await ed.getByRole('button', { name: 'Mlimani Bank · Flow Test Launch' }).click();
+  await expect(ed).toContainText('MB/PO/2026/0777');
+  await ed.getByLabel('Item 1').fill('Stage and truss, 2 days');
+  await ed.getByLabel('Rate 1').fill('3600000');
+  await btn(ed, 'Create invoice').click();
+  await toast(page, 'waiting for Executive Director to sign');
+  data = await saved(page);
+  const inv = data.invoices[0];
+  expect(inv).toMatchObject({ c: 'Mlimani Bank', p: P.id, st: 'draft', signer: 'ED' });
+  await openAs(page, 'ceo', 'finance', { finTab: 'invoices' }, false);
+  await page.getByRole('tab', { name: 'Invoices' }).click();
+  await page.locator('[data-invoice="' + inv.id + '"] .fh-inv-row').click();
+  await btn(page.locator('[data-invoice="' + inv.id + '"]'), 'Sign & stamp').click();
+  await toast(page, inv.id + ' signed and stamped');
+  const [pdf] = await Promise.all([page.context().waitForEvent('page'), btn(page.locator('[data-invoice="' + inv.id + '"]'), 'Open PDF').click()]);
+  await expect(pdf.locator('.po')).toContainText('MB/PO/2026/0777');
+  await expect(pdf.locator('.po')).toContainText('TMS-07');
+  await expect(pdf.locator('img.sigimg')).toHaveCount(1);
+  await expect(pdf.getByText('Prepared by')).toHaveCount(0);
+  await pdf.close();
+
+  // 9. Management sees the report in the project's activity; the PM side closes the project.
   await openAs(page, 'ceo', 'project', { projectId: P.id }, false);
   await expect(page.getByLabel('Activity')).toContainText('Stage up and checked with the venue');
   await now(page).getByRole('button', { name: 'Close project' }).click();

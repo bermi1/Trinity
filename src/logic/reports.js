@@ -12,7 +12,7 @@ export const reportChannel = {
   reportTargets() {
     const role = this.state.role || 'ceo', me = this.me().k, ceo = this.ROLES.ceo.k, gm = this.ROLES.gm.k;
     if (role === 'ceo') return [];
-    if (role === 'gm') return [ceo];
+    if (role === 'gm' || role === 'pa') return [ceo];
     const d = this.myDept();
     if (role === 'finance' || (d && this.isManagerOf(d))) return [gm, ceo];
     const head = d ? this.managerOf(d) : null;

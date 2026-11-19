@@ -26,11 +26,12 @@ export function homeVals(s) {
       date: new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
       kpis: [
         { l: 'Active projects', v: String(live.length), s: live.filter(p => p.st === 'late' || p.st === 'risk').length + ' need attention', on: () => this.go('projects') },
-        { l: 'Pipeline', v: this.fmtM(open.reduce((a, b) => a + (b.v || 0), 0)), s: open.length + ' open leads', on: () => this.go('clients') },
+        { l: 'Open leads', v: String(open.length), s: open.filter(l => this.leadStage(l) >= 3).length + ' with a proposal', on: () => this.go('clients') },
         { l: 'Owed by clients', v: this.fmtM(owed / 1e6), s: unpaid.filter(i => i.st === 'overdue').length + ' overdue', warn: unpaid.some(i => i.st === 'overdue'), on: () => this.finGo('invoices') },
         { l: 'Waiting for you', v: String(myAppr.length), s: myAppr.length ? this.fmtT(myAppr.reduce((a, b) => a + b.amt, 0)) : 'All clear', on: () => this.go('requests') }
       ],
-      att, stages: stages.map(x => Object.assign(x, { w: Math.round(x.n / pmax * 100), vt: this.canSeeValues() ? this.fmtM(x.v) : '' })),
+      att, stages: stages.map(x => Object.assign(x, { w: Math.round(x.n / pmax * 100), vt: '' })),
+      po: (() => { const ps = live.filter(p => ['approval', 'execution'].includes(this.flowOf(p))); const miss = ps.filter(p => !p.po); return { got: ps.length - miss.length, miss: miss.length, list: miss.slice(0, 5).map(p => ({ t: p.client + ' · ' + p.name, s: this.flowOf(p) === 'execution' ? 'Work started without a PO' : 'Waiting for approval', on: () => this.go('project', { projectId: p.id }) })) }; })(),
       pstages, customers: (s.customers || []).length, won: (s.leads || []).filter(l => this.leadStage(l) === 5).length,
       team: { sent: Object.keys(s.reportsToday || {}).length, total: (s.staff || []).length },
       activity: (s.activity || []).slice(0, 6),

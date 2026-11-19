@@ -100,11 +100,7 @@ function Editor({ F }) {
             <div className="ff-chips">{F.projects.filter(p => !f.c || p.c === f.c).map(p => <button key={p.v} type="button" className={f.p === p.v ? 'is-on' : ''} onClick={() => set('p', f.p === p.v ? '' : p.v)}>{p.l}</button>)}</div>
           </div>
           <label className="ff"><span className="ff-l">Event / title</span><input value={f.title} onChange={e => set('title', e.target.value)} placeholder="e.g. Brand Launch Gala · Serena Hotel" /></label>
-          <div className="fh-three">
-            <label className="ff"><span className="ff-l">PO No</span><input value={f.po} onChange={e => set('po', e.target.value)} /></label>
-            <label className="ff"><span className="ff-l">PO Date</span><input type="date" value={f.poDate} onChange={e => set('poDate', e.target.value)} /></label>
-            <label className="ff"><span className="ff-l">Vendor No</span><input value={f.vendor} onChange={e => set('vendor', e.target.value)} /></label>
-          </div>
+          {F.poFor(f.p) ? <p className="k-sub">Purchase order on the project: <b>{F.poFor(f.p)}</b> · it prints under the client details.</p> : f.p ? <p className="bi-ret">No purchase order recorded on this project yet. Management or the PA adds it on the project.</p> : null}
 
           <div className="ff"><span className="ff-l">Items</span>
             <div className="fh-lines">

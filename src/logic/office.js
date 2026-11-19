@@ -24,7 +24,7 @@ export const officeMethods = {
     return '';
   },
   removeCal(id) { this.setState(x => ({ cal: (x.cal || []).filter(e => e.id !== id) })); },
-  canCreateMeeting() { const d = this.myDept(); return this.isTop() || (this.state.role === 'finance') || (d && this.isManagerOf(d)) || this.state.role === 'reception'; },
+  canCreateMeeting() { const d = this.myDept(); return this.isTop() || ['finance', 'pa'].includes(this.state.role) || (d && this.isManagerOf(d)) || this.state.role === 'reception'; },
   meetingPeople(m) {
     const t = m.to || {}, out = new Set(t.people || []);
     if (t.all) this.everyone().forEach(k => out.add(k));
@@ -92,12 +92,12 @@ export const officeMethods = {
 export function officeVals(s) {
   const me = this.me().k, today = dayKey(0);
   const face = k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c }; };
-  const mine = (s.meetings || []).filter(m => m.date >= today && (this.isTop() || this.meetingPeople(m).includes(me))).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  const mine = (s.meetings || []).filter(m => m.date >= today && (this.isTop() || (s.role || 'ceo') === 'pa' || this.meetingPeople(m).includes(me))).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const days = [], end = dayKey(45);
   const dayOf = k => { let d = days.find(x => x.k === k); if (!d) days.push(d = { k, l: dayLabel(k), items: [] }); return d; };
   (s.cal || []).filter(e => e.date >= today && e.date <= end).forEach(e => dayOf(e.date).items.push({ id: e.id, time: e.time || 'All day', title: e.title, place: e.kind, kind: 'cal', who: 'Everyone', by: this.av(e.by).n, canCancel: e.by === me || this.isTop(), cancel: () => this.removeCal(e.id) }));
   this.visibleProjects().filter(p => p.st !== 'done').forEach(p => { const k = dueKey(p.due); if (k && k >= today && k <= end) dayOf(k).items.push({ id: 'due' + p.id, time: 'Due', title: p.client + ' · ' + p.name, place: 'Project deadline', kind: 'due', who: 'PM ' + (p.pm ? this.av(p.pm).n : 'not chosen'), by: '', go: () => this.go('project', { projectId: p.id }) }); });
-  const seeAllVisits = this.isTop() || (s.role || 'ceo') === 'reception';
+  const seeAllVisits = this.isTop() || ['reception', 'pa'].includes(s.role || 'ceo');
   (s.visitors || []).filter(v => v.st === 'expected' && !v.meeting && (v.date || today) >= today && (v.date || today) <= end && (seeAllVisits || v.host === me))
     .forEach(v => dayOf(v.date || today).items.push({ id: 'v' + v.id, time: v.time || '', title: 'Visitor: ' + v.name + (v.co ? ' · ' + v.co : ''), place: 'Front desk', kind: 'client', who: 'For ' + this.av(v.host).n, by: '', guest: v.purpose || '' }));
   mine.forEach(m => { const d = dayOf(m.date);

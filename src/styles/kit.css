@@ -985,3 +985,5 @@
 .ob-pay { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .ob-pay .fh-amt { height: 40px; flex: 0 1 180px; }
 .ob-pay .ff-search { width: 140px; }
+.co-sig { display: block; max-height: 44px; max-width: 160px; margin-top: 6px; background: #fff; border: 1px solid #ECEDF2; border-radius: 8px; padding: 4px; }
+.hd-stages div.is-warn b { color: #9A6200; }

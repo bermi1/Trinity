@@ -74,7 +74,7 @@ export const financeMethods = {
     if (!d.lines || !d.lines.some(l => l.item && +l.rate > 0)) return 'Add at least one item with a rate';
     const lines = d.lines.filter(l => l.item && +l.rate > 0).map(l => ({ item: l.item.trim(), n: +l.n || 1, rate: Math.round(+l.rate), days: +l.days || 1, events: +l.events || 1 }));
     const cust = (this.state.customers || []).find(c => c.n === d.c) || {};
-    const base = { c: d.c, tin: d.tin || cust.tin || '', vrn: d.vrn || '', p: d.p || '', title: (d.title || '').trim(), po: d.po || '', poDate: d.poDate || '', vendor: d.vendor || '', lines, admin: d.admin == null ? 15 : +d.admin, vat: 18, signer: d.signer || 'ED', due: d.due || '30 days', by: this.me().k };
+    const base = { c: d.c, tin: d.tin || cust.tin || '', vrn: d.vrn || '', p: d.p || '', title: (d.title || '').trim(), lines, admin: d.admin == null ? 15 : +d.admin, vat: 18, signer: d.signer || 'ED', due: d.due || '30 days', by: this.me().k };
     base.v = invTotals(base).total / 1e6;
     if (d.id) {
       this.setState(x => ({ invoices: x.invoices.map(i => (i.id === d.id ? Object.assign({}, i, base, { signed: null, st: (i.payments || []).some(p => p.ok) ? 'partial' : i.st === 'draft' ? 'draft' : 'sent' }) : i)) }));
@@ -131,6 +131,9 @@ export const financeMethods = {
   printInvoice(id) {
     const i = this.state.invoices.find(x => x.id === id); if (!i) return;
     const T = invTotals(i), n = v => Math.round(v).toLocaleString('en-US'), P = this.proj(i.p), S = SIGNERS[i.signer || 'ED'];
+    // The purchase order comes from the project (recorded by Management or the PA); older invoices kept their own.
+    const PO = P.po ? P.po : { no: i.po || '', date: i.poDate || '', vendor: i.vendor || '' };
+    const SIG = (((this.state.company || {}).signatures || {})[i.signer || 'ED'] || {}).url || '';
     const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const origin = location.origin;
     const rows = (i.lines && i.lines.length ? i.lines : [{ item: P.name || 'Services as agreed', n: 1, rate: T.net, days: 1, events: 1 }])
@@ -152,7 +155,7 @@ table{width:100%;border-collapse:collapse;margin-top:6px}th{background:#2B1459;c
 th:first-child{border-radius:8px 0 0 8px}th:last-child{border-radius:0 8px 8px 0}td{padding:9px 8px;border-bottom:1px solid #EEEAF4}.r{text-align:right}
 .tot{margin-left:auto;width:300px;margin-top:12px}.tot div{display:flex;justify-content:space-between;padding:5px 0}.tot .g{border-top:2px solid #2B1459;margin-top:4px;padding-top:9px;font-size:16px;font-weight:800;color:#2B1459}
 .sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:28px;align-items:end}.sig{border-top:1px solid #CFC8DD;padding-top:6px;font-size:11.5px;color:#6E6A7C;min-height:96px;position:relative;display:flex;flex-direction:column;justify-content:flex-end}
-.hand{font:600 30px Caveat,cursive;color:#1B2A7A;line-height:1;margin-bottom:4px}.stamp{position:absolute;right:-6px;bottom:18px;width:118px;opacity:.88;transform:rotate(-8deg)}
+.sigimg{max-height:56px;max-width:190px;object-fit:contain;margin-bottom:4px}.sigline{display:block;height:46px}.po{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px;padding:10px 14px;border:1px solid #E4DFEE;border-radius:10px}.po span{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8A7239;font-weight:700}.stamp{position:absolute;right:-6px;bottom:18px;width:118px;opacity:.88;transform:rotate(-8deg)}
 .draft{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:88px;font-weight:800;color:rgba(178,58,70,.09);transform:rotate(-24deg);letter-spacing:.1em}
 .foot{margin-top:auto;padding-top:18px;display:flex;justify-content:space-between;gap:14px;border-top:1px solid #EEEAF4;font-size:11px;color:#6E6A7C}
 .bar{position:fixed;top:12px;right:12px}.bar button{font:600 13px Inter;padding:9px 16px;border:none;border-radius:9px;background:#2B1459;color:#fff;cursor:pointer}
@@ -162,7 +165,8 @@ ${i.signed ? '' : '<div class=draft>DRAFT</div>'}
 <div class=top><img src="${origin}/brand/trinity-logo-full.png" alt="Trinity Mark"><div class=inv><h1>INVOICE</h1><div><b>${esc(i.id)}</b></div><div>Date: ${esc(i.at || dayKey(0))}</div></div></div>
 <div class=band></div>
 <div class=grid><div class=box><div class=lbl>Bill to</div><b style="font-size:15px">${esc(i.c)}</b><div class=kv style="margin-top:4px">${i.tin ? `<span>TIN</span><b>${esc(i.tin)}</b>` : ''}${i.vrn ? `<span>VRN</span><b>${esc(i.vrn)}</b>` : ''}</div></div>
-<div class=box><div class=lbl>From</div><b>${COMPANY.name}</b><div class=kv style="margin-top:4px"><span>TIN</span><b>${COMPANY.tin}</b><span>VRN</span><b>${COMPANY.vrn}</b>${i.po ? `<span>PO No</span><b>${esc(i.po)}</b>` : ''}${i.poDate ? `<span>PO Date</span><b>${esc(i.poDate)}</b>` : ''}${i.vendor ? `<span>Vendor No</span><b>${esc(i.vendor)}</b>` : ''}</div></div></div>
+<div class=box><div class=lbl>From</div><b>${COMPANY.name}</b><div class=kv style="margin-top:4px"><span>TIN</span><b>${COMPANY.tin}</b><span>VRN</span><b>${COMPANY.vrn}</b></div></div></div>
+${PO.no ? `<div class=po><div><span>PO number</span><b>${esc(PO.no)}</b></div><div><span>PO date</span><b>${esc(PO.date || '')}</b></div><div><span>Vendor number</span><b>${esc(PO.vendor || '')}</b></div></div>` : ''}
 <div class=title>${esc(i.title || P.name || '')}</div>
 <table><thead><tr><th>No</th><th>Item</th><th class=r>Number</th><th class=r>Rate (TZS)</th><th class=r>Days</th><th class=r>Events</th><th class=r>Total (TZS)</th></tr></thead><tbody>${rows}</tbody></table>
 <div class=tot>${T.legacy ? '' : `<div><span>Total direct costs</span><b>${n(T.direct)}</b></div><div><span>Administrative cost ${i.admin == null ? 15 : i.admin}%</span><b>${n(T.admin)}</b></div>`}
@@ -170,8 +174,8 @@ ${i.signed ? '' : '<div class=draft>DRAFT</div>'}
 ${paid ? `<div><span>Paid</span><b>${n(paid)}</b></div><div><span>Balance due</span><b>${n(T.total - paid)}</b></div>` : ''}</div>
 <div class=box style="margin-top:18px"><div class=lbl>Payment details</div><div class=kv><span>Bank</span><b>${COMPANY.bank}</b><span>Account name</span><b>${COMPANY.accName}</b><span>Account no</span><b>${COMPANY.acc}</b></div></div>
 <div class=sign>
-<div class=sig><span>Prepared by</span><b style="color:#17152A">${esc(this.av(i.by || this.ROLES.finance.k).n)}</b><span>Accountant</span></div>
-<div class=sig>${i.signed ? `<div class=hand>${esc(i.signed.name)}</div><img class=stamp src="${origin}/brand/company-stamp.png" alt="">` : '<i style="color:#B23A46">Awaiting signature</i>'}<span>Approved by</span><b style="color:#17152A">${i.signed ? esc(i.signed.name) : ''}</b><span>${S.t}${i.signed ? ' · ' + esc(i.signed.at) : ''}</span></div>
+<div class=sig>${i.signed ? (SIG ? `<img class=sigimg src="${SIG}" alt="Signature">` : '<span class=sigline></span>') + `<img class=stamp src="${origin}/brand/company-stamp.png" alt="">` : '<i style="color:#B23A46">Awaiting approval</i>'}<span>Approved by</span><b style="color:#17152A">${S.t}</b><span>${i.signed ? esc(i.signed.at) : ''}</span></div>
+<div></div>
 <div class=sig><span>Client approval</span><span style="margin-top:28px">Name, sign &amp; date</span></div></div>
 <div class=foot><span>${COMPANY.box}</span><span>${COMPANY.line}</span></div>
 </div></body></html>`;
@@ -217,6 +221,7 @@ export function financeVals(s) {
       const T = invTotals(i); return Object.assign({}, i, { admin: 0, lines: [{ item: this.proj(i.p).name || 'Services as agreed', n: 1, rate: T.net, days: 1, events: 1 }] }); })(),
     save: d => { const e = this.saveInvoice(d); if (!e) { this.setState({ invEdit: null }); if (s.page !== 'invoices') this.finGo('invoices'); } return e; },
     customers: (s.customers || []).map(c => ({ v: c.n, l: c.n, tin: c.tin || '' })),
+    poFor: pid => { const P = s.projects.find(p => p.id === pid); return P && P.po ? P.po.no + ' · ' + P.po.date + (P.po.vendor ? ' · vendor ' + P.po.vendor : '') : ''; },
     projects: s.projects.filter(p => p.st !== 'done').map(p => ({ v: p.id, l: p.client + ' · ' + p.name, c: p.client })),
     totals: invTotals
   };

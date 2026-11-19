@@ -61,3 +61,18 @@ test('a staff member’s expected visitor reaches the front desk and the GM’s 
   expect(data.visitors.find(v => v.name === 'Baraka Mushi').st).toBe('in');
   expect(data.notes.some(n => n.to === 'GM' && /Your guest has arrived: Baraka Mushi/.test(n.t))).toBe(true);
 });
+
+// The PA runs Management's diary: sees every meeting and visitor, schedules for Management, no money.
+test('the Personal Assistant schedules for Management and sees no money', async ({ page }) => {
+  await openAs(page, 'pa', 'meetings');
+  await expect(page.getByText('Gala planning with Safari Mobile')).toBeVisible();
+  await btn(page, 'New meeting').click();
+  await page.getByLabel('Title').fill('MD with CRDB marketing');
+  await page.getByRole('button', { name: 'Client meeting' }).click();
+  await page.getByLabel('Guest name').fill('Asha Mollel');
+  await btn(page, 'Send invitation').click();
+  await toast(page, 'Meeting sent');
+  await expect(page.locator('aside').getByText('Finance', { exact: false })).toHaveCount(0);
+  await openAs(page, 'ceo', 'dashboard', {}, false);
+  await expect(page.getByRole('region', { name: 'Purchase orders' })).toContainText('PO not received');
+});
