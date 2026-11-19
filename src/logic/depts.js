@@ -124,16 +124,17 @@ export const deptMethods = {
   },
   // Which parts of a project a person sees: each department sees what it adds.
   projectParts(p) {
-    // Management, the GM and Finance see the whole project. The Operations Manager and the
-    // project's PM also see the internal budget. Invoices stay with Management, the GM and Finance.
-    const role = this.state.role || 'ceo', me = this.me().k, top = ['ceo', 'gm', 'finance'].includes(role), fin = false;
+    // Management and the GM see the whole project. The Operations Manager and the project's PM see the
+    // internal budget. Finance handles the money (value, invoices, requests) but not profit or the internal budget.
+    const role = this.state.role || 'ceo', me = this.me().k, top = ['ceo', 'gm'].includes(role), fin = role === 'finance';
     const isPM = p.pm === me, ops = this.isManagerOf('operations') || isPM;
     const dept = this.myDept();
     return {
       client: top || dept === 'clientservice',
       creative: top || dept === 'clientservice' || dept === 'creative',
       delivery: true,
-      budget: top || fin || ops,
+      budget: top || ops,
+      profit: top,
       money: top || fin,
       allTasks: top || ops,
       allReqs: top || fin || ops,
@@ -156,6 +157,7 @@ export const deptMethods = {
     const d = this.deptOf(k), m = d ? this.managerOf(d) : null;
     const to = m && m !== k ? m : this.ROLES.gm.k;
     if (!to || to === k) return;
+    this.dayReport(k, done, plan, to);
     this.notify({ to, ic: 'checkSquare', t: this.av(k).n + '’s day: ' + done.length + ' done, ' + plan.length + ' planned', s: done.slice(0, 3).map(i => '✓ ' + i.t).join(' · ') || 'Nothing finished yet', go: 'today' });
   }
 };

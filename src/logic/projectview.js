@@ -73,7 +73,7 @@ export function projectVals(s) {
   if (!exec) { V.reqMoney = null; if (V.money) V.money.invoice = null; }
   if (V.clientPart && !(P.val > 0)) V.clientPart.value = 'Set in the budget';
   // The budget as Operations prepared it (for those who see money).
-  if ((can.budget || (role === 'gm')) && B.lines) {
+  if (can.budget && B.lines) {
     const internal = sumLines(B.lines);
     V.budgetSheet = { lines: B.lines.map(l => ({ item: l.item, qty: l.qty, cost: this.fmtT(l.cost), total: this.fmtT(l.qty * l.cost) })), internal: this.fmtT(internal), value: this.fmtT(B.value || 0), margin: B.value ? Math.round((B.value - internal) / B.value * 100) + '%' : '—',
       st: { draft: 'Draft', gm: 'Waiting for the GM', mgmt: 'Waiting for Management', approved: 'Approved', returned: 'Sent back' }[B.st] || '', gm: B.gm ? this.av(B.gm.by).n + ' · ' + B.gm.at : '', mgmt: B.mgmt ? this.av(B.mgmt.by).n + ' · ' + B.mgmt.at : '',
@@ -101,7 +101,7 @@ export function projectVals(s) {
 
   if (can.money) {
     const inv = (s.invoices || []).filter(i => i.p === P.id), invoiced = inv.reduce((a, b) => a + b.v, 0);
-    V.money = { val: this.fmtM(P.val), invoiced: this.fmtM(invoiced), margin: (P.val ? Math.round((P.val - Math.max(P.bud, P.spent)) / P.val * 100) : 0) + '%',
+    V.money = { val: this.fmtM(P.val), invoiced: this.fmtM(invoiced), margin: can.profit ? (P.val ? Math.round((P.val - Math.max(P.bud, P.spent)) / P.val * 100) : 0) + '%' : '',
       invoices: inv.map(i => ({ id: i.id, v: this.fmtM(i.v), st: i.st, due: i.due })), invoice: () => this.openModal('invoice', { p: P.id }) };
   }
   // Activity: what each department added, newest first, plus notes people log on the project.

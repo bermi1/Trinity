@@ -336,6 +336,7 @@ export function reportVals(s) {
       chart: chart.map(c => Object.assign(c, { hi: Math.round(c.in / max * 100), ho: Math.round(c.out / max * 100), tin: f(c.in), tout: f(c.out) })), maxT: f(peak), ticks: [4, 3, 2, 1, 0].map(i => ({ l: short(step * i), pct: i * 25 })), showEvery: chart.length > 16 ? 5 : 1,
       outCat: outCat.map(x => Object.assign(x, { t: f(x.v), pct: tout ? Math.round(x.v / tout * 100) : 0 })),
       inCli: inCli.slice(0, 8).map(x => Object.assign(x, { t: f(x.v), pct: tin ? Math.round(x.v / tin * 100) : 0 })),
+      showProfit: (s.role || 'ceo') !== 'finance',
       projects: projects.map(p => ({ id: p.id, n: p.n, c: p.c, value: f(p.value), invoiced: f(p.invoiced), got: f(p.got), spent: f(p.spent), profit: (p.profit < 0 ? '−' : '') + f(Math.abs(p.profit)), neg: p.profit < 0, margin: p.got ? Math.round(p.profit / p.got * 100) + '%' : '—' })),
       aging: aging.map(a => Object.assign(a, { t: f(a.v) })), agingMax: Math.max(1, ...aging.map(a => a.v)),
       book: book.slice(0, 200).map(e => ({ id: e.id, at: e.at, dir: e.dir, cat: e.cat, party: e.party, proj: e.proj, ref: e.ref, amt: f(e.amt), run: (e.run < 0 ? '−' : '') + f(Math.abs(e.run)) })),

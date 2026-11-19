@@ -102,7 +102,7 @@ function Overview({ P }) {
           <div className="pv-budnums">
             <span><small>Contract value</small><b>{P.money.val}</b></span>
             <span><small>Invoiced</small><b>{P.money.invoiced}</b></span>
-            <span><small>Margin</small><b>{P.money.margin}</b></span>
+            {P.money.margin ? <span><small>Margin</small><b>{P.money.margin}</b></span> : null}
           </div>
         </section>
       ) : null}

@@ -959,3 +959,20 @@
 .cr-mst { font-size: 11.5px; font-weight: 700; padding: 1px 7px; border-radius: 8px; background: #FBF1DD; color: #8A6414; }
 .cr-mst.is-seen { background: #E9EFFA; color: #3559A8; } .cr-mst.is-done { background: #E7F6EE; color: #1F7549; }
 .cr-memo-t { width: 100%; box-sizing: border-box; border: 1px solid #E6E7ED; border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 14px; resize: vertical; }
+/* Reports */
+.rp-new { max-width: 720px; }
+.rp-kinds { grid-template-columns: repeat(4, 1fr); }
+.rp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.rp-item { background: #fff; border: 1px solid #ECEDF2; border-radius: 14px; }
+.rp-item.is-unread { border-color: #CDBDEB; }
+.rp-row { width: 100%; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 12px 14px; border: none; background: none; font: inherit; text-align: left; cursor: pointer; color: inherit; }
+.rp-main { display: flex; flex-direction: column; min-width: 0; font-size: 14px; }
+.rp-main small { color: #8A8D99; font-size: 12.5px; }
+.rp-item.is-unread .rp-main b { color: #2B1459; }
+.rp-kind { font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 8px; background: #F3EEFB; color: #5A2FA8; }
+.rp-dot { width: 9px; height: 9px; border-radius: 50%; background: #6D3CC2; }
+.rp-body { padding: 0 16px 16px 60px; display: grid; gap: 6px; font-size: 14px; }
+.rp-body h4 { margin: 8px 0 0; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: #8A8D99; }
+.rp-body p { margin: 0; white-space: pre-line; line-height: 1.5; }
+.rp-issue { color: #B23A46; }
+@media (max-width: 600px) { .rp-body { padding: 0 12px 12px; } .rp-kinds { grid-template-columns: 1fr 1fr; } }

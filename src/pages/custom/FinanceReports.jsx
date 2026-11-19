@@ -97,11 +97,11 @@ export function Reports({ R }) {
           </ul>
         </section>
         <section className="fh-card fr-proj">
-          <h3>Projects · money in and out</h3>
+          <h3>{R.showProfit ? 'Projects · money in and out' : 'Projects · invoiced, received and spent'}</h3>
           <div className="fr-table-wrap">
             <table className="fr-table">
-              <thead><tr><th>Project</th><th>Invoiced</th><th>Received</th><th>Spent</th><th>Profit</th></tr></thead>
-              <tbody>{R.projects.map(p => <tr key={p.id}><td><b>{p.c}</b><small>{p.n}</small></td><td>{p.invoiced}</td><td>{p.got}</td><td>{p.spent}</td><td className={p.neg ? 'is-red' : 'is-green'}>{p.profit}<small>{p.margin}</small></td></tr>)}</tbody>
+              <thead><tr><th>Project</th><th>Invoiced</th><th>Received</th><th>Spent</th>{R.showProfit ? <th>Profit</th> : null}</tr></thead>
+              <tbody>{R.projects.map(p => <tr key={p.id}><td><b>{p.c}</b><small>{p.n}</small></td><td>{p.invoiced}</td><td>{p.got}</td><td>{p.spent}</td>{R.showProfit ? <td className={p.neg ? 'is-red' : 'is-green'}>{p.profit}<small>{p.margin}</small></td> : null}</tr>)}</tbody>
             </table>
           </div>
         </section>
