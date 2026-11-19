@@ -74,7 +74,7 @@ export const financeMethods = {
     if (!d.lines || !d.lines.some(l => l.item && +l.rate > 0)) return 'Add at least one item with a rate';
     const lines = d.lines.filter(l => l.item && +l.rate > 0).map(l => ({ item: l.item.trim(), n: +l.n || 1, rate: Math.round(+l.rate), days: +l.days || 1, events: +l.events || 1 }));
     const cust = (this.state.customers || []).find(c => c.n === d.c) || {};
-    const base = { c: d.c, tin: d.tin || cust.tin || '', vrn: d.vrn || '', p: d.p || '', title: (d.title || '').trim(), lines, admin: d.admin == null ? 15 : +d.admin, vat: 18, signer: d.signer || 'ED', due: d.due || '30 days', by: this.me().k };
+    const base = { c: d.c, tin: d.tin || cust.tin || '', vrn: d.vrn || cust.vrn || '', addr: [cust.box, cust.address, cust.city].filter(Boolean).join(', '), p: d.p || '', title: (d.title || '').trim(), lines, admin: d.admin == null ? 15 : +d.admin, vat: 18, signer: d.signer || 'ED', due: d.due || '30 days', by: this.me().k };
     base.v = invTotals(base).total / 1e6;
     if (d.id) {
       this.setState(x => ({ invoices: x.invoices.map(i => (i.id === d.id ? Object.assign({}, i, base, { signed: null, st: (i.payments || []).some(p => p.ok) ? 'partial' : i.st === 'draft' ? 'draft' : 'sent' }) : i)) }));
@@ -164,7 +164,7 @@ th:first-child{border-radius:8px 0 0 8px}th:last-child{border-radius:0 8px 8px 0
 ${i.signed ? '' : '<div class=draft>DRAFT</div>'}
 <div class=top><img src="${origin}/brand/trinity-logo-full.png" alt="Trinity Mark"><div class=inv><h1>INVOICE</h1><div><b>${esc(i.id)}</b></div><div>Date: ${esc(i.at || dayKey(0))}</div></div></div>
 <div class=band></div>
-<div class=grid><div class=box><div class=lbl>Bill to</div><b style="font-size:15px">${esc(i.c)}</b><div class=kv style="margin-top:4px">${i.tin ? `<span>TIN</span><b>${esc(i.tin)}</b>` : ''}${i.vrn ? `<span>VRN</span><b>${esc(i.vrn)}</b>` : ''}</div></div>
+<div class=grid><div class=box><div class=lbl>Bill to</div><b style="font-size:15px">${esc(i.c)}</b>${i.addr ? `<div style="color:#6E6A7C;margin-top:2px">${esc(i.addr)}</div>` : ''}<div class=kv style="margin-top:4px">${i.tin ? `<span>TIN</span><b>${esc(i.tin)}</b>` : ''}${i.vrn ? `<span>VRN</span><b>${esc(i.vrn)}</b>` : ''}</div></div>
 <div class=box><div class=lbl>From</div><b>${COMPANY.name}</b><div class=kv style="margin-top:4px"><span>TIN</span><b>${COMPANY.tin}</b><span>VRN</span><b>${COMPANY.vrn}</b></div></div></div>
 ${PO.no ? `<div class=po><div><span>PO number</span><b>${esc(PO.no)}</b></div><div><span>PO date</span><b>${esc(PO.date || '')}</b></div><div><span>Vendor number</span><b>${esc(PO.vendor || '')}</b></div></div>` : ''}
 <div class=title>${esc(i.title || P.name || '')}</div>
@@ -220,7 +220,7 @@ export function financeVals(s) {
       if (i.lines && i.lines.length) return i;
       const T = invTotals(i); return Object.assign({}, i, { admin: 0, lines: [{ item: this.proj(i.p).name || 'Services as agreed', n: 1, rate: T.net, days: 1, events: 1 }] }); })(),
     save: d => { const e = this.saveInvoice(d); if (!e) { this.setState({ invEdit: null }); if (s.page !== 'invoices') this.finGo('invoices'); } return e; },
-    customers: (s.customers || []).map(c => ({ v: c.n, l: c.n, tin: c.tin || '' })),
+    customers: (s.customers || []).map(c => ({ v: c.n, l: c.n, tin: c.tin || '', vrn: c.vrn || '' })),
     poFor: pid => { const P = s.projects.find(p => p.id === pid); return P && P.po ? P.po.no + ' · ' + P.po.date + (P.po.vendor ? ' · vendor ' + P.po.vendor : '') : ''; },
     projects: s.projects.filter(p => p.st !== 'done').map(p => ({ v: p.id, l: p.client + ' · ' + p.name, c: p.client })),
     totals: invTotals

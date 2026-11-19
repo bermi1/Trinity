@@ -76,3 +76,23 @@ test('the Personal Assistant schedules for Management and sees no money', async 
   await openAs(page, 'ceo', 'dashboard', {}, false);
   await expect(page.getByRole('region', { name: 'Purchase orders' })).toContainText('PO not received');
 });
+
+// A customer's invoice details (TIN, VRN, address) are captured once and used on every invoice.
+test('a new customer’s TIN, VRN and address flow into the invoice', async ({ page }) => {
+  await openAs(page, 'clientservice', 'clients');
+  await btn(page, 'Add customer').click();
+  const f = page.getByRole('dialog');
+  for (const [l, v] of [['Company name', 'Azam Media Ltd'], ['Contact person', 'Rose Mkapa'], ['TIN', '104-555-210'], ['VRN', '10-031122-K'], ['P.O. Box', 'P.O. Box 2517'], ['City', 'Dar es Salaam']]) await f.locator('[data-field="' + l + '"] input').fill(v);
+  await btn(f, 'Add customer').click();
+  await toast(page, 'Customer added · Azam Media Ltd');
+  await openAs(page, 'finance', 'invoices', {}, false);
+  await btn(page, 'New invoice').click();
+  const ed = page.getByRole('dialog');
+  await ed.getByRole('button', { name: 'Azam Media Ltd', exact: true }).click();
+  await expect(ed.locator('[data-field] input, label.ff input').nth(1)).toHaveValue('10-031122-K');
+  await ed.getByLabel('Item 1').fill('Studio branding');
+  await ed.getByLabel('Rate 1').fill('2500000');
+  await btn(ed, 'Create invoice').click();
+  const data = await saved(page);
+  expect(data.invoices[0]).toMatchObject({ c: 'Azam Media Ltd', tin: '104-555-210', vrn: '10-031122-K', addr: 'P.O. Box 2517, Dar es Salaam' });
+});

@@ -4,7 +4,7 @@ export function overlayVals(s, IC) {
   const V = {};
   const m = s.modal;
   V.modalOpen = !!m;
-  V.M = m ? {title:m.title, sub:m.sub, submit:m.submit} : {};
+  V.M = m ? {title:m.title, sub:m.sub, submit:m.submit, wide:!!m.wide} : {};
   V.modalErr = s.modalErr;
   // Each field becomes chips, faces, a searchable list, an amount, a file drop or text (see FormFields).
   const setF = k => val => this.setState(x => ({form:Object.assign({}, x.form, {[k]:val}), modalErr:''}));

@@ -5,7 +5,7 @@ export default function FormModal({ v }) {
   const enter = e => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') v.modalSubmit(); };
   return (
     <div className="fm-back" onClick={v.modalClose}>
-      <div className="fm" onClick={v.stop} role="dialog" aria-modal="true" aria-label={v.M.title}>
+      <div className={'fm' + (v.M.wide ? ' is-wide' : '')} onClick={v.stop} role="dialog" aria-modal="true" aria-label={v.M.title}>
         <div className="fm-head">
           <div>
             <h3>{v.M.title}</h3>

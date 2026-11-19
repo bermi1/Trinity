@@ -987,3 +987,8 @@
 .ob-pay .ff-search { width: 140px; }
 .co-sig { display: block; max-height: 44px; max-width: 160px; margin-top: 6px; background: #fff; border: 1px solid #ECEDF2; border-radius: 8px; padding: 4px; }
 .hd-stages div.is-warn b { color: #9A6200; }
+/* Wide forms: two columns of fields */
+.fm.is-wide { max-width: 760px; width: min(760px, calc(100vw - 32px)); }
+.fm.is-wide .fm-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 16px; align-content: start; }
+.fm.is-wide .fm-body > .ff[data-field="Company name"], .fm.is-wide .fm-body > .ff[data-field="Physical address"], .fm.is-wide .fm-body > .ff[data-field="Account owner"], .fm.is-wide .fm-body > .fm-err { grid-column: 1 / -1; }
+@media (max-width: 600px) { .fm.is-wide .fm-body { grid-template-columns: 1fr; } }

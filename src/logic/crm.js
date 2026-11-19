@@ -48,7 +48,7 @@ export const crmMethods = {
   addCustomer(f) {
     const n = f.n.trim();
     if ((this.state.customers || []).some(c => c.n.toLowerCase() === n.toLowerCase())) { this.toast(n + ' is already a customer'); return; }
-    this.setState(x => ({ customers: [{ id: 'C' + Date.now().toString(36), n, contact: (f.contact || '').trim(), phone: (f.phone || '').trim(), email: (f.email || '').trim(), tin: (f.tin || '').trim(), city: (f.city || '').trim(), owner: f.owner || this.me().k }, ...(x.customers || [])] }));
+    this.setState(x => ({ customers: [{ id: 'C' + Date.now().toString(36), n, contact: [(f.contact || '').trim(), (f.title || '').trim()].filter(Boolean).join(' · '), phone: (f.phone || '').trim(), email: (f.email || '').trim(), tin: (f.tin || '').trim(), vrn: (f.vrn || '').trim(), box: (f.box || '').trim(), address: (f.address || '').trim(), city: (f.city || '').trim(), owner: f.owner || this.me().k }, ...(x.customers || [])] }));
     this.toast('Customer added · ' + n);
   },
 

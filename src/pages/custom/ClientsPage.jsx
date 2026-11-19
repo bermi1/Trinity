@@ -163,6 +163,7 @@ function Customers({ C }) {
             <header><b>{c.n}</b>{c.active ? <span className="cr-active">{c.active} active</span> : null}</header>
             <p>{c.contact || '—'}</p>
             <p className="k-sub">{[c.phone, c.email].filter(Boolean).join(' · ') || 'No contact details yet'}</p>
+            {c.tin || c.vrn ? <p className="k-sub">{[c.tin ? 'TIN ' + c.tin : '', c.vrn ? 'VRN ' + c.vrn : ''].filter(Boolean).join(' · ')}</p> : null}
             <footer>
               <span>{c.jobs} jobs{c.value ? ' · ' + c.value : ''}{c.leads ? ' · ' + c.leads + ' open leads' : ''}</span>
               <span className="k-sub">{c.ownerN}</span>

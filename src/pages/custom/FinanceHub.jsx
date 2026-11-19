@@ -83,7 +83,7 @@ function Editor({ F }) {
   const set = (k, v) => setF(x => Object.assign({}, x, { [k]: v }));
   const setLine = (i, k, v) => setF(x => Object.assign({}, x, { lines: x.lines.map((l, j) => (j === i ? Object.assign({}, l, { [k]: v }) : l)) }));
   const T = F.totals({ lines: f.lines.map(l => ({ n: +l.n || 0, rate: +l.rate || 0, days: +l.days || 1, events: +l.events || 1 })), admin: f.admin, vat: 18 });
-  const pickClient = c => { const cu = F.customers.find(x => x.v === c); setF(x => Object.assign({}, x, { c, tin: x.tin || (cu ? cu.tin : '') })); };
+  const pickClient = c => { const cu = F.customers.find(x => x.v === c); setF(x => Object.assign({}, x, { c, tin: cu ? cu.tin : x.tin, vrn: cu ? cu.vrn : x.vrn })); };
   return (
     <div className="fm-back" onClick={F.closeEdit}>
       <div className="fm fh-ed" role="dialog" aria-label={d ? 'Edit ' + d.id : 'New invoice'} onClick={e => e.stopPropagation()}>
