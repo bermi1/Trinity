@@ -3,7 +3,7 @@ import CustomPage from '../pages/custom/CustomPage';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import DashboardPage from '../pages/DashboardPage';
-import BriefingPage from '../pages/BriefingPage';
+import Briefing from '../pages/custom/Briefing';
 import ProjectsPage from '../pages/ProjectsPage';
 import ProjectView from '../pages/custom/ProjectView';
 import TasksPage from '../pages/TasksPage';
@@ -49,7 +49,7 @@ export default function AppShell({ v }) {
           <TopBar v={v} />
           <div style={{ padding: "clamp(16px,2.4vw,32px)", display: "flex", flexDirection: "column", gap: "20px", animation: "tmIn .25s ease" }}>
             {v.is.dashboard ? <HomeDash v={v} /> : null}
-            {v.is.briefing ? <BriefingPage v={v} /> : null}
+            {v.is.briefing ? <Briefing v={v} /> : null}
             {v.is.projects ? <ProjectsPage v={v} /> : null}
             {v.is.project ? <ProjectView v={v} /> : null}
             {v.is.tasks ? <TasksPage v={v} /> : null}

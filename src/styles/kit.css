@@ -992,3 +992,16 @@
 .fm.is-wide .fm-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 16px; align-content: start; }
 .fm.is-wide .fm-body > .ff[data-field="Company name"], .fm.is-wide .fm-body > .ff[data-field="Physical address"], .fm.is-wide .fm-body > .ff[data-field="Account owner"], .fm.is-wide .fm-body > .fm-err { grid-column: 1 / -1; }
 @media (max-width: 600px) { .fm.is-wide .fm-body { grid-template-columns: 1fr; } }
+/* Monday Briefing */
+.br { display: grid; gap: 16px; }
+.br-kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.br-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.br-list li { display: grid; gap: 3px; padding: 10px 12px; border-radius: 12px; background: #F7F7FA; font-size: 13.5px; }
+.br-list li.is-done { background: #F1F9F4; } .br-list li.is-open small { color: #9A6200; }
+.br-list small { color: #6E7180; font-size: 12.5px; }
+.br-list p { margin: 0; }
+.rp-pre { white-space: pre-line; margin: 4px 0 0; }
+.br-tag { font-style: normal; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 6px; background: #FFF4E0; color: #9A6200; margin-right: 4px; }
+.br-side { display: grid; gap: 14px; align-content: start; }
+.br-sel { flex: 1 1 220px; }
+.br-people { flex-wrap: nowrap; overflow-x: auto; }
