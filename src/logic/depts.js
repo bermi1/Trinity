@@ -176,7 +176,9 @@ export function deptVals(s) {
   const myTasks = s.tasks.filter(t => t.who === me && t.st !== 'done' && t.kind !== 'brief').slice(0, 6).map(t => ({ id: t.id, t: t.t, due: t.due, client: proj(t.p).client || '', done: () => this.setState(x => ({ tasks: x.tasks.map(y => (y.id === t.id ? Object.assign({}, y, { st: 'done' }) : y)) })) }));
   const briefRow = b => this.briefRow(b);
   const briefs = s.tasks.filter(t => t.kind === 'brief');
-  const V = { has: true, dept, label: D.l, isMgr, mgrName: this.av(this.managerOf(dept)).n, first: this.me().n.split(' ')[0], team, myTasks,
+  const memos = (s.memos || []).filter(m => m.dept === dept && (isMgr || m.to === me)).map(m => ({ id: m.id, from: this.av(m.from).n, text: m.text, st: m.st, reply: m.reply || '', at: m.at, lead: m.lead ? ((s.leads || []).find(l => l.id === m.lead) || {}).c || '' : '',
+    file: m.file ? () => this.openDoc({ n: m.file.name, url: m.file.url, path: m.file.path }) : null, seen: () => this.memoAct(m.id, 'seen'), done: r => this.memoAct(m.id, 'done', r) }));
+  const V = { has: true, dept, label: D.l, memos, isMgr, mgrName: this.av(this.managerOf(dept)).n, first: this.me().n.split(' ')[0], team, myTasks,
     newTask: () => this.openModal('task'), canAssign: isMgr };
 
   if (dept === 'clientservice') {

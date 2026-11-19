@@ -1,0 +1,63 @@
+import { test, expect } from '@playwright/test';
+import { openAs, watchErrors, saved, toast, btn } from './helpers';
+
+// A lead that only needs a piece of work: Client Service sends a memo; the department head
+// sees it, replies and marks it done; Client Service sees the answer on the lead.
+test('a memo from a lead reaches the department head and the answer comes back', async ({ page }) => {
+  const errors = watchErrors(page);
+  await openAs(page, 'clientservice', 'clients');
+  await page.locator('[data-lead="L1"]').click();
+  const panel = page.getByRole('dialog');
+  await panel.getByRole('button', { name: 'Send memo to a department' }).click();
+  await panel.getByRole('radio', { name: 'Operations' }).click();
+  await panel.getByLabel('Memo', { exact: true }).fill('Please quote transport for 3 trucks to Arusha on 12 Dec');
+  await panel.getByRole('button', { name: 'Send memo' }).click();
+  await toast(page, 'Memo sent to Michael Mushi');
+  let data = await saved(page);
+  const memo = data.memos[0];
+  expect(memo).toMatchObject({ dept: 'operations', to: 'MM', from: 'NL', lead: 'L1', st: 'sent' });
+  expect(data.notes.some(n => n.to === 'MM' && /Memo from Neema Lyimo/.test(n.t))).toBe(true);
+
+  await openAs(page, 'operations', 'dept', {}, false);
+  const card = page.locator('[data-memo="' + memo.id + '"]');
+  await expect(card).toContainText('Please quote transport for 3 trucks');
+  await card.getByRole('button', { name: 'Mark seen' }).click();
+  await card.getByLabel('Reply to memo from Neema Lyimo').fill('Quote is TZS 2.4M, sent by email');
+  await btn(card, 'Done').click();
+  await toast(page, 'Memo done · Neema Lyimo told');
+  data = await saved(page);
+  expect(data.memos[0]).toMatchObject({ st: 'done', reply: 'Quote is TZS 2.4M, sent by email' });
+
+  await openAs(page, 'clientservice', 'clients', {}, false);
+  await page.locator('[data-lead="L1"]').click();
+  await expect(page.getByRole('dialog')).toContainText('Quote is TZS 2.4M, sent by email');
+  expect(errors).toEqual([]);
+});
+
+// Any staff member registers a visitor; the front desk expects them and tells the host on arrival;
+// the GM sees it on the calendar.
+test('a staff member’s expected visitor reaches the front desk and the GM’s calendar', async ({ page }) => {
+  await openAs(page, 'staff', 'meetings');
+  await btn(page, 'I’m expecting a visitor').click();
+  const form = page.getByRole('region', { name: 'Expected visitor' });
+  await form.getByLabel('Visitor name').fill('Baraka Mushi');
+  await form.getByLabel('From (company)').fill('Vodacom');
+  await form.getByLabel('Reason').fill('Site plan review');
+  await form.getByLabel('Time').fill('15:45');
+  await btn(form, 'Tell the front desk').click();
+  await toast(page, 'Front desk told · Baraka Mushi');
+  let data = await saved(page);
+  expect(data.visitors[0]).toMatchObject({ name: 'Baraka Mushi', host: 'GM', st: 'expected', time: '15:45' });
+  expect(data.notes.some(n => n.to === 'AM' && /Expected visitor: Baraka Mushi from Vodacom/.test(n.t))).toBe(true);
+
+  await openAs(page, 'gm', 'meetings', {}, false);
+  await expect(page.getByText('Visitor: Baraka Mushi · Vodacom')).toBeVisible();
+
+  await openAs(page, 'reception', 'reception', {}, false);
+  const row = page.locator('.rd-list li').filter({ hasText: 'Baraka Mushi' });
+  await btn(row, 'Arrived').click();
+  await toast(page, 'Baraka Mushi checked in');
+  data = await saved(page);
+  expect(data.visitors.find(v => v.name === 'Baraka Mushi').st).toBe('in');
+  expect(data.notes.some(n => n.to === 'GM' && /Your guest has arrived: Baraka Mushi/.test(n.t))).toBe(true);
+});

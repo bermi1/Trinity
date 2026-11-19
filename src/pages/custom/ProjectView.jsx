@@ -123,9 +123,9 @@ export default function ProjectView({ v }) {
         <nav className="rc-crumbs" aria-label="Breadcrumb"><button type="button" onClick={P.back}>Projects</button><span>/</span><b>{P.id}</b></nav>
         <div className="rc-acts">
           {P.addTask ? <Btn kind="ghost" onClick={P.addTask}>Assign task</Btn> : null}
-          <Btn kind="ghost" onClick={P.reqMoney}>Request money</Btn>
+          {P.reqMoney ? <Btn kind="ghost" onClick={P.reqMoney}>Request money</Btn> : null}
           {P.newBrief ? <Btn kind="ghost" onClick={P.newBrief}>Send design brief</Btn> : null}
-          {P.money ? <Btn kind="ghost" onClick={P.money.invoice}>Create invoice</Btn> : null}
+          {P.money && P.money.invoice ? <Btn kind="ghost" onClick={P.money.invoice}>Create invoice</Btn> : null}
         </div>
       </div>
 

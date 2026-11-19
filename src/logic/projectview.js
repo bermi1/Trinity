@@ -66,6 +66,12 @@ export function projectVals(s) {
   }
   if (flow === 'closed') N.text = 'Closed.';
   V.now = N;
+  // The record's buttons follow the step: briefs before execution, tasks, money and invoices in execution.
+  const exec = flow === 'execution' || flow === 'closed';
+  if (!['brief', 'design'].includes(flow)) V.newBrief = null;
+  if (flow !== 'execution') V.addTask = null;
+  if (!exec) { V.reqMoney = null; if (V.money) V.money.invoice = null; }
+  if (V.clientPart && !(P.val > 0)) V.clientPart.value = 'Set in the budget';
   // The budget as Operations prepared it (for those who see money).
   if ((can.budget || (role === 'gm')) && B.lines) {
     const internal = sumLines(B.lines);

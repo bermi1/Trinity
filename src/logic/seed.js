@@ -178,6 +178,9 @@ export function seed() {
   reportsSub:44, reportsToday:{}, reportText:'', fieldReq:{amt:'',purpose:'',p:'PRJ-0231',cat:'Team'},
   // Company-wide setup: requests up to smallLimit (TZS) need only the PM and Finance; `off` hides sections.
   outbox:[],
+  memos:[],
+  reports:[],
+  petty:{open:300000,entries:[],counts:[]},
   cal:[{id:'CE1',title:'Staff meeting · monthly',date:dayKey(2),time:'08:30',kind:'Staff meeting',by:'GN'},{id:'CE2',title:'Q4 results presentation to the board',date:dayKey(6),time:'10:00',kind:'Presentation',by:'DK'},{id:'CE3',title:'Public holiday · Independence Day',date:dayKey(23),time:'',kind:'Holiday',by:'GN'}],
   meetings:[
     {id:'MT1',title:'Gala planning with Safari Mobile',date:dayKey(0),time:'16:00',place:'Boardroom',kind:'client',to:{all:false,depts:['clientservice'],people:['GN']},guest:{name:'Halima Juma',co:'Safari Mobile',phone:'+255 767 300 900'},by:'DK',at:dayKey(-1)},

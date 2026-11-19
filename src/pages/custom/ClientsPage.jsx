@@ -117,6 +117,8 @@ function LeadPanel({ L, reasons }) {
             </div>
           ) : null}
 
+          <Memo L={L} />
+
           <section>
             <h3 className="cr-h3">History</h3>
             <ol className="cr-hist">
@@ -126,6 +128,26 @@ function LeadPanel({ L, reasons }) {
         </div>
       </aside>
     </div>
+  );
+}
+
+// A memo to a department, for a lead that only needs a piece of work done.
+function Memo({ L }) {
+  const [open, setOpen] = useState(false); const [dept, setDept] = useState(''); const [text, setText] = useState(''); const [file, setFile] = useState(null); const [err, setErr] = useState('');
+  return (
+    <section className="cr-memo">
+      <h3 className="cr-h3">Memos</h3>
+      {L.memos.length ? <ul className="cr-memos">{L.memos.map(m => <li key={m.id}><b>To {m.to}</b> · <span className={'cr-mst is-' + m.st.toLowerCase()}>{m.st}</span><p>{m.text}</p>{m.reply ? <p className="cr-reply">↳ {m.reply}</p> : null}<small>{m.at}</small></li>)}</ul> : null}
+      {open ? (
+        <div className="pn-form">
+          <div className="ff-chips" role="radiogroup" aria-label="Department">{L.depts.map(d => <button key={d.v} type="button" role="radio" aria-checked={dept === d.v} className={dept === d.v ? 'is-on' : ''} onClick={() => setDept(d.v)}>{d.l}</button>)}</div>
+          <textarea rows={3} className="cr-memo-t" value={text} onChange={e => setText(e.target.value)} placeholder="What do you need from them, and by when?" aria-label="Memo" />
+          <label className="bi-up"><input type="file" onChange={e => setFile(e.target.files[0] || null)} aria-label="Memo attachment" />{file ? '✓ ' + file.name : '↑ Attach a file (optional)'}</label>
+          {err ? <div className="fm-err" role="alert">{err}</div> : null}
+          <div className="fh-row"><button type="button" className="me-cancel" onClick={() => setOpen(false)}>Cancel</button><button type="button" className="me-save" onClick={async () => { const m = await L.memo({ dept, text, file }); if (m) setErr(m); else { setOpen(false); setText(''); setFile(null); setDept(''); } }}>Send memo</button></div>
+        </div>
+      ) : <Btn kind="ghost" onClick={() => setOpen(true)}>Send memo to a department</Btn>}
+    </section>
   );
 }
 

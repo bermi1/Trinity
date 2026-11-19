@@ -93,6 +93,26 @@ export const crmMethods = {
     this.remind(k, 'Lead assigned to you · ' + l.c, 'clients', 'users', l.t + ' · from ' + this.me().n);
     this.toast(l.c + ' → ' + this.av(k).n);
   },
+  // A memo to a department (for a lead that needs work without a full project). The head acts on it.
+  async sendMemo(f) {
+    const text = (f.text || '').trim(); if (!f.dept) return 'Choose the department'; if (text.length < 5) return 'Write the memo';
+    let file = null; if (f.file) { try { file = await this.storeFile(f.file); } catch (e) { return 'Upload failed · ' + (e.message || e); } }
+    const to = this.managerOf(f.dept), id = 'MEMO' + Date.now().toString(36), at = dayKey(0);
+    const m = { id, from: this.me().k, dept: f.dept, to, text, file, lead: f.lead || '', st: 'sent', at, log: [{ by: this.me().k, at, t: 'Sent' }] };
+    this.setState(x => ({ memos: [m, ...(x.memos || [])] }));
+    const L = (this.state.leads || []).find(l => l.id === f.lead);
+    if (L) this.setState(x => ({ leads: x.leads.map(l => (l.id === L.id ? Object.assign({}, l, { hist: [...(l.hist || []), { s: this.leadStage(l), by: this.me().k, at, note: 'Memo sent to ' + this.av(to).n + ': ' + text.slice(0, 80) }] }) : l)) }));
+    if (to && to !== this.me().k) this.notify({ to, ic: 'fileText', t: 'Memo from ' + this.me().n + (L ? ' · ' + L.c : ''), s: text.slice(0, 120), go: 'dept' });
+    this.toast('Memo sent to ' + this.av(to).n);
+    return '';
+  },
+  memoAct(id, st, reply) {
+    const m = (this.state.memos || []).find(x => x.id === id); if (!m) return;
+    const at = dayKey(0), t = st === 'seen' ? 'Seen' : 'Done' + (reply ? ': ' + reply : '');
+    this.setState(x => ({ memos: x.memos.map(y => (y.id === id ? Object.assign({}, y, { st, reply: reply || y.reply || '', log: [...(y.log || []), { by: this.me().k, at, t }] }) : y)) }));
+    if (m.from !== this.me().k) this.notify({ to: m.from, ic: 'check', t: 'Memo ' + (st === 'seen' ? 'seen' : 'done') + ' by ' + this.me().n, s: reply || m.text.slice(0, 80), go: m.lead ? 'clients' : 'dept' });
+    this.toast(st === 'seen' ? 'Marked as seen' : 'Memo done · ' + this.av(m.from).n + ' told');
+  },
   setLeadNext(id, next) { this.setState(x => ({ leads: x.leads.map(y => (y.id === id ? Object.assign({}, y, { next }) : y)) })); }
 };
 
@@ -122,7 +142,10 @@ export function crmVals(s) {
       hist: (sel.hist || []).slice().reverse().map(h => ({ stage: LEAD_STAGES[h.s], by: this.av(h.by).n, at: h.at, note: h.note || '' })),
       job: sel.job || '', goJob: () => this.go('project', { projectId: sel.job }),
       close: () => this.setState({ leadSel: null }), setOwner: k => this.setLeadOwner(sel.id, k), setNext: t => this.setLeadNext(sel.id, t),
-      move: (to, extra) => this.moveLead(sel.id, to, extra), store: f => this.storeFile(f)
+      move: (to, extra) => this.moveLead(sel.id, to, extra), store: f => this.storeFile(f),
+      memo: f => this.sendMemo(Object.assign({ lead: sel.id }, f)),
+      memos: (s.memos || []).filter(m => m.lead === sel.id).map(m => ({ id: m.id, to: this.av(m.to).n, dept: m.dept, text: m.text, st: { sent: 'Sent', seen: 'Seen', done: 'Done' }[m.st], reply: m.reply || '', at: m.at })),
+      depts: ['creative', 'operations', 'finance', 'production'].map(d => ({ v: d, l: { creative: 'Creative', operations: 'Operations', finance: 'Finance', production: 'Printing' }[d] }))
     });
   }
   const tab = s.crmTab || 'leads';

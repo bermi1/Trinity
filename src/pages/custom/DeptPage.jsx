@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import BriefItem from '../../components/BriefItem';
 import { PageHead, Card, Btn, Avatar, Kpis, Pill, Empty } from '../../ui/kit';
 
@@ -52,6 +53,31 @@ function MyTasks({ D }) {
 }
 
 // Department dashboard: Client Service, Creative or Operations.
+function Memos({ list }) {
+  const [reply, setReply] = useState({});
+  if (!list.length) return null;
+  return (
+    <Card title={'Memos · ' + list.filter(m => m.st !== 'done').length + ' open'}>
+      <ul className="cr-memos">
+        {list.map(m => (
+          <li key={m.id} data-memo={m.id}>
+            <b>From {m.from}</b>{m.lead ? ' · ' + m.lead : ''} · <span className={'cr-mst is-' + m.st}>{m.st === 'sent' ? 'New' : m.st === 'seen' ? 'Seen' : 'Done'}</span>
+            <p>{m.text}</p>{m.reply ? <p className="cr-reply">↳ {m.reply}</p> : null}
+            {m.file ? <button type="button" className="td-start" onClick={m.file}>Open attachment</button> : null}
+            {m.st !== 'done' ? (
+              <div className="mr-reply">
+                {m.st === 'sent' ? <button type="button" className="td-start" onClick={m.seen}>Mark seen</button> : null}
+                <input className="ff-search" value={reply[m.id] || ''} onChange={e => setReply(Object.assign({}, reply, { [m.id]: e.target.value }))} placeholder="Reply (what was done)" aria-label={'Reply to memo from ' + m.from} />
+                <Btn kind="dark" onClick={() => m.done(reply[m.id] || '')}>Done</Btn>
+              </div>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 export default function DeptPage({ v }) {
   const D = v.DP;
   if (!D.has) return <Card><Empty>This page is for department portals.</Empty></Card>;
@@ -68,6 +94,7 @@ export default function DeptPage({ v }) {
         {D.dept === 'operations' ? <Btn kind="dark" onClick={D.request}>Request money</Btn> : null}
       </PageHead>
       <div className="dp-kpis"><Kpis items={D.kpis} /></div>
+      <Memos list={D.memos || []} />
       {D.dept === 'clientservice' ? (
         <div className="dp-target" aria-label={'Target ' + D.targetPct + '% achieved'}><i style={{ width: D.targetPct + '%' }} /></div>
       ) : null}

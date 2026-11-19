@@ -58,6 +58,27 @@ function AddEvent({ M, onDone }) {
   );
 }
 
+function AddVisitor({ M, onDone }) {
+  const [f, setF] = useState({ name: '', co: '', phone: '', purpose: '', date: M.dates[0].v, time: '10:00' });
+  const [err, setErr] = useState('');
+  const set = (k, v) => setF(x => Object.assign({}, x, { [k]: v }));
+  return (
+    <section className="fh-card mt-new" aria-label="Expected visitor">
+      <p className="k-sub">The front desk is told, so your visitor is welcomed and you are called when they arrive.</p>
+      <div className="fh-two">
+        <label className="ff"><span className="ff-l">Visitor name</span><input value={f.name} onChange={e => set('name', e.target.value)} placeholder="Who is coming?" /></label>
+        <label className="ff"><span className="ff-l">From (company)</span><input value={f.co} onChange={e => set('co', e.target.value)} /></label>
+        <label className="ff"><span className="ff-l">Phone</span><input inputMode="tel" value={f.phone} onChange={e => set('phone', e.target.value)} placeholder="+255" /></label>
+        <label className="ff"><span className="ff-l">Reason</span><input value={f.purpose} onChange={e => set('purpose', e.target.value)} placeholder="e.g. Contract signing" /></label>
+        <label className="ff"><span className="ff-l">Day</span><input type="date" value={f.date} onChange={e => set('date', e.target.value)} /></label>
+        <label className="ff"><span className="ff-l">Time</span><input type="time" value={f.time} onChange={e => set('time', e.target.value)} /></label>
+      </div>
+      {err ? <div className="fm-err" role="alert">{err}</div> : null}
+      <div className="fh-row"><Btn kind="dark" onClick={() => { const e = M.addAppt(f); if (e) setErr(e); else onDone(); }}>Tell the front desk</Btn><Btn kind="ghost" onClick={onDone}>Cancel</Btn></div>
+    </section>
+  );
+}
+
 // Calendar: meetings, company events and project deadlines, in one list everyone sees. Invitations reach everyone invited; client meetings also go to Reception.
 export default function MeetingsPage({ v }) {
   const M = v.MT;
@@ -65,10 +86,11 @@ export default function MeetingsPage({ v }) {
   return (
     <>
       <PageHead kicker="Office" title="Calendar" sub="Meetings, company events and project deadlines. Client meetings tell Reception who to welcome.">
-        {M.can && !adding ? <><Btn kind="dark" onClick={() => setAdding('meet')}>New meeting</Btn><Btn kind="ghost" onClick={() => setAdding('event')}>Add event</Btn></> : null}
+        {!adding ? <>{M.can ? <><Btn kind="dark" onClick={() => setAdding('meet')}>New meeting</Btn><Btn kind="ghost" onClick={() => setAdding('event')}>Add event</Btn></> : null}<Btn kind="ghost" onClick={() => setAdding('visit')}>I’m expecting a visitor</Btn></> : null}
       </PageHead>
       {adding === 'meet' ? <NewMeeting M={M} onDone={() => setAdding('')} /> : null}
       {adding === 'event' ? <AddEvent M={M} onDone={() => setAdding('')} /> : null}
+      {adding === 'visit' ? <AddVisitor M={M} onDone={() => setAdding('')} /> : null}
       {M.days.length ? M.days.map(d => (
         <section key={d.k} className="fh-card">
           <h3>{d.l}</h3>

@@ -56,6 +56,19 @@ export const officeMethods = {
     this.toast('Meeting cancelled');
   },
 
+  // Anyone can register a visitor they expect: it goes to the front desk, Reception is told,
+  // and the GM and Management see it on the calendar.
+  addAppointment(f) {
+    if (!(f.name || '').trim()) return 'Enter the visitor’s name';
+    if (!f.date || !f.time) return 'Choose the day and time';
+    const me = this.me().k, id = 'V' + Date.now().toString(36);
+    const v = { id, name: f.name.trim(), co: (f.co || '').trim(), phone: (f.phone || '').trim(), purpose: (f.purpose || '').trim() || 'Appointment', host: me, date: f.date, time: f.time, st: 'expected', appt: true };
+    this.setState(x => ({ visitors: [v, ...(x.visitors || [])] }));
+    const rk = this.ROLES.reception.k, when = dayLabel(v.date) + ' ' + v.time;
+    if (rk !== me) this.notify({ to: rk, ic: 'users', t: 'Expected visitor: ' + v.name + (v.co ? ' from ' + v.co : ''), s: when + ' · for ' + this.me().n + ' · ' + v.purpose, go: 'reception' });
+    this.toast('Front desk told · ' + v.name + ' · ' + when);
+    return '';
+  },
   // Reception: a guest signs in at the front desk; the person or office they visit is told.
   checkIn(f) {
     if (!(f.name || '').trim()) return 'Enter the guest’s name';
@@ -84,6 +97,9 @@ export function officeVals(s) {
   const dayOf = k => { let d = days.find(x => x.k === k); if (!d) days.push(d = { k, l: dayLabel(k), items: [] }); return d; };
   (s.cal || []).filter(e => e.date >= today && e.date <= end).forEach(e => dayOf(e.date).items.push({ id: e.id, time: e.time || 'All day', title: e.title, place: e.kind, kind: 'cal', who: 'Everyone', by: this.av(e.by).n, canCancel: e.by === me || this.isTop(), cancel: () => this.removeCal(e.id) }));
   this.visibleProjects().filter(p => p.st !== 'done').forEach(p => { const k = dueKey(p.due); if (k && k >= today && k <= end) dayOf(k).items.push({ id: 'due' + p.id, time: 'Due', title: p.client + ' · ' + p.name, place: 'Project deadline', kind: 'due', who: 'PM ' + (p.pm ? this.av(p.pm).n : 'not chosen'), by: '', go: () => this.go('project', { projectId: p.id }) }); });
+  const seeAllVisits = this.isTop() || (s.role || 'ceo') === 'reception';
+  (s.visitors || []).filter(v => v.st === 'expected' && !v.meeting && (v.date || today) >= today && (v.date || today) <= end && (seeAllVisits || v.host === me))
+    .forEach(v => dayOf(v.date || today).items.push({ id: 'v' + v.id, time: v.time || '', title: 'Visitor: ' + v.name + (v.co ? ' · ' + v.co : ''), place: 'Front desk', kind: 'client', who: 'For ' + this.av(v.host).n, by: '', guest: v.purpose || '' }));
   mine.forEach(m => { const d = dayOf(m.date);
     const t = m.to || {};
     d.items.push({ id: m.id, time: m.time, title: m.title, place: m.place, client: m.kind === 'client', guest: m.guest ? m.guest.name + (m.guest.co ? ' · ' + m.guest.co : '') : '',
@@ -94,7 +110,7 @@ export function officeVals(s) {
   const vrow = v => ({ id: v.id, name: v.name, co: v.co || '', phone: v.phone || '', purpose: v.purpose || '', host: this.av(v.host).n, time: v.time || '', out: v.outAt || '',
     arrive: () => this.arrived(v.id), leave: () => this.checkOut(v.id) });
   return {
-    MT: { days, can: this.canCreateMeeting(), create: f => this.createMeeting(f), addCal: f => this.addCal(f), kinds: CAL_KINDS,
+    MT: { days, can: this.canCreateMeeting(), create: f => this.createMeeting(f), addCal: f => this.addCal(f), kinds: CAL_KINDS, addAppt: f => this.addAppointment(f),
       offices: OFFICES.map(d => ({ v: d, l: DEPTS[d].l })), people: this.everyone().map(face).sort((a, b) => a.l.localeCompare(b.l)),
       dates: [0, 1, 2, 3, 4, 5, 6].map(o => ({ v: dayKey(o), l: dayLabel(dayKey(o)) })) },
     RD: { inside: vis.filter(v => v.st === 'in' && isToday(v)).map(vrow), expected: vis.filter(v => v.st === 'expected' && (v.date || today) === today).sort((a, b) => (a.time || '').localeCompare(b.time || '')).map(vrow),
