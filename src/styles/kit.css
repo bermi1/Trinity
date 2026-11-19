@@ -1005,3 +1005,8 @@
 .br-side { display: grid; gap: 14px; align-content: start; }
 .br-sel { flex: 1 1 220px; }
 .br-people { flex-wrap: nowrap; overflow-x: auto; }
+.br-kpis .hd-kpi b { font-size: 20px; }
+.br-pres { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.br-pres li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px; border-radius: 12px; background: #F7F7FA; }
+.br-pres-main { display: flex; flex-direction: column; gap: 2px; font-size: 14px; min-width: 0; }
+.br-pres-main small { color: #8A8D99; }

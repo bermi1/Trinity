@@ -14,8 +14,28 @@ export function briefWeek(d = new Date()) {
 const addDays = (k, n) => { const [y, m, d] = k.split('-').map(Number); const x = new Date(y, m - 1, d + n); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
 
 export const briefingMethods = {
-  canBriefing() { const d = this.myDept(); return this.isTop() || (this.state.role || 'ceo') === 'finance' || (d && this.isManagerOf(d)); },
-  canChair() { return this.isTop(); },
+  // Everyone attends (presentations, highlights, actions); heads also see updates and issues.
+  canBriefing() { return true; },
+  isBriefHead() { const d = this.myDept(); return this.isTop() || ['finance', 'pa'].includes(this.state.role || 'ceo') || (d && this.isManagerOf(d)); },
+  canChair() { return this.isTop() || (this.state.role || 'ceo') === 'pa'; },
+  // Anyone presenting uploads the file and the key points before the meeting.
+  async uploadPresentation(f) {
+    if (!(f.title || '').trim()) return 'Give your presentation a title';
+    if (!f.file) return 'Attach your presentation';
+    if ((f.points || '').trim().length < 5) return 'Write the key points (a short summary)';
+    let file; try { file = await this.storeFile(f.file); } catch (e) { return 'Upload failed · ' + (e.message || e); }
+    const b = this.brief(briefWeek());
+    this.saveBrief(Object.assign({}, b, { pres: [...(b.pres || []), { id: 'PR' + Date.now().toString(36), by: this.me().k, title: f.title.trim(), points: f.points.trim(), file, at: dayKey(0) + ' ' + this.now() }] }));
+    this.toast('Presentation uploaded for Monday · ' + f.title.trim());
+    return '';
+  },
+  addHighlight(t) {
+    if (!this.canChair()) return 'The PA, the GM or Management records highlights';
+    if (!(t || '').trim()) return 'Write the highlight';
+    const b = this.brief(briefWeek());
+    this.saveBrief(Object.assign({}, b, { highlights: [...(b.highlights || []), { t: t.trim(), by: this.me().k }] }));
+    return '';
+  },
   brief(week) { return (this.state.briefings || []).find(b => b.week === week) || { id: 'BR' + week, week, updates: {}, decisions: [], published: null }; },
   saveBrief(b) { this.setState(x => ({ briefings: [...(x.briefings || []).filter(y => y.week !== b.week), b] })); },
   sendBriefUpdate(f) {
@@ -31,7 +51,7 @@ export const briefingMethods = {
   remindBriefing(d) { const k = this.managerOf(d); if (k) { this.remind(k, 'Send your update for Monday’s briefing', 'briefing', 'presentation', DEPTS[d].l); this.toast('Reminder sent to ' + this.av(k).n); } },
   // A decision with an action, owner and deadline becomes a task.
   addDecision(f) {
-    if (!this.canChair()) return 'The GM or Management records decisions';
+    if (!this.canChair()) return 'The PA, the GM or Management records decisions';
     if (!(f.d || '').trim() || !(f.a || '').trim()) return 'Write the decision and the action';
     if (!f.o) return 'Choose who does it';
     const b = this.brief(briefWeek()), tid = 'T' + Date.now();
@@ -42,11 +62,11 @@ export const briefingMethods = {
     return '';
   },
   publishBriefing() {
-    if (!this.canChair()) return 'The GM or Management publishes the minutes';
+    if (!this.canChair()) return 'The PA, the GM or Management publishes the minutes';
     const b = this.brief(briefWeek());
     if (!b.decisions.length) return 'Record at least one decision before publishing';
     this.saveBrief(Object.assign({}, b, { published: { by: this.me().k, at: dayKey(0) + ' ' + this.now() } }));
-    const heads = [...new Set([this.ROLES.ceo.k, this.ROLES.gm.k, ...BR_DEPTS.map(d => this.managerOf(d))].filter(k => k && k !== this.me().k))];
+    const heads = [...new Set([this.ROLES.ceo.k, this.ROLES.gm.k, ...BR_DEPTS.map(d => this.managerOf(d)), ...(this.state.staff || []).map(p => p.k)].filter(k => k && k !== this.me().k))];
     heads.forEach(k => this.notify({ to: k, ic: 'presentation', t: 'Monday Briefing minutes published', s: b.decisions.length + ' decisions · ' + b.decisions.filter(x => x.o === k).length + ' action(s) for you', go: 'briefing' }));
     this.toast('Minutes published to ' + heads.length + ' people');
     return '';
@@ -54,9 +74,8 @@ export const briefingMethods = {
 };
 
 export function briefingVals(s) {
-  if (!this.canBriefing()) return { BRF: null };
   const week = briefWeek(), from = addDays(week, -7), to = addDays(week, -1), next = addDays(week, 6), b = this.brief(week), prev = this.brief(addDays(week, -7));
-  const role = s.role || 'ceo', top = this.isTop(), me = this.me().k;
+  const role = s.role || 'ceo', top = this.isTop(), me = this.me().k, head = this.isBriefHead();
   const label = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); };
   // Last week from live data.
   const cash = top ? this.cashEntries().filter(e => e.at >= from && e.at <= to) : [];
@@ -76,11 +95,15 @@ export function briefingVals(s) {
   const myDept = role === 'finance' ? 'finance' : this.myDept();
   return {
     BRF: {
+      head,
+      pres: (b.pres || []).map(p => ({ id: p.id, title: p.title, points: p.points, by: this.av(p.by).n, bi: this.av(p.by).i, bc: this.av(p.by).c, at: p.at, mine: p.by === me, open: () => this.openDoc({ n: p.file.name, url: p.file.url, path: p.file.path }), name: p.file.name })),
+      upload: f => this.uploadPresentation(f),
+      highlights: (b.highlights || []).map(h => ({ t: h.t, by: this.av(h.by).first })), addHighlight: t => this.addHighlight(t),
       week: label(week), range: label(from) + ' – ' + label(to), chair: this.canChair(), published: b.published ? this.av(b.published.by).n + ' · ' + b.published.at : '',
       money: top ? { in: this.fmtT(cash.filter(e => e.dir === 'in').reduce((a, e) => a + e.amt, 0)), out: this.fmtT(cash.filter(e => e.dir === 'out').reduce((a, e) => a + e.amt, 0)) } : null,
-      stats: [{ l: 'Projects active', v: String(live.length) }, { l: 'Tasks done last week', v: String(tasksDone.length) }, { l: 'Project steps completed', v: String(moved.length) }, { l: 'Issues to discuss', v: String(issues.length) }],
-      moved: moved.slice(0, 10), issues, weekItems, lastActions,
-      heads, sent: heads.filter(h => h.u).length,
+      stats: !head ? [] : [{ l: 'Projects active', v: String(live.length) }, { l: 'Tasks done last week', v: String(tasksDone.length) }, { l: 'Project steps completed', v: String(moved.length) }, { l: 'Issues to discuss', v: String(issues.length) }],
+      moved: head ? moved.slice(0, 10) : [], issues: head ? issues : [], weekItems, lastActions,
+      heads: head ? heads : [], sent: heads.filter(h => h.u).length,
       myUpdate: myDept && b.updates[myDept] ? b.updates[myDept] : null, canUpdate: !!myDept && (this.isManagerOf(myDept) || role === 'finance'), sendUpdate: f => this.sendBriefUpdate(f),
       decisions: b.decisions.map(x => { const t = (s.tasks || []).find(y => y.id === x.task); return { d: x.d, a: x.a, who: this.av(x.o).n, due: x.due, st: t ? this.tst(t.st)[0] : '' }; }),
       people: [...new Set([this.ROLES.gm.k, ...BR_DEPTS.map(d => this.managerOf(d)), ...(s.staff || []).map(p => p.k)].filter(Boolean))].map(k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c }; }),

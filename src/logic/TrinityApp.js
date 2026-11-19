@@ -356,9 +356,9 @@ export default class TrinityApp extends Logic {
         ['More',[['store','Inventory','package'],['procurement','Procurement','cart'],...company], true]]
     };
     // The Personal Assistant runs Management's diary and records purchase orders; no money.
-    N.pa = [['Office',[['meetings','Calendar','calendar'],['reception','Front desk','message'],['projects','Projects','folder'],['clients','Clients & leads','users'],['today','My work','checkSquare',myOpen],['reporting','Reports','fileText',rptN]]]];
+    N.pa = [['Office',[['meetings','Calendar','calendar'],['briefing','Monday Briefing','presentation'],['reception','Front desk','message'],['projects','Projects','folder'],['clients','Clients & leads','users'],['today','My work','checkSquare',myOpen],['reporting','Reports','fileText',rptN]]]];
     // Department portals: their dashboard first, then what that department works with.
-    const myReqs = ['requests','My requests','banknote'], deptMore = [['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],...(this.myDept() && this.isManagerOf(this.myDept()) ? [['briefing','Monday Briefing','presentation']] : []),['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['rooms','Meeting rooms','calendar'],['settings','Settings','settings']];
+    const myReqs = ['requests','My requests','banknote'], deptMore = [['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['briefing','Monday Briefing','presentation'],['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['rooms','Meeting rooms','calendar'],['settings','Settings','settings']];
     N.clientservice = [['Client Service',[['dept','Client Service','home'],['today','My work','checkSquare',myOpen],['clients','Clients & leads','users'],['proposals','Proposals','clipboard'],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
     N.creative = [['Creative',[['dept','Creative','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
     N.operations = [['Operations',[['dept','Operations','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',[['field','Field capture app','camera'], ...deptMore],true]];

@@ -56,8 +56,40 @@ test('Monday Briefing: updates, decisions as tasks, minutes, and next week’s f
   expect(errors).toEqual([]);
 });
 
-test('staff do not see the Monday Briefing', async ({ page }) => {
+// Anyone presenting uploads slides and key points; the PA records highlights and what was agreed;
+// everyone opens the presentations and sees the agreed to-dos. Heads' updates stay with the heads.
+test('presentations uploaded before the meeting, highlights and agreed to-dos for everyone', async ({ page }) => {
+  const errors = watchErrors(page);
   await openAs(page, 'staff', 'briefing');
-  await expect(page.locator('aside').getByText('Monday Briefing')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Monday Briefing' })).toHaveCount(0);
+  await expect(page.getByText('Department updates')).toHaveCount(0);
+  const pres = page.getByRole('region', { name: 'Presentations' });
+  await btn(pres, 'Upload my presentation').click();
+  await pres.getByLabel('Presentation title').fill('Field team: roadshow results');
+  await pres.getByLabel('Key points').fill('6 regions done\n12,400 people reached\nNeed rain covers');
+  await pres.getByLabel('Presentation file').setInputFiles({ name: 'Roadshow results.pptx', mimeType: 'application/vnd.ms-powerpoint', buffer: Buffer.from('slides') });
+  await btn(pres, 'Upload').click();
+  await toast(page, 'Presentation uploaded for Monday · Field team: roadshow results');
+
+  await openAs(page, 'pa', 'briefing', {}, false);
+  await expect(page.locator('.br-pres')).toContainText('12,400 people reached');
+  const [doc] = await Promise.all([page.context().waitForEvent('page'), page.getByRole('button', { name: 'Open presentation · Field team: roadshow results' }).click()]);
+  await doc.close();
+  const hl = page.getByRole('region', { name: 'Key highlights' });
+  await hl.getByLabel('Highlight').fill('Roadshow reached 12,400 people across 6 regions');
+  await btn(hl, 'Add').click();
+  const dec = page.getByRole('group', { name: 'New decision' });
+  await dec.getByLabel('Decision').fill('Buy rain covers before the next roadshow');
+  await dec.getByLabel('Action').fill('Get 3 quotes for gazebo rain covers');
+  await dec.getByRole('radio', { name: 'John Mwakyusa' }).click();
+  await btn(dec, 'Record decision · create task').click();
+  await toast(page, 'task given to John Mwakyusa');
+  await btn(page, 'Publish minutes').click();
+  await toast(page, 'Minutes published to');
+
+  await openAs(page, 'staff', 'briefing', {}, false);
+  await expect(page.getByRole('region', { name: 'Key highlights' })).toContainText('Roadshow reached 12,400 people');
+  await expect(page.getByText('Get 3 quotes for gazebo rain covers')).toBeVisible();
+  const data = await saved(page);
+  expect(data.notes.some(n => n.to === 'GM' && /minutes published/.test(n.t))).toBe(true);
+  expect(errors).toEqual([]);
 });

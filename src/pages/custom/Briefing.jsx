@@ -16,6 +16,53 @@ function MyUpdate({ B }) {
   );
 }
 
+function Present({ B }) {
+  const [f, setF] = useState({ title: '', points: '', file: null }); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [open, setOpen] = useState(false);
+  const mine = B.pres.filter(p => p.mine);
+  return (
+    <section className="fh-card" aria-label="Presentations">
+      <header className="fr-chart-h"><h3>Presentations · {B.pres.length}</h3>{!open ? <Btn kind="ghost" onClick={() => setOpen(true)}>{mine.length ? 'Upload another' : 'Upload my presentation'}</Btn> : null}</header>
+      {open ? (
+        <div className="pn-form">
+          <input className="me-who" value={f.title} onChange={e => setF(Object.assign({}, f, { title: e.target.value }))} placeholder="Title · e.g. Creative: designs delivered this week" aria-label="Presentation title" />
+          <textarea className="cr-memo-t" rows={3} value={f.points} onChange={e => setF(Object.assign({}, f, { points: e.target.value }))} placeholder="Key points, 3 to 5 lines" aria-label="Key points" />
+          <label className="bi-up"><input type="file" accept=".pdf,.ppt,.pptx,.key,image/*" onChange={e => setF(Object.assign({}, f, { file: e.target.files[0] || null }))} aria-label="Presentation file" />{f.file ? '✓ ' + f.file.name : '↑ PowerPoint or PDF'}</label>
+          {err ? <div className="fm-err" role="alert">{err}</div> : null}
+          <div className="fh-row"><button type="button" className="me-cancel" onClick={() => setOpen(false)}>Cancel</button><button type="button" className="me-save" disabled={busy} onClick={async () => { setBusy(true); const m = await B.upload(f); setBusy(false); if (m) setErr(m); else { setOpen(false); setF({ title: '', points: '', file: null }); } }}>{busy ? 'Uploading…' : 'Upload'}</button></div>
+        </div>
+      ) : null}
+      {B.pres.length ? (
+        <ul className="br-pres">
+          {B.pres.map(p => (
+            <li key={p.id} data-pres={p.id}>
+              <span className="pv-face" style={{ background: p.bc, width: 34, height: 34 }}>{p.bi}</span>
+              <span className="br-pres-main"><b>{p.title}</b><small>{p.by} · {p.at}</small><p className="rp-pre">{p.points}</p></span>
+              <button type="button" className="me-save" onClick={p.open} aria-label={'Open presentation · ' + p.title}>Open</button>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="k-sub">Presenting on Monday? Upload your slides and key points here, then just open them in the room.</p>}
+    </section>
+  );
+}
+
+function Highlights({ B }) {
+  const [t, setT] = useState(''); const [err, setErr] = useState('');
+  return (
+    <section className="fh-card" aria-label="Key highlights">
+      <h3>Key highlights</h3>
+      {B.highlights.length ? <ul className="br-list">{B.highlights.map((h, i) => <li key={i}><b>{h.t}</b><small>{h.by}</small></li>)}</ul> : <p className="k-sub">Highlights from the meeting appear here.</p>}
+      {B.chair && !B.published ? (
+        <form className="mr-reply" onSubmit={e => { e.preventDefault(); const m = B.addHighlight(t); setErr(m); if (!m) setT(''); }}>
+          <input className="ff-search" value={t} onChange={e => setT(e.target.value)} placeholder="Add a key highlight" aria-label="Highlight" />
+          <Btn kind="dark" type="submit">Add</Btn>
+        </form>
+      ) : null}
+      {err ? <div className="fm-err" role="alert">{err}</div> : null}
+    </section>
+  );
+}
+
 function Decide({ B }) {
   const [f, setF] = useState({ d: '', a: '', o: '', due: 'Fri', p: '' }); const [err, setErr] = useState('');
   const set = (k, v) => setF(x => Object.assign({}, x, { [k]: v }));
@@ -37,16 +84,22 @@ function Decide({ B }) {
 export default function Briefing({ v }) {
   const B = v.BRF;
   const [err, setErr] = useState('');
-  if (!B) return <Empty>The Monday Briefing is for Management, the GM and department heads.</Empty>;
-  return (
+    return (
     <div className="br">
-      <PageHead kicker={'Week of ' + B.week} title="Monday Briefing" sub={'Last week (' + B.range + ') from the system, each department’s update, this week ahead, and decisions that become tasks.'}>
+      <PageHead kicker={'Week of ' + B.week} title="Monday Briefing" sub={'Upload your presentation before the meeting; open it in the room. Highlights and what was agreed are here for everyone.'}>
         {B.chair ? <Btn kind="dark" onClick={() => setErr(B.publish())}>{B.published ? 'Minutes published' : 'Publish minutes'}</Btn> : null}
       </PageHead>
       {err ? <div className="fm-err" role="alert">{err}</div> : null}
       {B.published ? <p className="mr-recline">Minutes published by {B.published}</p> : null}
 
-      <section className="hd-kpis br-kpis">{B.stats.map(k => <div key={k.l} className="hd-kpi"><span>{k.l}</span><b>{k.v}</b></div>)}{B.money ? <div className="hd-kpi"><span>Money in / out last week</span><b>{B.money.in}</b><small>out {B.money.out}</small></div> : null}</section>
+      <Present B={B} />
+      <div className="fr-two"><Highlights B={B} />
+      <section className="fh-card"><h3>Agreed in the meeting · {B.decisions.length}</h3>
+        {B.decisions.length ? <ul className="br-list">{B.decisions.map((x, i) => <li key={i}><b>{x.d}</b><small>To do: {x.a} · {x.who} · due {x.due}{x.st ? ' · ' + x.st : ''}</small></li>)}</ul> : <p className="k-sub">Decisions and to-dos agreed in the meeting appear here for everyone.</p>}
+        {B.chair && !B.published ? <Decide B={B} /> : null}
+      </section></div>
+
+      {B.head ? <section className="hd-kpis br-kpis">{B.stats.map(k => <div key={k.l} className="hd-kpi"><span>{k.l}</span><b>{k.v}</b></div>)}{B.money ? <><div className="hd-kpi"><span>Money in last week</span><b>{B.money.in}</b></div><div className="hd-kpi"><span>Money out last week</span><b>{B.money.out}</b></div></> : null}</section> : null}
 
       {B.lastActions.length ? (
         <section className="fh-card"><h3>Last week’s actions</h3>
@@ -54,7 +107,7 @@ export default function Briefing({ v }) {
         </section>
       ) : null}
 
-      <div className="fr-two">
+      {B.head ? <div className="fr-two">
         <section className="fh-card"><h3>Department updates · {B.sent} of {B.heads.length} in</h3>
           <ul className="br-list">{B.heads.map(h => (
             <li key={h.d} className={h.u ? 'is-done' : 'is-open'} data-dept={h.d}>
@@ -69,21 +122,17 @@ export default function Briefing({ v }) {
             {B.issues.length ? <ul className="br-list">{B.issues.map((x, i) => <li key={i}><b><em className="br-tag">{x.tag}</em> {x.t}</b><small>{x.s}</small></li>)}</ul> : <Empty>No issues.</Empty>}
           </section>
         </div>
-      </div>
+      </div> : null}
 
       <div className="fr-two">
-        <section className="fh-card"><h3>Last week in the projects</h3>
+        {B.head ? <section className="fh-card"><h3>Last week in the projects</h3>
           {B.moved.length ? <ul className="br-list">{B.moved.map((m, i) => <li key={i}><b>{m.t}</b><small>{m.s} · {m.at}</small></li>)}</ul> : <Empty>No project steps last week.</Empty>}
-        </section>
+        </section> : null}
         <section className="fh-card"><h3>This week</h3>
           {B.weekItems.length ? <ul className="br-list">{B.weekItems.map(d => <li key={d.l}><b>{d.l}</b>{d.items.map((t, i) => <small key={i}>{t}</small>)}</li>)}</ul> : <Empty>Nothing on the calendar.</Empty>}
         </section>
       </div>
 
-      <section className="fh-card"><h3>Decisions and actions · {B.decisions.length}</h3>
-        {B.decisions.length ? <ul className="br-list">{B.decisions.map((x, i) => <li key={i}><b>{x.d}</b><small>Action: {x.a} · {x.who} · due {x.due}{x.st ? ' · ' + x.st : ''}</small></li>)}</ul> : <p className="k-sub">Decisions recorded in the meeting become tasks for the person responsible.</p>}
-        {B.chair && !B.published ? <Decide B={B} /> : null}
-      </section>
     </div>
   );
 }
