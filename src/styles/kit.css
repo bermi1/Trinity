@@ -1010,3 +1010,18 @@
 .br-pres li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px; border-radius: 12px; background: #F7F7FA; }
 .br-pres-main { display: flex; flex-direction: column; gap: 2px; font-size: 14px; min-width: 0; }
 .br-pres-main small { color: #8A8D99; }
+/* Payroll */
+.py-emps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.py-emp { border-radius: 12px; background: #F7F7FA; }
+.py-emp-row { width: 100%; display: grid; grid-template-columns: 34px minmax(0, 1fr) 140px 140px auto; gap: 12px; align-items: center; padding: 10px 12px; border: none; background: none; font: inherit; text-align: left; cursor: pointer; color: inherit; }
+.py-emp-n, .py-num { display: flex; flex-direction: column; min-width: 0; font-size: 14px; }
+.py-num { align-items: flex-end; } .py-emp-n small, .py-num small { color: #8A8D99; font-size: 11.5px; }
+.py-form { padding: 4px 12px 14px; display: grid; gap: 8px; }
+.py-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+.py-totals span { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; background: #F7F7FA; border-radius: 12px; }
+.py-totals small { color: #8A8D99; font-size: 11.5px; } .py-totals b { font-size: 15px; } .py-net { color: #1F7549; }
+.py-table td, .py-table th { font-size: 12.5px; }
+.py-adv { width: 90px; height: 30px; border: 1px solid #E6E7ED; border-radius: 8px; padding: 0 8px; font: inherit; font-size: 12.5px; text-align: right; }
+.py-st { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 10px; background: #FBF1DD; color: #8A6414; }
+.py-st.is-paid { background: #E7F6EE; color: #1F7549; } .py-st.is-approved { background: #E9EFFA; color: #3559A8; }
+@media (max-width: 700px) { .py-emp-row { grid-template-columns: 34px 1fr auto; } .py-num:nth-of-type(3) { display: none; } }

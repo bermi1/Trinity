@@ -65,7 +65,8 @@ export function pettyVals(s) {
       lastCount: p.counts[0] ? { at: p.counts[0].at, diff: p.counts[0].diff, t: p.counts[0].diff === 0 ? 'Matched' : (p.counts[0].diff < 0 ? 'Short ' : 'Over ') + this.fmtT(Math.abs(p.counts[0].diff)) } : null,
       book: book.map(e => ({ id: e.id, at: e.at, dir: e.dir, amt: this.fmtT(e.amt), cat: e.cat, what: e.what, who: e.who, voucher: e.voucher, bal: this.fmtT(e.bal), by: this.av(e.by).first })),
       add: f => this.addPetty(f), count: (c, n) => this.countPetty(c, n),
-      obligations: OBLIGATIONS.map(o => { const paid = this.obligationPaid(o); return { k: o.k, l: o.l, day: o.day, due: o.day >= today ? 'Due by the ' + o.day + 'th' : 'Was due on the ' + o.day + 'th', late: !paid && o.day < today, paid: paid ? this.fmtT(paid.amt) + ' · ' + paid.at : '', pay: (a, r) => this.payObligation(o.k, a, r) }; })
+      obligations: OBLIGATIONS.map(o => { const paid = this.obligationPaid(o), last = ((this.state.payroll || {}).runs || []).find(r => r.st === 'paid'), due = last && last.due ? ({ sal: null, paye: last.due.paye, nssf: last.due.nssf, wcf: last.due.wcf })[o.k] : null;
+        return { k: o.k, l: o.l, expect: due ? this.fmtT(due) + ' from the ' + last.month + ' payroll' : '', expectN: due || 0, day: o.day, due: o.day >= today ? 'Due by the ' + o.day + 'th' : 'Was due on the ' + o.day + 'th', late: !paid && o.day < today, paid: paid ? this.fmtT(paid.amt) + ' · ' + paid.at : '', pay: (a, r) => this.payObligation(o.k, a, r) }; })
     }
   };
 }

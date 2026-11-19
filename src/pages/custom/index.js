@@ -11,6 +11,7 @@ import ClientsPage from './ClientsPage';
 import MeetingsPage from './MeetingsPage';
 import FinanceHub from './FinanceHub';
 import ReportingPage from './ReportingPage';
+import PayrollPage from './PayrollPage';
 
 export default {
   requisitions: RequisitionsPage,
@@ -28,5 +29,7 @@ export default {
   freports: FinanceHub,
   float: FinanceHub,
   reporting: ReportingPage,
-  petty: FinanceHub
+  petty: FinanceHub,
+  payroll: PayrollPage,
+  payslips: PayrollPage
 };

@@ -1,3 +1,4 @@
+import { payLine } from './payroll';
 // Ported from the Claude Design file (design/project/Trinity Mark 360 App.dc.html).
 // Demo data. Every key here is saved to the browser and synced across tabs.
 // Local date as YYYY-MM-DD, `offset` days from today.
@@ -15,6 +16,16 @@ function ledgerSeed() {
   [[-50, 22000000, 'Kilimo Bank', 'PRJ-0230'], [-35, 31500000, 'Mlimani Bank', 'PRJ-0233'], [-18, 15800000, 'Pwani Beverages', 'PRJ-0228'], [-8, 12600000, 'Kivuko Foods', 'PRJ-0226'], [-4, 9400000, 'Nyota Insurance', 'PRJ-0224']].forEach(([o, a, c, p]) => add(o, 'in', a, 'Client payment', c, p, 'CRDB'));
   add(-26, 'in', 1200000, 'Other income', 'Equipment hire · Safari Mobile');
   return L;
+}
+
+// Pay records (TZS a month) and last month's paid payroll.
+const PAY = { GN: [4500000, 500000], MM: [2800000, 300000], SK: [2200000, 250000], NL: [2400000, 250000], RT: [2000000, 200000], RS: [2100000, 200000], DS: [1300000, 100000], KM: [1200000, 100000], JM: [1100000, 100000], JA: [900000, 80000], GM: [850000, 80000, true], FH: [750000, 60000], AM: [700000, 60000], AJ: [650000, 60000], PL: [600000, 50000], UK: [1000000, 100000] };
+function payrollSeed() {
+  const emp = {}; Object.keys(PAY).forEach(k => { const [basic, allow, heslb] = PAY[k]; emp[k] = { basic, allow, heslb: !!heslb, bank: 'CRDB Bank', acc: '015' + String(1000000 + basic).slice(0, 7), nssfNo: 'NSSF-' + (480000 + basic / 1000), tin: '1' + String(basic).slice(0, 2) + '-' + String(allow).slice(0, 3) + '-448', active: true }; });
+  const d = new Date(); d.setMonth(d.getMonth() - 1); const month = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  const lines = Object.keys(emp).map(k => Object.assign({ k }, payLine(emp[k])));
+  const sum = key => lines.reduce((a, l) => a + l[key], 0);
+  return { emp, runs: [{ id: 'PAY' + month.replace('-', ''), month, lines, st: 'paid', by: 'GN', at: month + '-24', gm: { by: 'GN', at: month + '-24' }, mgmt: { by: 'DK', at: month + '-25' }, paid: { by: 'RT', at: month + '-27', ref: 'CRDB PAYROLL ' + month }, due: { paye: sum('paye') + sum('sdl'), nssf: sum('nssf') + sum('erNssf'), wcf: sum('wcf'), heslb: sum('heslb') } }] };
 }
 
 export function seed() {
@@ -179,6 +190,7 @@ export function seed() {
   // Company-wide setup: requests up to smallLimit (TZS) need only the PM and Finance; `off` hides sections.
   outbox:[],
   memos:[],
+  payroll:payrollSeed(),
   briefings:[],
   reports:[],
   petty:{open:300000,entries:[{id:'PC1',at:dayKey(-2),dir:'out',amt:15000,cat:'Transport',what:'Bajaji to TRA office',who:'Amani Juma',voucher:'PCV-0002',by:'RT'},{id:'PC2',at:dayKey(-4),dir:'in',amt:200000,cat:'Top-up from bank',what:'',who:'',voucher:'',by:'RT'},{id:'PC3',at:dayKey(-5),dir:'out',amt:42000,cat:'Refreshments',what:'Client meeting water and snacks',who:'Aisha Mbwana',voucher:'PCV-0001',by:'RT'}],counts:[]},

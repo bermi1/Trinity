@@ -50,14 +50,14 @@ function Obligations({ P }) {
       <ul className="ob-list">
         {P.obligations.map(o => (
           <li key={o.k} className={o.paid ? 'is-paid' : o.late ? 'is-late' : ''} data-ob={o.k}>
-            <span><b>{o.l}</b><small>{o.paid ? 'Paid · ' + o.paid : o.due}</small></span>
+            <span><b>{o.l}</b><small>{o.paid ? 'Paid · ' + o.paid : o.due + (o.expect ? ' · ' + o.expect : '')}</small></span>
             {o.paid ? <span className="fh-ok">✓ Paid</span> : paying === o.k ? (
               <span className="ob-pay">
                 <label className="fh-amt"><span>TZS</span><input inputMode="numeric" value={amt ? n(amt) : ''} onChange={e => setAmt(digits(e.target.value))} aria-label={'Amount paid · ' + o.l} /></label>
                 <input className="ff-search" value={ref} onChange={e => setRef(e.target.value)} placeholder="Reference" aria-label={'Reference · ' + o.l} />
                 <button type="button" className="me-save" onClick={() => { const m = o.pay(amt, ref); setErr(m); if (!m) { setPaying(''); setAmt(''); setRef(''); } }}>Save</button>
               </span>
-            ) : <button type="button" className="td-start" onClick={() => { setPaying(o.k); setErr(''); }}>Record payment</button>}
+            ) : <button type="button" className="td-start" onClick={() => { setPaying(o.k); setErr(''); setAmt(o.expectN ? String(o.expectN) : ''); }}>Record payment</button>}
           </li>
         ))}
       </ul>
