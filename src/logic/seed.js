@@ -28,6 +28,20 @@ function payrollSeed() {
   return { emp, runs: [{ id: 'PAY' + month.replace('-', ''), month, lines, st: 'paid', by: 'GN', at: month + '-24', gm: { by: 'GN', at: month + '-24' }, mgmt: { by: 'DK', at: month + '-25' }, paid: { by: 'RT', at: month + '-27', ref: 'CRDB PAYROLL ' + month }, due: { paye: sum('paye') + sum('sdl'), nssf: sum('nssf') + sum('erNssf'), wcf: sum('wcf'), heslb: sum('heslb') } }] };
 }
 
+// Demo targets: the current year, a little behind pace, weeks keyed in up to last week.
+function targetSeed() {
+  const d = new Date(), x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = x.getUTCDay() || 7; x.setUTCDate(x.getUTCDate() + 4 - day);
+  const year = x.getUTCFullYear(), cur = Math.ceil(((x - new Date(Date.UTC(year, 0, 1))) / 864e5 + 1) / 7);
+  const revenue = 2400000000, share = { clientservice: .4, creative: .15, operations: .35, production: .1 };
+  const weeks = {};
+  for (let w = 1; w < cur; w++) {
+    const amt = Math.round((34 + ((w * 37) % 23)) * 1e6 / 1e5) * 1e5;
+    const depts = {}; Object.keys(share).forEach(k => { depts[k] = Math.round(amt * share[k] / 1e5) * 1e5; });
+    weeks[year + '-W' + String(w).padStart(2, '0')] = { amt, projects: (w % 3 === 0) ? 3 : 2, depts, note: '', by: 'GN', at: '' };
+  }
+  return [{ id: 'T' + year, year, revenue, projects: 120, depts: { clientservice: 960000000, creative: 360000000, operations: 840000000, production: 240000000 }, weeks, setBy: 'DK', setAt: year + '-01-05' }];
+}
+
 export function seed() {
   return {
   projects:[
@@ -192,6 +206,7 @@ export function seed() {
   memos:[],
   photos:{},
   payroll:payrollSeed(),
+  targets:targetSeed(),
   briefings:[],
   reports:[],
   petty:{open:300000,entries:[{id:'PC1',at:dayKey(-2),dir:'out',amt:15000,cat:'Transport',what:'Bajaji to TRA office',who:'Amani Juma',voucher:'PCV-0002',by:'RT'},{id:'PC2',at:dayKey(-4),dir:'in',amt:200000,cat:'Top-up from bank',what:'',who:'',voucher:'',by:'RT'},{id:'PC3',at:dayKey(-5),dir:'out',amt:42000,cat:'Refreshments',what:'Client meeting water and snacks',who:'Aisha Mbwana',voucher:'PCV-0001',by:'RT'}],counts:[]},

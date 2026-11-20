@@ -1138,3 +1138,84 @@
 .pdf-side.is-l { left: 0; } .pdf-side.is-r { right: 0; }
 .br-show-slide .pdf { background: #000; }
 @media (prefers-reduced-motion: reduce) { .pdf-page.is-next, .pdf-page.is-prev { animation: none; } }
+
+/* Company target panel (GM, Management, Client Service) */
+.tg { display: grid; gap: 14px; margin-bottom: 16px; }
+.tg-hero { position: relative; overflow: hidden; border-radius: 22px; padding: 24px 26px; color: #fff; background: radial-gradient(700px 300px at 85% -10%, rgba(227,169,59,.28), transparent 60%), radial-gradient(600px 320px at 0% 120%, rgba(109,60,194,.55), transparent 60%), linear-gradient(140deg, #1B1036, #2E1766); box-shadow: 0 18px 40px rgba(27,16,54,.25); display: grid; gap: 16px; }
+.tg-hero-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.tg-hero small, .tg-empty small { font-size: 11.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #E3A93B; }
+.tg-hero h2 { margin: 6px 0 0; font-size: 34px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.tg-hero h2 span { font-size: 18px; font-weight: 600; color: #CFC6E6; letter-spacing: 0; }
+.tg-speed { text-align: right; display: grid; justify-items: end; gap: 2px; }
+.tg-speed b { font-size: 40px; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.tg-speed span { font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.1); }
+.tg-speed.is-ahead span { color: #C9B6F2; } .tg-speed.is-close span { color: #F1CF86; } .tg-speed.is-behind span { color: #FFB4AE; }
+.tg-track { position: relative; height: 12px; border-radius: 6px; background: rgba(255,255,255,.12); }
+.tg-track i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; background: linear-gradient(90deg, #8F63E0, #C9B6F2); }
+.tg-track em { position: absolute; top: -6px; width: 3px; height: 24px; margin-left: -1.5px; border-radius: 2px; background: #E3A93B; box-shadow: 0 0 0 3px rgba(227,169,59,.25); }
+.tg-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: #CFC6E6; }
+.tg-legend i, .tg-chart header i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.tg-legend .is-got { background: #A98BE0; } .tg-legend .is-time { background: #E3A93B; }
+.tg-clock { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.tg-clock div { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 12px 14px; display: grid; gap: 2px; }
+.tg-clock b { font-size: 24px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.tg-clock span { font-size: 12px; color: #CFC6E6; }
+.tg-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.tg-btn { height: 40px; padding: 0 16px; border-radius: 11px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.08); color: #fff; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.tg-btn.is-pri { background: #E3A93B; border-color: #E3A93B; color: #1B1036; }
+.tg-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.tg-card { background: #fff; border: 1px solid #ECE8F2; border-radius: 18px; padding: 18px 20px; display: grid; gap: 8px; align-content: start; box-shadow: 0 1px 2px rgba(23,21,42,.04); }
+.tg-card small { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #7A7590; }
+.tg-card b { font-size: 24px; font-weight: 800; letter-spacing: -.02em; color: #17152A; font-variant-numeric: tabular-nums; }
+.tg-card b span { font-size: 14px; font-weight: 600; color: #7A7590; letter-spacing: 0; }
+.tg-card p { margin: 0; font-size: 13px; color: #4B4F5C; }
+.tg-card .tg-note { font-size: 12px; color: #7A7590; }
+.tg-bar { height: 8px; border-radius: 4px; background: #F1EEF6; overflow: hidden; }
+.tg-bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #6D3CC2, #A98BE0); }
+.tg-split { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; }
+.tg-chart, .tg-depts { background: #fff; border: 1px solid #ECE8F2; border-radius: 18px; padding: 18px 20px; }
+.tg-chart header, .tg-depts header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+.tg-chart h3, .tg-depts h3 { margin: 0; font-size: 15px; }
+.tg-chart header span { font-size: 12.5px; color: #7A7590; font-weight: 600; }
+.tg-chart header .is-got { background: #8F63E0; } .tg-chart header .is-need { background: #E3A93B; height: 3px; width: 14px; }
+.tg-bars { display: flex; gap: 6px; height: 170px; align-items: stretch; }
+.tg-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.tg-colbox { position: relative; flex: 1; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid #ECE8F2; }
+.tg-colbox i { width: 70%; max-width: 26px; border-radius: 6px 6px 2px 2px; background: #C9B6F2; }
+.tg-colbox i.is-hit { background: #6D3CC2; }
+.tg-colbox em { position: absolute; left: 8%; right: 8%; height: 3px; border-radius: 2px; background: #E3A93B; }
+.tg-col small { text-align: center; font-size: 10.5px; color: #8A8599; }
+.tg-col.is-cur small { color: #1B1036; font-weight: 800; }
+.tg-depts ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.tg-depts li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; }
+.tg-depts .tg-bar { grid-column: 1 / 2; }
+.tg-depts .tg-pill { grid-row: 1 / 3; grid-column: 2; }
+.tg-dl { display: grid; } .tg-dl b { font-size: 14px; } .tg-dl small { font-size: 12px; color: #7A7590; }
+.tg-pill { font-size: 13px; font-weight: 800; padding: 6px 10px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+.tg-pill.is-ahead { background: #F1ECFA; color: #4B2A8C; } .tg-pill.is-close { background: #FBF1DD; color: #8A6414; } .tg-pill.is-behind { background: #FDECEE; color: #A3354A; }
+.tg-sheet { background: #fff; border: 1px solid #ECE8F2; border-radius: 18px; padding: 20px; display: grid; gap: 14px; box-shadow: 0 16px 40px rgba(23,21,42,.08); }
+.tg-sheet header { display: flex; justify-content: space-between; align-items: center; } .tg-sheet h3 { margin: 0; font-size: 17px; }
+.tg-x { width: 34px; height: 34px; border-radius: 10px; border: none; background: #F4F2F8; cursor: pointer; font-size: 14px; }
+.tg-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.tg-money { display: grid; gap: 6px; font-size: 12.5px; font-weight: 600; color: #6E6A7C; }
+.tg-money div { display: flex; align-items: baseline; gap: 8px; border: 1px solid #E6E7ED; border-radius: 12px; padding: 0 12px; background: #fff; }
+.tg-money div:focus-within { border-color: #6D3CC2; box-shadow: 0 0 0 3px rgba(109,60,194,.12); }
+.tg-money em { font-style: normal; font-size: 12px; font-weight: 700; color: #A3A6B2; }
+.tg-money input { flex: 1; min-width: 0; height: 44px; border: none; outline: none; background: none; font: inherit; font-size: 16px; font-weight: 700; color: #17152A; font-variant-numeric: tabular-nums; }
+.tg-money.is-big input { height: 54px; font-size: 26px; }
+.tg-hint { margin: -4px 0 0; font-size: 12.5px; color: #7A7590; }
+.tg-weeks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tg-weeks button { text-align: left; padding: 10px 12px; border-radius: 12px; border: 1px solid #E6E7ED; background: #fff; cursor: pointer; font: inherit; display: grid; gap: 2px; }
+.tg-weeks button.is-on { border-color: #6D3CC2; background: #F6F1FD; box-shadow: 0 0 0 3px rgba(109,60,194,.12); }
+.tg-weeks b { font-size: 14px; } .tg-weeks small { font-size: 12px; color: #7A7590; }
+.tg-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; } .tg-row .me-who { flex: 1; min-width: 220px; }
+.tg-step { display: grid; gap: 6px; font-size: 12.5px; font-weight: 600; color: #6E6A7C; }
+.tg-step div { display: flex; align-items: center; gap: 10px; border: 1px solid #E6E7ED; border-radius: 12px; padding: 4px; }
+.tg-step button { width: 36px; height: 36px; border-radius: 9px; border: none; background: #F4F2F8; font-size: 18px; font-weight: 700; cursor: pointer; }
+.tg-step b { min-width: 28px; text-align: center; font-size: 18px; color: #17152A; }
+.tg-foot { display: flex; justify-content: flex-end; gap: 8px; }
+.tg-empty { background: #fff; border: 1px dashed #D9D2E6; border-radius: 18px; padding: 22px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.tg-empty h3 { margin: 6px 0 4px; font-size: 18px; } .tg-empty p { margin: 0; font-size: 13.5px; color: #4B4F5C; max-width: 640px; }
+.tg-empty .tg-sheet { flex-basis: 100%; }
+@media (max-width: 900px) { .tg-split { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .tg-clock { grid-template-columns: repeat(2, minmax(0, 1fr)); } .tg-hero { padding: 20px; } .tg-hero h2 { font-size: 26px; } .tg-speed b { font-size: 32px; } .tg-weeks { grid-template-columns: 1fr; } .tg-bars { height: 130px; gap: 3px; } }

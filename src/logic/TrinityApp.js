@@ -21,6 +21,7 @@ import { crmMethods, crmVals, SOURCES } from './crm';
 import { projectMethods, projectVals, reqFlowMethods } from './projectview';
 import { financeMethods, financeVals, reportMethods, reportVals } from './finance';
 import { homeVals } from './home';
+import { targetVals, targetMethods } from './targets';
 import { officeMethods, officeVals } from './office';
 import { flowMethods, FLOW } from './flow';
 import { reportChannel, reportingVals } from './reports';
@@ -661,4 +662,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, officeVals, reportingVals, pettyVals, briefingVals, payrollVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods, briefingMethods, payrollMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, targetVals, officeVals, reportingVals, pettyVals, briefingVals, payrollVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods, briefingMethods, payrollMethods, targetMethods);

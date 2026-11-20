@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import BriefItem from '../../components/BriefItem';
+import TargetPanel from './TargetPanel';
 import { PageHead, Card, Btn, Avatar, Kpis, Pill, Empty } from '../../ui/kit';
 
 function Briefs({ list, designers, from }) {
@@ -95,9 +96,7 @@ export default function DeptPage({ v }) {
       </PageHead>
       <div className="dp-kpis"><Kpis items={D.kpis} /></div>
       <Memos list={D.memos || []} />
-      {D.dept === 'clientservice' ? (
-        <div className="dp-target" aria-label={'Target ' + D.targetPct + '% achieved'}><i style={{ width: D.targetPct + '%' }} /></div>
-      ) : null}
+      {D.dept === 'clientservice' && v.TG ? <TargetPanel T={v.TG} /> : null}
 
       {D.dept === 'clientservice' ? (
         <>

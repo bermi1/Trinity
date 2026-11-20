@@ -1,4 +1,5 @@
 import { CashChart } from './FinanceReports';
+import TargetPanel from './TargetPanel';
 
 const TONE = { amber: ['#FFF4E0', '#9A6200'], purple: ['#F0EBFA', '#5A2FA8'], green: ['#E7F6EE', '#1F7549'], red: ['#FDECEE', '#B23A46'] };
 
@@ -12,6 +13,8 @@ export default function HomeDash({ v }) {
         <div><h1>{H.hello}</h1><p>{H.date}</p></div>
         <div className="hd-acts">{H.actions.map((a, i) => <button key={a.l} type="button" className={'hd-btn' + (i === 0 ? ' is-pri' : '')} onClick={a.on}><i aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d={v.ic[['plus', 'checkSquare', 'fileText', 'banknote'][i]]} /></svg></i><span>{a.l}</span></button>)}</div>
       </header>
+
+      {v.TG ? <TargetPanel T={v.TG} /> : null}
 
       <section className="hd-kpis">
         {H.kpis.map(k => (
