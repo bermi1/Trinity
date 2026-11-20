@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PageHead, Btn, Empty } from '../../ui/kit';
+import { PageHead, Btn, Empty, faceStyle, faceText } from '../../ui/kit';
 
 const TIMES = ['08:00', '09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00'];
 
@@ -31,7 +31,7 @@ function NewMeeting({ M, onDone }) {
       </div>
       {!f.all ? (
         <div className="ff"><span className="ff-l">And people</span>
-          <div className="ff-people">{M.people.map(p => <button key={p.v} type="button" aria-label={p.l} className={f.people.includes(p.v) ? 'is-on' : ''} onClick={() => tog('people', p.v)}><span className="ff-face" style={{ background: p.c }}>{p.i}</span><span className="ff-name">{p.l.split(' ')[0]}</span></button>)}</div>
+          <div className="ff-people">{M.people.map(p => <button key={p.v} type="button" aria-label={p.l} className={f.people.includes(p.v) ? 'is-on' : ''} onClick={() => tog('people', p.v)}><span className="ff-face" style={faceStyle(p)}>{faceText(p)}</span><span className="ff-name">{p.l.split(' ')[0]}</span></button>)}</div>
         </div>
       ) : null}
       {err ? <div className="fm-err" role="alert">{err}</div> : null}

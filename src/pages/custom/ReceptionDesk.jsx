@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Btn, Empty } from '../../ui/kit';
+import { Btn, Empty, faceStyle, faceText } from '../../ui/kit';
 
 const PURPOSE = ['Meeting', 'Delivery', 'Interview', 'Enquiry', 'Collection', 'Other'];
 const BLANK = { name: '', co: '', phone: '', dept: '', host: '', purpose: 'Meeting' };
@@ -30,7 +30,7 @@ export default function ReceptionDesk({ v }) {
           <div className="ff"><span className="ff-l">Visiting</span><div className="rd-tiles">{R.offices.map(o => <button key={o.v} type="button" className={f.dept === o.v ? 'is-on' : ''} onClick={() => setF(x => Object.assign({}, x, { dept: o.v, host: '' }))}>{o.l}</button>)}</div></div>
           {office ? (
             <div className="ff"><span className="ff-l">Person (optional)</span>
-              <div className="ff-people">{office.people.map(p => <button key={p.v} type="button" aria-label={p.l} className={f.host === p.v ? 'is-on' : ''} onClick={() => set('host', f.host === p.v ? '' : p.v)}><span className="ff-face" style={{ background: p.c }}>{p.i}</span><span className="ff-name">{p.l.split(' ')[0]}</span></button>)}</div>
+              <div className="ff-people">{office.people.map(p => <button key={p.v} type="button" aria-label={p.l} className={f.host === p.v ? 'is-on' : ''} onClick={() => set('host', f.host === p.v ? '' : p.v)}><span className="ff-face" style={faceStyle(p)}>{faceText(p)}</span><span className="ff-name">{p.l.split(' ')[0]}</span></button>)}</div>
             </div>
           ) : null}
           <div className="ff"><span className="ff-l">Reason</span><div className="ff-chips">{PURPOSE.map(p => <button key={p} type="button" className={f.purpose === p ? 'is-on' : ''} onClick={() => set('purpose', p)}>{p}</button>)}</div></div>

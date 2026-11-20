@@ -1,3 +1,4 @@
+import { faceStyle, faceText } from '../ui/kit';
 import { useState } from 'react';
 
 // Form fields shared by the desktop form and the phone sheet. No plain dropdowns:
@@ -27,7 +28,7 @@ function People({ f }) {
       <div className="ff-people" role="radiogroup" aria-label={f.l}>
         {list.map(o => (
           <button key={o.v} type="button" role="radio" aria-checked={f.v === o.v} aria-label={o.l} className={f.v === o.v ? 'is-on' : ''} onClick={() => f.set(o.v)}>
-            <span className="ff-face" style={{ background: o.c }}>{o.i}</span>
+            <span className="ff-face" style={faceStyle(o)}>{faceText(o)}</span>
             <span className="ff-name">{o.l.split(' ')[0]}</span>
           </button>
         ))}

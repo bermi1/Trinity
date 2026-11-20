@@ -128,7 +128,7 @@ export function pageVals(s, IC, ST, narrow) {
   V.floats = Object.keys(byWho).map(k => {
     const a = this.av(k), list = byWho[k], amt = list.reduce((x, r) => x + r.amt, 0), oldest = Math.max(...list.map(r => daysSince(r.paidOn))), sub = list.filter(r => r.rec && r.rec.st === 'submitted'), isLate = list.some(r => !r.rec && daysSince(r.paidOn) > 3);
     const p = (s.staff || []).find(x => x.k === k) || {};
-    return {n:a.n, i:a.i, c:a.c, role:p.role || '', amt:this.fmtT(amt), age:oldest ? oldest + (oldest === 1 ? ' day' : ' days') : 'today',
+    return {n:a.n, i:a.i, c:a.c, ph:a.ph, role:p.role || '', amt:this.fmtT(amt), age:oldest ? oldest + (oldest === 1 ? ' day' : ' days') : 'today',
       items:list.map(r => ({id:r.id, what:this.reqWhat(r), purpose:r.purpose || '', proj:r.p ? this.proj(r.p).client : 'Office', amt:this.fmtT(r.amt), paid:r.paidOn || '', rec:r.rec ? (r.rec.st === 'submitted' ? 'Receipts submitted · spent ' + this.fmtT(r.rec.spent) : '') : 'No receipts yet', open:() => this.setState({reqSel:r.id, reqFilter:'all'})})),
       stl:sub.length ? 'Receipts to check' : isLate ? 'Receipts overdue' : 'In use', stbg:sub.length ? '#E9EFFA' : isLate ? '#FBEDEE' : '#EFE8FA', stfg:sub.length ? '#3559A8' : isLate ? '#B23A46' : '#5A2FA8',
       recLabel:sub.length ? 'Accept receipts' : 'Ask for receipts',

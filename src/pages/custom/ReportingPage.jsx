@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { PageHead, Btn, Empty } from '../../ui/kit';
+import { PageHead, Btn, Empty, faceStyle, faceText } from '../../ui/kit';
 
 function NewReport({ R, onDone }) {
-  const [f, setF] = useState({ kind: R.defaultKind, title: '', summary: '', issues: '', next: '', to: R.targets.map(t => t.v), file: null });
+  const [f, setF] = useState(Object.assign({ kind: R.defaultKind, title: '', summary: '', issues: '', next: '', to: R.targets.map(t => t.v), file: null }, R.draft || {}));
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
   const set = (k, v) => { setErr(''); setF(x => Object.assign({}, x, { [k]: v })); };
   const tog = k => set('to', f.to.includes(k) ? f.to.filter(x => x !== k) : [...f.to, k]);
@@ -15,10 +15,10 @@ function NewReport({ R, onDone }) {
       <label className="ff"><span className="ff-l">Next</span><textarea rows={2} value={f.next} onChange={e => set('next', e.target.value)} placeholder="Plan for the next day or week" aria-label="Next" /></label>
       <label className="bi-up"><input type="file" onChange={e => set('file', e.target.files[0] || null)} aria-label="Report file" />{f.file ? '✓ ' + f.file.name : '↑ Attach a file (Excel, PDF, photos), optional'}</label>
       <div className="ff"><span className="ff-l">Send to</span>
-        <div className="ff-people" role="group" aria-label="Send to">{R.targets.map(t => <button key={t.v} type="button" aria-pressed={f.to.includes(t.v)} aria-label={t.l} className={f.to.includes(t.v) ? 'is-on' : ''} onClick={() => tog(t.v)}><span className="ff-face" style={{ background: t.c }}>{t.i}</span><span className="ff-name">{t.l.split(' ')[0]}</span></button>)}</div>
+        <div className="ff-people" role="group" aria-label="Send to">{R.targets.map(t => <button key={t.v} type="button" aria-pressed={f.to.includes(t.v)} aria-label={t.l} className={f.to.includes(t.v) ? 'is-on' : ''} onClick={() => tog(t.v)}><span className="ff-face" style={faceStyle(t)}>{faceText(t)}</span><span className="ff-name">{t.l.split(' ')[0]}</span></button>)}</div>
       </div>
       {err ? <div className="fm-err" role="alert">{err}</div> : null}
-      <div className="me-foot"><button type="button" className="me-cancel" onClick={onDone}>Cancel</button><button type="button" className="me-save" disabled={busy} onClick={async () => { setBusy(true); const m = await R.send(f); setBusy(false); if (m) setErr(m); else onDone(); }}>{busy ? 'Sending…' : 'Send report'}</button></div>
+      <div className="me-foot"><button type="button" className="me-cancel" onClick={onDone}>Cancel</button><button type="button" className="me-save" disabled={busy} onClick={async () => { setBusy(true); const m = await R.send(f); setBusy(false); if (m) setErr(m); else { R.clearDraft(); onDone(); } }}>{busy ? 'Sending…' : 'Send report'}</button></div>
     </section>
   );
 }

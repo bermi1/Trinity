@@ -1,3 +1,4 @@
+import { faceStyle, faceText } from '../ui/kit';
 import Sheet from './Sheet';
 import Icon from './Icon';
 
@@ -7,7 +8,7 @@ export default function ProfileSheet({ v }) {
     <Sheet onClose={v.toggleMenu} label="Account">
       <div className="m-stack">
         <div className="m-profile">
-          <span className="m-avatar is-lg" style={{ background: v.me.c }}>{v.me.i}</span>
+          <span className="m-avatar is-lg" style={faceStyle(v.me)}>{faceText(v.me)}</span>
           <div><b>{v.me.n}</b><span>{v.me.t} · {v.me.label.charAt(0) + v.me.label.slice(1).toLowerCase()} portal</span></div>
         </div>
         <div className="m-group">
@@ -19,6 +20,7 @@ export default function ProfileSheet({ v }) {
           </div>
         </div>
         <div className="m-list">
+          <label className="m-photo-btn"><input type="file" accept="image/*" capture="user" onChange={async e => { const f = e.target.files[0]; e.target.value = ''; if (f) await v.setMyPhoto(f); }} aria-label="Change my photo" /><Icon d={v.ic.user} size={20} />Change my photo<Icon d={v.ic.chevR} size={18} /></label>
           <button onClick={v.goNotes}><Icon d={v.ic.bell} size={20} />Notifications{v.hasUnread ? <span className="m-count">{v.unread}</span> : null}<Icon d={v.ic.chevR} size={18} /></button>
           {v.canSetup ? <button onClick={() => v.goCompany()}><Icon d={v.ic.settings} size={20} />Company setup<Icon d={v.ic.chevR} size={18} /></button> : null}
           <button onClick={() => v.goSettings()}><Icon d={v.ic.settings} size={20} />Settings<Icon d={v.ic.chevR} size={18} /></button>

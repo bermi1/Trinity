@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Btn } from '../../ui/kit';
+import { Btn, faceStyle, faceText } from '../../ui/kit';
 
 const n = v => Math.round(+v || 0).toLocaleString('en-US');
 const digits = v => String(v || '').replace(/\D/g, '');
@@ -27,7 +27,7 @@ function Budget({ B }) {
   return (
     <div className="pn-form">
       <div className="ff" data-field="Project Manager"><span className="ff-l">Project Manager</span>
-        <div className="ff-people" role="radiogroup" aria-label="Project Manager">{B.people.map(p => <button key={p.k} type="button" role="radio" aria-checked={pm === p.k} aria-label={p.n} className={pm === p.k ? 'is-on' : ''} onClick={() => setPm(p.k)}><span className="ff-face" style={{ background: p.c }}>{p.i}</span><span className="ff-name">{p.n.split(' ')[0]}</span></button>)}</div>
+        <div className="ff-people" role="radiogroup" aria-label="Project Manager">{B.people.map(p => <button key={p.k} type="button" role="radio" aria-checked={pm === p.k} aria-label={p.n} className={pm === p.k ? 'is-on' : ''} onClick={() => setPm(p.k)}><span className="ff-face" style={faceStyle(p)}>{faceText(p)}</span><span className="ff-name">{p.n.split(' ')[0]}</span></button>)}</div>
       </div>
       <div className="ff"><span className="ff-l">Internal budget</span>
         <div className="pn-lines">

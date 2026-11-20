@@ -271,9 +271,15 @@ export default class TrinityApp extends Logic {
       const acc = prof || {role:'staff'};
       const role = ROLES[acc.role] ? acc.role : 'staff';
       this.account = {role, isAdmin:!!acc.is_admin, isDemo:!!acc.is_demo};
-      const { data: everyone } = await withTimeout(supabase.from('profiles').select('full_name,person_key'));
+      const { data: everyone } = await withTimeout(supabase.from('profiles').select('full_name,person_key,role,title,is_demo'));
       this.setPeople(everyone);
-      this.ROLES = Object.assign({}, ROLES, {[role]:Object.assign({}, ROLES[role], {email:user.email}, acc.full_name ? {n:acc.full_name} : {}, acc.title ? {t:acc.title} : {}, acc.person_key ? {k:acc.person_key} : {})});
+      // Who holds each portal: alerts for "the GM", "Finance", "Reception" or a department head reach the real person.
+      const holders = {};
+      (everyone || []).filter(p => p.person_key).sort((a, b) => (a.is_demo ? 1 : 0) - (b.is_demo ? 1 : 0)).forEach(p => { if (ROLES[p.role] && !holders[p.role]) holders[p.role] = p; });
+      this.roleHolder = Object.fromEntries(Object.keys(holders).map(r => [r, holders[r].person_key.toUpperCase()]));
+      const fromAccounts = {};
+      Object.keys(holders).forEach(r => { const h = holders[r]; fromAccounts[r] = Object.assign({}, ROLES[r], {k:h.person_key.toUpperCase(), n:h.full_name || ROLES[r].n}, h.title ? {t:h.title} : {}); });
+      this.ROLES = Object.assign({}, ROLES, fromAccounts, {[role]:Object.assign({}, ROLES[role], fromAccounts[role] || {}, {email:user.email}, acc.full_name ? {n:acc.full_name} : {}, acc.title ? {t:acc.title} : {}, acc.person_key ? {k:acc.person_key.toUpperCase()} : {})});
       const shared = await withTimeout(this.sync.load(this.seed()), 30000);
       // After "Remove demo", collections with no rows start empty instead of showing demo data.
       const live = !!shared._meta;
@@ -382,7 +388,23 @@ export default class TrinityApp extends Logic {
   fmtT(n) { return 'TZS ' + Math.round(n).toLocaleString('en-US'); }
   fmtM(v) { return 'TZS ' + (+v).toFixed(1) + 'M'; }
   now() { return new Date().toTimeString().slice(0,5); }
-  av(k) { const p = this.PPL[k] || (this.people && this.people[k]) || [String(k || '—'),'#6E6A7C']; return {i:k,n:p[0],c:p[1],first:p[0].split(' ')[0]}; }
+  av(k) { const p = (this.people && this.people[k]) || this.PPL[k] || [String(k || '—'),'#6E6A7C']; return {i:k,n:p[0],c:p[1],first:p[0].split(' ')[0],ph:((this.state && this.state.photos) || {})[k] || ''}; }
+  // A profile picture: shrunk to 160×160 in the browser before it is saved.
+  async setPhoto(k, file) {
+    if (!k) return 'No person';
+    if (k !== this.me().k && !this.isAdmin() && this.state.db) return 'Only the person or an administrator can change this photo';
+    if (!file || !/^image\//.test(file.type)) return 'Choose a photo (JPG or PNG)';
+    try {
+      const url = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+      const c = document.createElement('canvas'), n = 160, sz = Math.min(img.width, img.height); c.width = c.height = n;
+      c.getContext('2d').drawImage(img, (img.width - sz) / 2, (img.height - sz) / 2, sz, sz, 0, 0, n, n);
+      const small = c.toDataURL('image/jpeg', 0.82);
+      this.setState(x => ({ photos: Object.assign({}, x.photos || {}, { [k]: small }) }));
+      this.toast('Photo saved · ' + this.av(k).n);
+      return '';
+    } catch (e) { return 'Could not read that photo'; }
+  }
   proj(id) { return this.state.projects.find(p => p.id === id) || {id:'',name:'General',client:'Company'}; }
   tone(t) { return ({amber:['#FBF1DD','#8A6414'],purple:['#EFE8FA','#5A2FA8'],green:['#E6F4EC','#1F7549'],blue:['#E9EFFA','#3559A8'],dark:['#EDE8F6','#2B1459'],red:['#FBEDEE','#B23A46']})[t] || ['#F4F1FA','#2B1459']; }
   // Pages a portal may open: parked sections and (outside Management, the GM and Finance) the company dashboard send people to their own home.

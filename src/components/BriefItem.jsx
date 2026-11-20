@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Btn, Pill } from '../ui/kit';
+import { Btn, Pill, faceStyle, faceText } from '../ui/kit';
 
 export const BRIEF_PILL = { todo: ['#FBF1DD', '#8A6414'], prog: ['#EFE8FA', '#5A2FA8'], review: ['#E9EFFA', '#3559A8'], done: ['#E6F4EC', '#1F7549'] };
 
@@ -46,7 +46,7 @@ export default function BriefItem({ b, designers, showFrom }) {
         <div className="ff-people bi-people" role="radiogroup" aria-label={'Designer for ' + b.t}>
           {designers.map(d => (
             <button key={d.v} type="button" role="radio" aria-checked={b.whoK === d.v} aria-label={d.l} className={b.whoK === d.v ? 'is-on' : ''} onClick={() => b.assign(d.v)}>
-              <span className="ff-face" style={{ background: d.c }}>{d.i}</span><span className="ff-name">{d.l.split(' ')[0]}</span>
+              <span className="ff-face" style={faceStyle(d)}>{faceText(d)}</span><span className="ff-name">{d.l.split(' ')[0]}</span>
             </button>
           ))}
         </div>

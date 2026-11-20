@@ -190,6 +190,7 @@ export function seed() {
   // Company-wide setup: requests up to smallLimit (TZS) need only the PM and Finance; `off` hides sections.
   outbox:[],
   memos:[],
+  photos:{},
   payroll:payrollSeed(),
   briefings:[],
   reports:[],

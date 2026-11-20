@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PageHead, Card, Btn, Kpis, Empty } from '../../ui/kit';
+import { PageHead, Card, Btn, Kpis, Empty, faceStyle, faceText } from '../../ui/kit';
 
 const FOLLOW = ['Today', 'Tomorrow', 'This week', 'Next week'];
 
@@ -112,7 +112,7 @@ function LeadPanel({ L, reasons }) {
           {L.canOwner ? (
             <div className="ff"><span className="ff-l">Follow-up by</span>
               <div className="ff-people">
-                {L.team.map(p => <button key={p.v} type="button" aria-label={p.l} className={L.ownerK === p.v ? 'is-on' : ''} onClick={() => L.setOwner(p.v)}><span className="ff-face" style={{ background: p.c }}>{p.i}</span><span className="ff-name">{p.l.split(' ')[0]}</span></button>)}
+                {L.team.map(p => <button key={p.v} type="button" aria-label={p.l} className={L.ownerK === p.v ? 'is-on' : ''} onClick={() => L.setOwner(p.v)}><span className="ff-face" style={faceStyle(p)}>{faceText(p)}</span><span className="ff-name">{p.l.split(' ')[0]}</span></button>)}
               </div>
             </div>
           ) : null}

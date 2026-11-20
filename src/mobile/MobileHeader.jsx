@@ -1,3 +1,4 @@
+import { faceStyle, faceText } from '../ui/kit';
 import { useEffect, useState } from 'react';
 import Icon, { Logo } from './Icon';
 
@@ -30,7 +31,7 @@ export default function MobileHeader({ v }) {
 
       <div className="m-header-actions">
         <button className="m-hbtn" title="Search" aria-label="Search" onClick={v.openCmd}><Icon d={ic.search} size={20} /></button>
-        <button className="m-avatar" style={{ background: v.me.c }} onClick={v.toggleMenu} aria-label={'Account · ' + v.me.n}>{v.me.i}</button>
+        <button className="m-avatar" style={faceStyle(v.me)} onClick={v.toggleMenu} aria-label={'Account · ' + v.me.n}>{faceText(v.me)}</button>
         <button className="m-hbtn m-bell" title="Notifications" aria-label="Notifications" onClick={v.goNotes}><Icon d={ic.bell} size={20} />{v.hasUnread ? <span className="m-badge">{v.unread > 99 ? '99+' : v.unread}</span> : null}</button>
       </div>
     </header>

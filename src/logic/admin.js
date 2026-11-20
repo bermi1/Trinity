@@ -40,7 +40,8 @@ export const adminMethods = {
     const k = (f.k || '').trim().toUpperCase();
     // Field staff appear on the staff list with daily reports and floats.
     if (k && !this.state.staff.some(p => p.k === k)) {
-      this.setState(x => ({ staff: [...x.staff, { k, role: f.title || this.ROLES[f.role].label, dept: this.ROLES[f.role].label, rep: false, fl: 0 }] }));
+      const dept = ['clientservice', 'creative', 'operations', 'finance', 'production', 'reception'].includes(f.role) ? f.role : f.dept || 'operations';
+      this.setState(x => ({ staff: [...x.staff, { k, role: f.title || this.ROLES[f.role].label, dept, rep: false, fl: 0 }] }));
     }
     this.toast('Account created · ' + f.email);
     this.log('user', 'purple', 'Account created · ' + f.name, this.ROLES[f.role].label + ' portal');

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Btn, Pill, Empty } from '../../ui/kit';
+import { Btn, Pill, Empty, faceStyle, faceText } from '../../ui/kit';
 import BriefItem from '../../components/BriefItem';
 import ProjectNow from './ProjectNow';
 
@@ -94,7 +94,7 @@ function Overview({ P }) {
             <div className="ff-people" role="radiogroup" aria-label="Project Manager">
               {P.pmOpts.map(p => (
                 <button key={p.k} type="button" role="radio" aria-checked={P.pm === p.n} aria-label={p.n} className={P.pm === p.n ? 'is-on' : ''} onClick={() => P.setPM(p.k)}>
-                  <span className="ff-face" style={{ background: p.c }}>{p.i}</span><span className="ff-name">{p.n.split(' ')[0]}</span>
+                  <span className="ff-face" style={faceStyle(p)}>{faceText(p)}</span><span className="ff-name">{p.n.split(' ')[0]}</span>
                 </button>
               ))}
             </div>

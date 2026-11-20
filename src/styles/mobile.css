@@ -259,3 +259,6 @@ body:has(.m-app), body:has(.m-login) { overscroll-behavior-y: none; background: 
 .m-screen .rc-fields, .m-screen .rc-sec .rc-fields { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .m-screen .rc-sheet, .m-screen .rc-body, .m-screen .rc { min-width: 0; max-width: 100%; }
 .m-screen .ff-people { flex-wrap: nowrap; overflow-x: auto; }
+.m-photo-btn { position: relative; display: flex; align-items: center; gap: 12px; padding: 14px 16px; font-weight: 600; cursor: pointer; }
+.m-photo-btn input { position: absolute; inset: 0; opacity: 0; }
+.m-photo-btn svg:last-child { margin-left: auto; }

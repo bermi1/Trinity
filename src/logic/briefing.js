@@ -106,7 +106,7 @@ export function briefingVals(s) {
       heads: head ? heads : [], sent: heads.filter(h => h.u).length,
       myUpdate: myDept && b.updates[myDept] ? b.updates[myDept] : null, canUpdate: !!myDept && (this.isManagerOf(myDept) || role === 'finance'), sendUpdate: f => this.sendBriefUpdate(f),
       decisions: b.decisions.map(x => { const t = (s.tasks || []).find(y => y.id === x.task); return { d: x.d, a: x.a, who: this.av(x.o).n, due: x.due, st: t ? this.tst(t.st)[0] : '' }; }),
-      people: [...new Set([this.ROLES.gm.k, ...BR_DEPTS.map(d => this.managerOf(d)), ...(s.staff || []).map(p => p.k)].filter(Boolean))].map(k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c }; }),
+      people: [...new Set([this.ROLES.gm.k, ...BR_DEPTS.map(d => this.managerOf(d)), ...(s.staff || []).map(p => p.k)].filter(Boolean))].map(k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c, ph: a.ph }; }),
       projects: live.map(p => ({ v: p.id, l: p.client + ' · ' + p.name })),
       decide: f => this.addDecision(f), publish: () => this.publishBriefing()
     }

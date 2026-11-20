@@ -78,8 +78,8 @@ export default function TopBar({ v }) {
         </button>
         <div style={{ position: "relative", flex: "none" }}>
           <div className="tm-h3" onClick={v.toggleMenu} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", padding: "4px", borderRadius: "10px" }}>
-            <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: v.me.c, color: "#fff", fontWeight: "700", fontSize: "13px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {v.me.i}
+            <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: v.me.ph ? 'center / cover no-repeat url("' + v.me.ph + '")' : v.me.c, color: "#fff", fontWeight: "700", fontSize: "13px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {v.me.ph ? '' : v.me.i}
             </div>
             {v.wide ? (
               <>
@@ -179,6 +179,10 @@ export default function TopBar({ v }) {
                   </svg>
                   Reset demo data
                 </div>
+                <label className="tm-h3 tb-photo">
+                  <input type="file" accept="image/*" onChange={async e => { const f = e.target.files[0]; e.target.value = ''; if (f) { const m = await v.setMyPhoto(f); if (m) v.toastMsg && v.toastMsg(m); } }} aria-label="Change my photo" />
+                  Change my photo
+                </label>
                 <div className="tm-h8" onClick={v.signOut} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer", color: "#B23A46" }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d={v.ic.logout} />

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PageHead, Btn, Empty } from '../../ui/kit';
+import { PageHead, Btn, Empty, faceStyle, faceText } from '../../ui/kit';
 
 const n = v => Math.round(+v || 0).toLocaleString('en-US');
 const digits = v => String(v || '').replace(/\D/g, '');
@@ -12,7 +12,7 @@ function Employee({ e, admin }) {
   return (
     <li className="py-emp" data-emp={e.k}>
       <button type="button" className="py-emp-row" onClick={() => admin && setOpen(!open)} aria-expanded={open}>
-        <span className="pv-face" style={{ background: e.c, width: 34, height: 34 }}>{e.i}</span>
+        <span className="pv-face" style={faceStyle(e, { width: 34, height: 34 })}>{faceText(e)}</span>
         <span className="py-emp-n"><b>{e.n}</b><small>{e.role || '—'}</small></span>
         <span className="py-num"><small>Gross</small><b>{e.gross}</b></span>
         <span className="py-num"><small>Net</small><b>{e.net}</b></span>

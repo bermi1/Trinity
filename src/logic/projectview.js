@@ -9,7 +9,7 @@ export function projectVals(s) {
   const P = (s.projects || []).find(p => p.id === s.projectId);
   if (!P || !this.visibleProjects().some(p => p.id === P.id)) return { PV: { none: true, back: () => this.go('projects') } };
   const me = this.me().k, can = this.projectParts(P), stage = this.stageOf(P), pm = this.av(P.pm);
-  const face = k => { const a = this.av(k); return { k, n: a.n, i: a.i, c: a.c }; };
+  const face = k => { const a = this.av(k); return { k, n: a.n, i: a.i, c: a.c, ph: a.ph }; };
   const st = ST[P.st] || ST.on;
   const V = {
     id: P.id, name: P.name, client: P.client, due: P.due, prog: P.prog || 0, st: { l: st.l, bg: st.bg, fg: st.fg },

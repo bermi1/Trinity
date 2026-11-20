@@ -4,7 +4,7 @@ import { pinFor } from '../pin';
 import { colorFor } from '../admin';
 import { HIDDEN_ROLES } from '../constants';
 
-const ROLES_LABEL = {ceo:'Management', gm:'General Manager', clientservice:'Client Service', creative:'Creative', operations:'Operations', staff:'Staff', finance:'Finance', reception:'Reception', store:'Store', production:'Printing'};
+const ROLES_LABEL = {ceo:'Management', gm:'General Manager', clientservice:'Client Service', creative:'Creative', operations:'Operations', staff:'Staff', finance:'Finance', reception:'Reception', store:'Store', production:'Printing', pa:'Personal Assistant'};
 export function renderVals() {
   const s = this.state, IC = this.IC, ST = this.ST;
   const narrow = s.w < 960, wide = s.w >= 1240;
@@ -88,14 +88,15 @@ export function renderVals() {
     page:s.page, pageKey:s.page + '|' + (s.page === 'project' ? s.projectId : s.page === 'job' ? s.jobId : ''), navDir:s.navDir || 'tab', online:s.online !== false, signingIn:!!s.signingIn, db:!!s.db,
     isAdmin:this.isAdmin(), workspaceLive:!!s.workspaceLive, colorFor,
     pinMenu:pinFor(s.pinUser) ? {l:'Turn off PIN unlock', on:() => this.turnOffPin()} : {l:'Set up PIN unlock', on:() => this.setState({pin:'setup', menu:false})},
-    ADM:{db:!!s.db, users:s.users || null, busy:!!s.usersBusy, me:this.state.pinUser, load:() => this.loadUsers(), create:f => this.createUser(f), update:(u, c) => this.updateUser(u, c),
+    photos:s.photos || {},
+    ADM:{db:!!s.db, photo:(k, f) => this.setPhoto(k, f), users:s.users || null, busy:!!s.usersBusy, me:this.state.pinUser, load:() => this.loadUsers(), create:f => this.createUser(f), update:(u, c) => this.updateUser(u, c),
       reset:(u, pw) => this.resetPassword(u, pw), del:u => this.deleteUser(u), removeDemo:() => this.removeDemo(), live:!!s.workspaceLive,
-      roles:Object.keys(this.ROLES).map(k => ({v:k, l:ROLES_LABEL[k]}))},
+      roles:Object.keys(this.ROLES).filter(k => k !== 'store').map(k => ({v:k, l:ROLES_LABEL[k]}))},
     PIN:{mode:s.pin || null, user:s.pinUser, name:R.n, set:(a, b) => this.setPin(a, b), unlock:p => this.unlock(p), skip:() => this.skipPin(), usePassword:() => this.signOut(), hasPin:!!pinFor(s.pinUser), setup:() => this.setState({pin:'setup', menu:false, more:false}), off:() => this.turnOffPin()},
     showBack:phone && !this.isTab(s.page), goSettings:() => this.go('settings'), goBack:() => this.goBack(), refresh:() => this.refresh(), haptic:ms => this.haptic(ms), remember:s.remember !== false,
     nav, is, narrow, wide, phone, notPhone:!phone, tabletNav:narrow && !phone, toastBottom:phone ? 'calc(78px + env(safe-area-inset-bottom, 0px))' : '24px', deskDisp:phone ? 'none' : 'block',
     pageTitle, mobileTabs, moreOpen:phone && !!s.more, closeMore:() => this.setState({more:false}), moreItems, portalChips,
-    me:(() => { const R = this.ROLES[s.role || 'ceo']; return {i:R.k, n:R.n, t:R.t, c:this.av(R.k).c, label:R.label.toUpperCase(), first:R.n.split(' ')[0]}; })(),
+    me:(() => { const R = this.ROLES[s.role || 'ceo']; return {i:R.k, n:R.n, t:R.t, c:this.av(R.k).c, ph:this.av(R.k).ph, label:R.label.toUpperCase(), first:R.n.split(' ')[0]}; })(), setMyPhoto:f => this.setPhoto(this.me().k, f),
     loginRoles:Object.keys(this.ROLES).filter(k => !HIDDEN_ROLES.includes(k)).map(k => { const on = false; return {l:this.ROLES[k].label, on:() => this.quickSignIn(k), bg:on ? '#2B1459' : '#fff', c:on ? '#fff' : '#17152A', bd:on ? '#2B1459' : '#E8E4EF'}; }),
     asCeo:this.asRole('ceo'), asGm:this.asRole('gm'), asCs:this.asRole('clientservice'), asCreative:this.asRole('creative'), asOps:this.asRole('operations'), asStaff:this.asRole('staff'), asFinance:this.asRole('finance'), asReception:this.asRole('reception'), asStore:this.asRole('store'), asProduction:this.asRole('production'), asStaffMobile:this.asRole('staff','field'), asCeoMobile:this.asRole(s.role || 'ceo','ceomobile',{mobileRole:s.role || 'ceo'}), showSidebar:!narrow || s.drawer, drawerOpen:narrow && s.drawer, sb:{pos:narrow ? 'fixed' : 'sticky', z:narrow ? 50 : 1},
     openDrawer:() => this.setState({drawer:true}), closeDrawer:() => this.setState({drawer:false}),

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PageHead, Btn, Empty } from '../../ui/kit';
+import { PageHead, Btn, Empty, faceStyle, faceText } from '../../ui/kit';
 
 function MyUpdate({ B }) {
   const [f, setF] = useState({ done: '', issues: '', plan: '' }); const [err, setErr] = useState('');
@@ -70,7 +70,7 @@ function Decide({ B }) {
     <div className="pn-form" aria-label="New decision" role="group">
       <input className="me-who" value={f.d} onChange={e => set('d', e.target.value)} placeholder="Decision (e.g. Follow up Kilimo Bank permits with the council)" aria-label="Decision" />
       <input className="me-who" value={f.a} onChange={e => set('a', e.target.value)} placeholder="Action: what exactly must be done" aria-label="Action" />
-      <div className="ff-people br-people" role="radiogroup" aria-label="Who does it">{B.people.map(p => <button key={p.v} type="button" role="radio" aria-checked={f.o === p.v} aria-label={p.l} className={f.o === p.v ? 'is-on' : ''} onClick={() => set('o', p.v)}><span className="ff-face" style={{ background: p.c }}>{p.i}</span><span className="ff-name">{p.l.split(' ')[0]}</span></button>)}</div>
+      <div className="ff-people br-people" role="radiogroup" aria-label="Who does it">{B.people.map(p => <button key={p.v} type="button" role="radio" aria-checked={f.o === p.v} aria-label={p.l} className={f.o === p.v ? 'is-on' : ''} onClick={() => set('o', p.v)}><span className="ff-face" style={faceStyle(p)}>{faceText(p)}</span><span className="ff-name">{p.l.split(' ')[0]}</span></button>)}</div>
       <div className="fh-row">
         <div className="me-mini">{['Today', 'Wed', 'Fri', 'Next Mon'].map(d => <button key={d} type="button" className={f.due === d ? 'is-on' : ''} onClick={() => set('due', d)}>{d}</button>)}</div>
       </div>

@@ -65,8 +65,9 @@ export function reportingVals(s) {
       open: () => this.readReport(r.id), reply: t => this.replyReport(r.id, t) };
   };
   const inbox = all.filter(r => r.by !== me && this.reportVisibleTo(r, me)).map(row), sent = all.filter(r => r.by === me).map(row);
-  const targets = this.reportTargets().map(k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c }; });
+  const targets = this.reportTargets().map(k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c, ph: a.ph }; });
   return { RPT: { inbox, sent, unread: inbox.filter(r => r.unread).length, targets, kinds: REPORT_KINDS, canSend: targets.length > 0, send: f => this.sendReport(f),
     tab: s.rptTab || (targets.length && !inbox.length ? 'new' : 'inbox'), setTab: k => this.setState({ rptTab: k }),
+    draft: s.rptDraft || null, clearDraft: () => this.setState({ rptDraft: null }),
     defaultKind: (s.role || 'ceo') === 'finance' ? 'monthly' : (s.role || 'ceo') === 'gm' ? 'daily' : 'weekly' } };
 }

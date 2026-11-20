@@ -1025,3 +1025,24 @@
 .py-st { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 10px; background: #FBF1DD; color: #8A6414; }
 .py-st.is-paid { background: #E7F6EE; color: #1F7549; } .py-st.is-approved { background: #E9EFFA; color: #3559A8; }
 @media (max-width: 700px) { .py-emp-row { grid-template-columns: 34px 1fr auto; } .py-num:nth-of-type(3) { display: none; } }
+.us-wide { flex-basis: 100%; }
+.tb-photo { position: relative; display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.tb-photo input, .us-photo input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.us-photo { position: relative; cursor: pointer; display: inline-flex; border-radius: 50%; }
+.us-photo:hover { box-shadow: 0 0 0 2px #6D3CC2; }
+.k-avatar, .ff-face, .pv-face, .m-avatar { background-size: cover; }
+/* Statuses and updates */
+.td-status { flex: none; height: 30px; padding: 0 11px; border: 1px solid #E6E7ED; border-radius: 15px; background: #fff; font: inherit; font-size: 12px; font-weight: 700; color: #6E7180; cursor: pointer; }
+.td-status.is-on { background: #EFE8FA; border-color: #CDBDEB; color: #5A2FA8; }
+.td-posts { display: grid; gap: 4px; margin-top: 4px; }
+.td-posts ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.td-posts li { font-size: 12.5px; background: #F4F1FA; border-radius: 4px 10px 10px 10px; padding: 4px 8px; color: #3B3F4C; }
+.td-posts li.is-mine { background: #EEF7F2; }
+.td-posts small { color: #8A8D99; }
+.td-posts form { display: flex; gap: 6px; }
+.td-posts input { flex: 1; min-width: 0; height: 32px; border: 1px solid #E6E7ED; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 13px; }
+.td-link { justify-self: start; border: none; background: none; padding: 0; font: inherit; font-size: 12px; font-weight: 600; color: #6D3CC2; cursor: pointer; }
+.td-st { font-size: 10.5px; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: #F1F2F5; color: #6E7180; }
+.td-st.is-on { background: #EFE8FA; color: #5A2FA8; }
+.td-badge.is-work { background: #EFE8FA; color: #5A2FA8; }
+.td-person li { display: grid; gap: 2px; }

@@ -43,8 +43,11 @@ export const Btn = ({ kind = 'primary', icon, children, ...rest }) => (
   <button className={'k-btn is-' + kind} {...rest}>{icon ? <Icon d={icon} size={15} width={2} /> : null}{children}</button>
 );
 
+// A person's face: their photo when they have one, else initials on their colour.
+export const faceStyle = (p, extra) => Object.assign({ background: p && p.ph ? 'center / cover no-repeat url("' + p.ph + '")' : (p && p.c) || '#6E6A7C' }, extra || {});
+export const faceText = p => (p && p.ph ? '' : (p && p.i) || '');
 export const Avatar = ({ p, size = 26 }) => (
-  <span className="k-avatar" title={p.n} style={{ background: p.c, width: size, height: size, fontSize: size * 0.38 }}>{p.i}</span>
+  <span className="k-avatar" title={p.n} style={faceStyle(p, { width: size, height: size, fontSize: size * 0.38 })}>{faceText(p)}</span>
 );
 
 // "1 roll", "3 rolls": units are stored in the plural.

@@ -127,7 +127,7 @@ export function payrollVals(s) {
   const staff = (s.staff || []).filter(p => p.k !== this.ROLES.ceo.k);
   const keys = [...new Set([this.ROLES.gm.k, ...staff.map(p => p.k), ...Object.keys(P.emp)])].filter(k => k !== this.ROLES.ceo.k);
   const emps = keys.map(k => { const e = P.emp[k], a = this.av(k), st = (s.staff || []).find(p => p.k === k) || {}; const l = e ? payLine(e) : null;
-    return { k, n: a.n, i: a.i, c: a.c, role: st.role || (k === this.ROLES.gm.k ? 'General Manager' : ''), has: !!e, e: e || { basic: '', allow: '', heslb: false, bank: '', acc: '', nssfNo: '', tin: '' }, gross: l ? f(l.gross) : '—', net: l ? f(l.net) : '—', save: x => this.setEmployee(k, x) }; });
+    return { k, n: a.n, i: a.i, c: a.c, ph: a.ph, role: st.role || (k === this.ROLES.gm.k ? 'General Manager' : ''), has: !!e, e: e || { basic: '', allow: '', heslb: false, bank: '', acc: '', nssfNo: '', tin: '' }, gross: l ? f(l.gross) : '—', net: l ? f(l.net) : '—', save: x => this.setEmployee(k, x) }; });
   const runs = P.runs.map(r => {
     const T = k => sumBy(r.lines, k);
     return { id: r.id, month: monthLabel(r.month), st: r.st, stl: { draft: 'Draft · GM', mgmt: 'Waiting for Management', approved: 'Approved · Finance to pay', paid: 'Paid' }[r.st], note: r.note || '',

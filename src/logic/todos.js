@@ -37,6 +37,43 @@ export const todoMethods = {
     const today = this.today();
     this.setState(x => ({ todos: (x.todos || []).map(i => (i.id !== id ? i : i.st === 'done' ? Object.assign({}, i, { st: 'todo', doneOn: '' }) : Object.assign({}, i, { st: 'done', doneOn: today }))) }));
   },
+  // Status of your own to-do: to do → working on it → done.
+  setTodoStatus(id, st) {
+    const today = this.today();
+    this.setState(x => ({ todos: (x.todos || []).map(i => (i.id !== id ? i : Object.assign({}, i, { st, doneOn: st === 'done' ? today : '' }))) }));
+  },
+  // A short update (or the manager's comment) on a to-do or a task; the owner and their head are told.
+  postItem(kind, id, text) {
+    const t = String(text || '').trim(); if (!t) return 'Write the update';
+    const me = this.me().k, at = this.today() + ' ' + this.now(), post = { by: me, t: t.slice(0, 400), at };
+    const coll = kind === 'task' ? 'tasks' : 'todos';
+    const item = (this.state[coll] || []).find(x => x.id === id); if (!item) return 'Not found';
+    this.setState(x => ({ [coll]: (x[coll] || []).map(y => (y.id === id ? Object.assign({}, y, { posts: [...(y.posts || []), post] }) : y)) }));
+    const owner = kind === 'task' ? item.who : item.k, head = this.managerOf(this.deptOf(owner));
+    [owner, head, kind === 'task' ? item.by : null].filter((k, i, a) => k && k !== me && a.indexOf(k) === i)
+      .forEach(k => this.notify({ to: k, ic: 'message', t: this.me().n + ' on “' + (item.t || '').slice(0, 50) + '”', s: t, go: 'today' }));
+    return '';
+  },
+  // The head's end-of-day report: everything the team finished and is working on, ready to send up.
+  deptDayReport() {
+    const d = this.myDept(), me = this.me().k, today = this.today(); if (!d) return;
+    const team = this.teamOf(d), name = k => this.av(k).first, last = x => (x.posts && x.posts.length ? ' (' + x.posts[x.posts.length - 1].t + ')' : '');
+    const done = [], doing = [], issues = [];
+    team.forEach(k => {
+      (this.state.tasks || []).filter(t => t.who === k && t.kind !== 'brief').forEach(t => {
+        if (t.st === 'done' && t.doneOn === today) done.push('✓ ' + name(k) + ': ' + t.t + (t.report ? ' · ' + t.report : ''));
+        else if (t.st === 'prog' || t.st === 'review') doing.push('• ' + name(k) + ': ' + t.t + last(t));
+      });
+      (this.state.todos || []).filter(i => i.k === k).forEach(i => {
+        if (i.st === 'done' && i.doneOn === today) done.push('✓ ' + name(k) + ': ' + i.t);
+        else if (i.st === 'prog') doing.push('• ' + name(k) + ': ' + i.t + last(i));
+      });
+      if (!(this.state.todos || []).some(i => i.k === k && (i.d === today || i.doneOn === today)) && !(this.state.tasks || []).some(t => t.who === k && t.doneOn === today) && k !== me) issues.push(this.av(k).n + ' has not written their day');
+    });
+    const draft = { kind: 'daily', title: (DEPTS[d] || {}).l + ' · day report ' + today, summary: done.length ? done.join('\n') : 'Nothing finished today.', issues: issues.join('\n'), next: doing.join('\n') };
+    this.setState({ rptDraft: draft, rptTab: 'new' });
+    this.go('reporting');
+  },
   removeTodo(id) { this.setState(x => ({ todos: (x.todos || []).filter(i => i.id !== id) })); },
 
   // Text of a person's day, for WhatsApp.
@@ -73,14 +110,16 @@ export const todoMethods = {
 // Values for the Daily to-do and Company setup pages.
 export function todayVals(s) {
   const me = this.me().k, today = this.today(), yesterday = dayKey(-1), list = s.todos || [];
-  const item = i => ({ id: i.id, t: i.t, done: i.st === 'done', since: i.st === 'todo' && i.d < today ? 'since ' + dayName(i.d) : '',
-    toggle: () => this.toggleTodo(i.id), remove: () => this.removeTodo(i.id) });
+  const postsOf = x => (x.posts || []).slice(-3).map(p => ({ who: this.av(p.by).first, t: p.t, at: p.at, mine: p.by === me }));
+  const item = i => ({ id: i.id, t: i.t, done: i.st === 'done', started: i.st === 'prog', since: i.st !== 'done' && i.d < today ? 'since ' + dayName(i.d) : '',
+    toggle: () => this.toggleTodo(i.id), remove: () => this.removeTodo(i.id), start: () => this.setTodoStatus(i.id, i.st === 'prog' ? 'todo' : 'prog'),
+    posts: postsOf(i), post: t => this.postItem('todo', i.id, t) });
   const mine = list.filter(i => i.k === me);
   const PRI = { high: 'High', med: '', low: '' };
   // Tasks someone gave you sit in the same list as your own to-dos.
   const taskItem = t => { const P = this.proj(t.p); return { id: t.id, t: t.t, task: true, done: t.st === 'done', started: t.st === 'prog' || t.st === 'review',
     from: t.by && t.by !== t.who ? this.av(t.by).n : '', where: P.id ? P.client : '', due: t.due || '', pri: PRI[t.pri] || '', since: '',
-    go: P.id ? () => this.go('project', { projectId: P.id }) : null, toggle: () => this.toggleTask(t.id), report: r => this.reportTask(t.id, r), start: () => this.startTask(t.id), reported: t.report || '' }; };
+    go: P.id ? () => this.go('project', { projectId: P.id }) : null, toggle: () => this.toggleTask(t.id), report: r => this.reportTask(t.id, r), start: () => this.startTask(t.id), reported: t.report || '', posts: postsOf(t), post: x => this.postItem('task', t.id, x) }; };
   const myTasks = s.tasks.filter(t => t.who === me && t.kind !== 'brief');
   const given = s.tasks.filter(t => t.by === me && t.who !== me && t.kind !== 'brief');
   const day = s.teamDay === 'yesterday' ? yesterday : today;
@@ -91,17 +130,18 @@ export function todayVals(s) {
   const team = keys.map(k => {
     const a = this.av(k), tk = s.tasks.filter(t => t.who === k && t.kind !== 'brief');
     const done = [...tk.filter(t => t.st === 'done' && t.doneOn === day).map(taskItem), ...list.filter(i => i.k === k && i.st === 'done' && i.doneOn === day).map(item)];
-    const plan = [...tk.filter(t => t.st !== 'done').map(taskItem), ...list.filter(i => i.k === k && i.st === 'todo').map(item)];
-    return { k, n: a.n, i: a.i, c: a.c, done, plan, empty: !done.length && !plan.length, sent: !!(s.reportsToday || {})[k],
+    const plan = [...tk.filter(t => t.st !== 'done').map(taskItem), ...list.filter(i => i.k === k && i.st !== 'done').map(item)];
+    return { k, n: a.n, i: a.i, c: a.c, ph: a.ph, done, plan, empty: !done.length && !plan.length, sent: !!(s.reportsToday || {})[k],
+      working: plan.filter(x => x.started).length, assign: () => this.openModal('task', { who: k }),
       remind: () => { this.remind(k, 'Please add today’s to-do: what you did and what you plan', 'today', 'checkSquare'); this.toast('Reminder sent to ' + a.n); } };
   }).sort((x, y) => (x.empty - y.empty) || x.n.localeCompare(y.n));
   const company = Object.assign({ smallLimit: 200000, off: [] }, s.company || {});
   return {
     TD: {
-      dayLabel: dayName(today), isTeam: s.todoTab === 'team', canTeam: this.isTop() || mgr,
+      dayLabel: dayName(today), isTeam: s.todoTab === 'team', canTeam: this.isTop() || mgr, canDayReport: mgr, dayReport: () => this.deptDayReport(),
       showMine: () => this.setState({ todoTab: 'mine' }), showTeam: () => this.setState({ todoTab: 'team' }),
       done: [...myTasks.filter(t => t.st === 'done' && t.doneOn === today).map(taskItem), ...mine.filter(i => i.st === 'done' && i.doneOn === today).map(item)],
-      plan: mine.filter(i => i.st === 'todo').sort((a, b) => (a.d < b.d ? 1 : -1)).map(item),
+      plan: mine.filter(i => i.st !== 'done').sort((a, b) => (a.d < b.d ? 1 : -1)).map(item),
       assigned: myTasks.filter(t => t.st !== 'done').sort((a, b) => (a.pri === 'high' ? -1 : 0) - (b.pri === 'high' ? -1 : 0)).map(taskItem),
       given: given.map(t => { const a = this.av(t.who); return { id: t.id, t: t.t, who: a.n, wi: a.i, wc: a.c, due: t.due, done: t.st === 'done', st: this.tst(t.st)[0],
         nudge: () => { this.remind(t.who, 'Reminder: ' + t.t, 'today', 'checkSquare', 'From ' + this.me().n + ' · due ' + t.due); this.toast('Reminder sent to ' + a.n); } }; }),

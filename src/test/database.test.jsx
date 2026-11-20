@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import { createFakeSupabase } from './fakeSupabase';
 
 let db;
@@ -123,7 +123,7 @@ describe('administrator', () => {
     await asAdmin();
     fireEvent.change(field('Full name'), { target: { value: 'Neema Lyimo' } });
     fireEvent.change(field('Email'), { target: { value: 'neema@tm.co.tz' } });
-    fireEvent.change(field('Portal'), { target: { value: 'finance' } });
+    fireEvent.click(within(screen.getByRole('radiogroup', { name: 'Portal' })).getByRole('radio', { name: 'Finance' }));
     fireEvent.change(field('Starting password'), { target: { value: 'short' } });
     fireEvent.click(screen.getByText('Create account'));
     expect(await screen.findByText('The starting password needs at least 8 characters.')).toBeTruthy();

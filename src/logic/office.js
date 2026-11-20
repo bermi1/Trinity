@@ -91,7 +91,7 @@ export const officeMethods = {
 
 export function officeVals(s) {
   const me = this.me().k, today = dayKey(0);
-  const face = k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c }; };
+  const face = k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c, ph: a.ph }; };
   const mine = (s.meetings || []).filter(m => m.date >= today && (this.isTop() || (s.role || 'ceo') === 'pa' || this.meetingPeople(m).includes(me))).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   const days = [], end = dayKey(45);
   const dayOf = k => { let d = days.find(x => x.k === k); if (!d) days.push(d = { k, l: dayLabel(k), items: [] }); return d; };

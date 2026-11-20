@@ -136,7 +136,7 @@ export function crmVals(s) {
     const can = this.canMoveLead(sel);
     L = Object.assign(row(sel), {
       can, src: sel.src || '', contact: sel.contact || '', canOwner: this.isTop() || this.isManagerOf('clientservice'),
-      team: team.map(k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c }; }), ownerK: sel.owner,
+      team: team.map(k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c, ph: a.ph }; }), ownerK: sel.owner,
       next1: sel.st < WON ? sel.st + 1 : null, nextLabel: NEXT_ACTION[sel.st] || '', needsFile: sel.st === 2 && !sel.proposal, needsValue: sel.st === 4,
       proposal: sel.proposal ? Object.assign({}, sel.proposal, { size: this.fmtSize(sel.proposal.size || 0), byN: this.av(sel.proposal.by).n, open: () => this.openDoc({ n: sel.proposal.name, url: sel.proposal.url, path: sel.proposal.path }) }) : null,
       hist: (sel.hist || []).slice().reverse().map(h => ({ stage: LEAD_STAGES[h.s], by: this.av(h.by).n, at: h.at, note: h.note || '' })),

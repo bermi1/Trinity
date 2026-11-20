@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { PageHead, Card, Btn, Avatar, Pill, Empty } from '../../ui/kit';
 
-const BLANK = { name: '', email: '', role: 'staff', title: '', k: '', password: '', admin: false };
+const BLANK = { name: '', email: '', role: 'staff', dept: 'operations', title: '', k: '', password: '', admin: false };
+const DEPTS = [['clientservice', 'Client Service'], ['creative', 'Creative'], ['operations', 'Operations'], ['finance', 'Finance'], ['production', 'Printing'], ['reception', 'Reception']];
+const DEPT_PORTALS = ['clientservice', 'creative', 'operations', 'finance', 'production', 'reception'];
 
 // Administrator: create, change and remove sign-in accounts, and remove the demo in one tap.
 export default function UsersPage({ v }) {
@@ -62,7 +64,15 @@ export default function UsersPage({ v }) {
           <form className="k-form" onSubmit={create} noValidate>
             <label>Full name<input value={f.name} onChange={set('name')} placeholder="e.g. Neema Lyimo" autoComplete="off" /></label>
             <label>Email<input type="email" value={f.email} onChange={set('email')} placeholder="name@trinitymark.co.tz" autoComplete="off" /></label>
-            <label>Portal<select value={f.role} onChange={set('role')}>{A.roles.map(r => <option key={r.v} value={r.v}>{r.l}</option>)}</select></label>
+            <div className="ff us-wide" data-field="Portal"><span className="ff-l">Portal</span>
+              <div className="ff-chips" role="radiogroup" aria-label="Portal">{A.roles.map(r => <button key={r.v} type="button" role="radio" aria-checked={f.role === r.v} className={f.role === r.v ? 'is-on' : ''} onClick={() => setF({ ...f, role: r.v })}>{r.l}</button>)}</div>
+              <small className="k-sub">Department heads get their department’s portal (they then see and task their team). Everyone else gets the Staff portal.</small>
+            </div>
+            {!DEPT_PORTALS.includes(f.role) && !['ceo', 'gm', 'pa'].includes(f.role) ? (
+              <div className="ff us-wide" data-field="Department"><span className="ff-l">Department (whose head they report to)</span>
+                <div className="ff-chips" role="radiogroup" aria-label="Department">{DEPTS.map(([k, l]) => <button key={k} type="button" role="radio" aria-checked={f.dept === k} className={f.dept === k ? 'is-on' : ''} onClick={() => setF({ ...f, dept: k })}>{l}</button>)}</div>
+              </div>
+            ) : null}
             <label>Job title<input value={f.title} onChange={set('title')} placeholder="e.g. Account Manager" /></label>
             <label style={{ flex: '0 1 110px' }}>Initials<input value={f.k} onChange={set('k')} placeholder={initials || 'NL'} maxLength={3} /></label>
             <label>Starting password<input type="text" value={f.password} onChange={set('password')} placeholder="at least 8 characters" autoComplete="new-password" /></label>
@@ -83,7 +93,10 @@ export default function UsersPage({ v }) {
                   <tr key={u.user_id} data-user={u.email}>
                     <td>
                       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                        <Avatar p={{ i: u.person_key || '?', n: u.full_name, c: v.colorFor(u.person_key || u.email) }} size={30} />
+                        <label className="us-photo" title="Upload photo">
+                          <input type="file" accept="image/*" onChange={async e => { const fl = e.target.files[0]; e.target.value = ''; if (fl && u.person_key) await A.photo(u.person_key, fl); }} aria-label={'Photo for ' + u.full_name} />
+                          <Avatar p={{ i: u.person_key || '?', n: u.full_name, c: v.colorFor(u.person_key || u.email), ph: (v.photos || {})[u.person_key] }} size={36} />
+                        </label>
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontWeight: 700 }}>{u.full_name} {u.is_admin ? <Pill l="Admin" bg="#EFE8FA" fg="#5A2FA8" /> : null} {u.is_demo ? <Pill l="Demo" bg="#FBF1DD" fg="#8A6414" /> : null}</div>
                           <div className="k-sub">{u.email}{u.title ? ' · ' + u.title : ''}</div>

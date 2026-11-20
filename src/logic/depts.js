@@ -18,7 +18,12 @@ export const deptMethods = {
     const r = Object.keys(this.ROLES).find(role => this.ROLES[role].k === k);
     return r && DEPTS[r] ? r : null;
   },
-  managerOf(dept) { const c = this.state.company || {}; return (c.managers || {})[dept] || (DEPTS[dept] || {}).mgr || null; },
+  // The head of a department: chosen in Company setup, else the person holding that department's portal;
+  // the demo's named heads only while the demo data is in use.
+  managerOf(dept) {
+    const c = this.state.company || {};
+    return (c.managers || {})[dept] || (this.roleHolder || {})[dept] || (this.state.workspaceLive ? null : (DEPTS[dept] || {}).mgr) || null;
+  },
   myDept() { const role = this.state.role || 'ceo'; return DEPTS[role] ? role : this.deptOf(this.me().k); },
   isManagerOf(dept) { return !!dept && this.managerOf(dept) === this.me().k; },
   isTop() { return ['ceo', 'gm'].includes(this.state.role || 'ceo'); },
@@ -27,7 +32,8 @@ export const deptMethods = {
     const m = this.managerOf(dept);
     return [...new Set([m, ...ks].filter(Boolean))];
   },
-  everyone() { return [...new Set([...Object.keys(this.PPL), ...Object.keys(this.people || {})])]; },
+  // Everyone who can be given work: real accounts on the live workspace, the demo cast otherwise.
+  everyone() { const live = this.state.workspaceLive && Object.keys(this.people || {}).length; return [...new Set([...(live ? [] : Object.keys(this.PPL)), ...Object.keys(this.people || {})])]; },
   // Management and the GM assign to anyone, a manager to their own team, everyone else only to themselves.
   assignable() {
     if (this.isTop()) return this.everyone();
@@ -171,7 +177,7 @@ export function deptVals(s) {
   const openTasks = k => s.tasks.filter(t => t.who === k && t.st !== 'done').length;
   const team = isMgr ? this.teamOf(dept).filter(k => k !== me).map(k => {
     const a = this.av(k), p = (s.staff || []).find(x => x.k === k) || {};
-    return { k, n: a.n, i: a.i, c: a.c, role: p.role || '', done: todos.filter(i => i.k === k && i.st === 'done' && i.doneOn === today).length,
+    return { k, n: a.n, i: a.i, c: a.c, ph: a.ph, role: p.role || '', done: todos.filter(i => i.k === k && i.st === 'done' && i.doneOn === today).length,
       plan: todos.filter(i => i.k === k && i.st === 'todo').length, sent: !!(s.reportsToday || {})[k], open: openTasks(k),
       assign: () => this.openModal('task', { who: k }), remind: () => { this.remind(k, 'Please add today’s to-do: what you did and what you plan', 'today', 'checkSquare'); this.toast('Reminder sent to ' + a.n); } };
   }) : [];
@@ -210,7 +216,7 @@ export function deptVals(s) {
     const mine = isMgr ? briefs : briefs.filter(b => b.who === me);
     V.kpis = Object.keys(BRIEF).map(k => ({ l: BRIEF[k], v: String(mine.filter(b => b.st === k).length) }));
     V.briefs = mine.filter(b => b.st !== 'done').map(briefRow).concat(mine.filter(b => b.st === 'done').slice(0, 3).map(briefRow));
-    V.designers = this.teamOf('creative').map(k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c }; });
+    V.designers = this.teamOf('creative').map(k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c, ph: a.ph }; });
   }
   if (dept === 'operations') {
     const live = s.projects.filter(p => this.flowOf(p) === 'execution'), toBudget = s.projects.filter(p => this.flowOf(p) === 'budget'), waiting = s.projects.filter(p => this.flowOf(p) === 'approval');

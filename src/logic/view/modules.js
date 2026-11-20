@@ -50,7 +50,7 @@ export function pageVals2(s, IC, ST, narrow) {
   V.staffSummary = (s.staff.length - miss.length) + ' of ' + s.staff.length + ' shown staff reported yesterday';
   V.hasMissing = miss.length > 0;
   V.remindAll = () => { miss.forEach(p => this.remind(p.k, 'Reminder · submit your daily report', 'staffportal')); this.toast('Reminder sent to ' + miss.length + ' staff'); };
-  V.staffRows = s.staff.map(p => { const a = this.av(p.k); return {n:a.n, i:a.i, c:a.c, role:p.role, dept:p.dept, tasks:s.tasks.filter(t => t.who === p.k && t.st !== 'done').length + ' open', fl:p.fl ? this.fmtT(p.fl) : '—', stl:p.rep ? 'Submitted' : 'Missing', stbg:p.rep ? '#E6F4EC' : '#FBEDEE', stfg:p.rep ? '#1F7549' : '#B23A46', miss:!p.rep, remind:() => { this.remind(p.k, 'Reminder · submit your daily report', 'staffportal'); this.toast('Reminder sent to ' + a.n); }}; });
+  V.staffRows = s.staff.map(p => { const a = this.av(p.k); return {n:a.n, i:a.i, c:a.c, ph:a.ph, role:p.role, dept:p.dept, tasks:s.tasks.filter(t => t.who === p.k && t.st !== 'done').length + ' open', fl:p.fl ? this.fmtT(p.fl) : '—', stl:p.rep ? 'Submitted' : 'Missing', stbg:p.rep ? '#E6F4EC' : '#FBEDEE', stfg:p.rep ? '#1F7549' : '#B23A46', miss:!p.rep, remind:() => { this.remind(p.k, 'Reminder · submit your daily report', 'staffportal'); this.toast('Reminder sent to ' + a.n); }}; });
   // Notifications
   V.noteRows = this.myNotes(s).map(n => ({ic:IC[n.ic] || IC.bell, t:n.t, s:n.s, time:n.time, unread:!n.read, bg:n.read ? '#fff' : '#FBF9FE', fw:n.read ? 500 : 700, on:() => { this.setState(x => ({notes:x.notes.map(y => y.id === n.id ? Object.assign({}, y, {read:true}) : y)})); this.goTarget(n.go); }}));
   V.markAllRead = () => { const mine = new Set(this.myNotes(s).map(n => n.id)); this.setState(x => ({notes:x.notes.map(y => mine.has(y.id) ? Object.assign({}, y, {read:true}) : y)})); };
@@ -101,7 +101,7 @@ export function pageVals2(s, IC, ST, narrow) {
     reqs:fReqs.map(r => ({who:this.av(r.who).n, amt:this.fmtT(r.amt), cat:this.reqWhat(r).split(' · ')[0], proj:this.reqWhat(r).split(' · ').slice(1).join(' · '), verify:() => this.decide(r, true)})),
     reqsEmpty:fReqs.length === 0,
     overdue:s.invoices.filter(i => i.st === 'overdue').map(i => ({id:i.id, c:i.c, due:i.due, v:this.fmtM(i.v)})), overdueEmpty:s.invoices.filter(i => i.st === 'overdue').length === 0,
-    floats:s.staff.filter(p => p.fl > 0).map(p => { const a = this.av(p.k); return {n:a.n, i:a.i, c:a.c, amt:this.fmtT(p.fl), age:({JM:'1 day',GM:'2 days',AJ:'4 days',PL:'12 days'})[p.k] || 'today', rec:() => { this.setState(x => ({staff:x.staff.map(q => q.k === p.k ? Object.assign({}, q, {fl:0}) : q)})); this.toast('Float reconciled · ' + a.n); this.log('receipt','green','Float reconciled · ' + this.fmtT(p.fl), a.n); }}; })
+    floats:s.staff.filter(p => p.fl > 0).map(p => { const a = this.av(p.k); return {n:a.n, i:a.i, c:a.c, ph:a.ph, amt:this.fmtT(p.fl), age:({JM:'1 day',GM:'2 days',AJ:'4 days',PL:'12 days'})[p.k] || 'today', rec:() => { this.setState(x => ({staff:x.staff.map(q => q.k === p.k ? Object.assign({}, q, {fl:0}) : q)})); this.toast('Float reconciled · ' + a.n); this.log('receipt','green','Float reconciled · ' + this.fmtT(p.fl), a.n); }}; })
   };
 
   // Reception / office front portal

@@ -13,6 +13,22 @@ function QuickAdd({ placeholder, label, onAdd, done }) {
   );
 }
 
+// Updates on an item: the last few, and a line to post a new one (also the manager's comment).
+function Posts({ it, compact }) {
+  const [open, setOpen] = useState(false); const [t, setT] = useState('');
+  return (
+    <div className="td-posts">
+      {it.posts && it.posts.length ? <ul>{it.posts.slice(compact ? -1 : -3).map((p, i) => <li key={i} className={p.mine ? 'is-mine' : ''}><b>{p.who}</b> {p.t}<small> · {p.at.slice(11)}</small></li>)}</ul> : null}
+      {open ? (
+        <form onSubmit={e => { e.preventDefault(); if (!it.post(t)) { setT(''); setOpen(false); } }}>
+          <input autoFocus value={t} onChange={e => setT(e.target.value)} placeholder={compact ? 'Comment for ' + it.t : 'Update: where is it at?'} aria-label={(compact ? 'Comment on ' : 'Update on ') + it.t} />
+          <button type="submit" className="td-start">Post</button>
+        </form>
+      ) : <button type="button" className="td-link" onClick={() => setOpen(true)}>{compact ? 'Comment' : 'Post update'}</button>}
+    </div>
+  );
+}
+
 // One row: a task someone gave you, or something you wrote yourself.
 // Finishing a task asks for one line on what was done; it goes to whoever gave the task.
 function Item({ it }) {
@@ -40,13 +56,13 @@ function Item({ it }) {
             {it.from ? <span>From {it.from.split(' ')[0]}</span> : null}
             {it.where ? (it.go ? <button type="button" onClick={it.go}>{it.where}</button> : <span>{it.where}</span>) : null}
             {it.due && !it.done ? <span>Due {it.due}</span> : null}
-            {it.started && !it.done ? <span className="td-going">In progress</span> : null}
             {it.done && it.reported ? <span className="td-rep">“{it.reported}”</span> : null}
           </span>
         ) : it.since ? <small>{it.since}</small> : null}
+        {!it.done ? <Posts it={it} /> : null}
       </span>
-      {it.task ? (!it.done && !it.started ? <button type="button" className="td-start" onClick={it.start}>Start</button> : null)
-        : <button type="button" className="td-x" onClick={it.remove} aria-label={'Remove: ' + it.t}>×</button>}
+      {!it.done ? <button type="button" className={'td-status' + (it.started ? ' is-on' : '')} onClick={it.start} aria-pressed={!!it.started} aria-label={'Working on it: ' + it.t}>{it.started ? 'Working on it' : 'Start'}</button> : null}
+      {!it.task ? <button type="button" className="td-x" onClick={it.remove} aria-label={'Remove: ' + it.t}>×</button> : null}
     </li>
   );
 }
@@ -108,6 +124,7 @@ function Team({ T }) {
       <div className="td-teamhead">
         <Chips items={[{ l: 'Today', on: T.teamDay === 'today', set: () => T.setTeamDay('today') }, { l: 'Yesterday', on: T.teamDay === 'yesterday', set: () => T.setTeamDay('yesterday') }]} />
         <span className="k-sub">{T.teamDone} of {T.teamTotal} people have written their day</span>
+        {T.canDayReport ? <Btn kind="dark" onClick={T.dayReport}>Create today’s department report</Btn> : null}
       </div>
       <div className="td-team">
         {T.team.map(p => (
@@ -115,14 +132,16 @@ function Team({ T }) {
             <header>
               <Avatar p={p} size={30} />
               <b>{p.n}</b>
+              {p.working ? <span className="td-badge is-work">{p.working} working on</span> : null}
               {p.sent ? <span className="td-badge">Report sent</span> : null}
+              <button type="button" className="td-start" onClick={p.assign} aria-label={'Assign a task to ' + p.n}>Assign</button>
             </header>
             {p.empty ? (
               <div className="td-nothing"><span>Nothing yet</span><Btn kind="ghost" onClick={p.remind}>Remind</Btn></div>
             ) : (
               <>
                 {p.done.length ? <><h4>Done</h4><ul>{p.done.map(i => <li key={i.id} className="is-done">✓ {i.t}</li>)}</ul></> : null}
-                {p.plan.length ? <><h4>To do</h4><ul>{p.plan.map(i => <li key={i.id}>• {i.t}{i.from ? <small> · from {i.from.split(' ')[0]}</small> : i.since ? <small> · {i.since}</small> : null}</li>)}</ul></> : null}
+                {p.plan.length ? <><h4>Open</h4><ul>{p.plan.map(i => <li key={i.id} className={i.started ? 'is-work' : ''} data-item={i.t}><span className={'td-st' + (i.started ? ' is-on' : '')}>{i.started ? 'Working on it' : 'To do'}</span> {i.t}{i.from ? <small> · from {i.from.split(' ')[0]}</small> : i.since ? <small> · {i.since}</small> : null}<Posts it={i} compact /></li>)}</ul></> : null}
               </>
             )}
           </section>
