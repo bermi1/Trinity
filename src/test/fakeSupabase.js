@@ -52,7 +52,7 @@ export function createFakeSupabase({ users = {}, profiles = {} } = {}) {
     admin_create_user: a => {
       if (users[a.p_email]) return { data: null, error: { message: 'An account with ' + a.p_email + ' already exists' } };
       const id = 'u' + (Object.keys(users).length + 1);
-      users[a.p_email] = { id, password: a.p_password };
+      users[a.p_email] = { id, password: a.p_password, meta: {} };
       tables.profiles.set(id, { role: a.p_role, full_name: a.p_full_name, title: a.p_title, person_key: a.p_person_key.toUpperCase(), is_admin: a.p_is_admin, is_demo: false });
       return { data: id, error: null };
     },
@@ -80,8 +80,14 @@ export function createFakeSupabase({ users = {}, profiles = {} } = {}) {
       async signInWithPassword({ email, password }) {
         const u = users[email];
         if (!u || u.password !== password) return { data: {}, error: { message: 'Invalid login credentials' } };
-        session = { user: { id: u.id, email } };
+        session = { user: { id: u.id, email, user_metadata: u.meta || { pw_set: true } } };
         return { data: { user: session.user, session }, error: null };
+      },
+      async updateUser({ password, data }) {
+        const u = Object.values(users).find(x => x.id === session.user.id);
+        if (password === u.password) return { error: { message: 'New password should be different from the old password.' } };
+        u.password = password; u.meta = Object.assign({}, u.meta, data); session.user.user_metadata = u.meta;
+        return { data: { user: session.user }, error: null };
       },
       async signOut() { session = null; return { error: null }; },
       async resetPasswordForEmail() { return { error: null }; }

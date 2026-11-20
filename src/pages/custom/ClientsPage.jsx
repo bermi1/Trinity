@@ -151,6 +151,34 @@ function Memo({ L }) {
   );
 }
 
+// Everything done with one customer: projects running now, finished projects, open leads, and deals won or lost.
+function History({ c }) {
+  const [open, setOpen] = useState(false);
+  const n = c.ongoing.length + c.past.length + c.openLeads.length + c.dealt.length;
+  if (!n) return <p className="k-sub cr-hist-none">No projects or deals yet.</p>;
+  const Job = ({ j }) => (
+    <li><button type="button" onClick={j.open} aria-label={'Open project ' + j.name}>
+      <b>{j.name}</b>
+      <span className="k-sub">{[j.done ? 'Closed' + (j.when ? ' · ' + j.when : '') : j.stage + (j.due ? ' · due ' + j.due : ''), j.pm ? 'PM ' + j.pm : '', j.value, j.po, j.billed].filter(Boolean).join(' · ')}</span>
+    </button></li>
+  );
+  return (
+    <div className="cr-hist">
+      <button type="button" className="td-link" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? 'Hide history' : 'History · ' + c.ongoing.length + ' ongoing · ' + c.past.length + ' past'}</button>
+      {open ? (
+        <div className="cr-hist-body" aria-label={'History of ' + c.n}>
+          <h4>Ongoing projects · {c.ongoing.length}</h4>
+          {c.ongoing.length ? <ul>{c.ongoing.map(j => <Job key={j.id} j={j} />)}</ul> : <p className="k-sub">None running now.</p>}
+          <h4>Past projects · {c.past.length}</h4>
+          {c.past.length ? <ul>{c.past.map(j => <Job key={j.id} j={j} />)}</ul> : <p className="k-sub">No finished projects yet.</p>}
+          {c.openLeads.length ? <><h4>Open leads · {c.openLeads.length}</h4><ul>{c.openLeads.map(l => <li key={l.id}><button type="button" onClick={l.open}><b>{l.t}</b><span className="k-sub">{l.stage}{l.v ? ' · ' + l.v : ''}</span></button></li>)}</ul></> : null}
+          {c.dealt.length ? <><h4>Deals won and lost</h4><ul>{c.dealt.map(l => <li key={l.id}><button type="button" onClick={l.open}><b>{l.t}</b><span className="k-sub">{l.won ? 'Won' : 'Lost' + (l.why ? ' · ' + l.why : '')}</span></button></li>)}</ul></> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function Customers({ C }) {
   const [q, setQ] = useState('');
   const list = q ? C.customers.filter(c => (c.n + ' ' + c.contact + ' ' + c.city).toLowerCase().includes(q.toLowerCase())) : C.customers;
@@ -168,6 +196,7 @@ function Customers({ C }) {
               <span>{c.jobs} jobs{c.value ? ' · ' + c.value : ''}{c.leads ? ' · ' + c.leads + ' open leads' : ''}</span>
               <span className="k-sub">{c.ownerN}</span>
             </footer>
+            <History c={c} />
           </article>
         ))}
         {!list.length ? <Empty>No customers match.</Empty> : null}

@@ -134,6 +134,24 @@ describe('administrator', () => {
     expect(db.users['neema@tm.co.tz'].password).toBe('Welcome-2026');
   });
 
+  it('a new account must choose its own password on first sign-in', async () => {
+    db.users['new@tm.co.tz'] = { id: 'u9', password: 'Welcome-2026', meta: {} };
+    db.tables.profiles.set('u9', { role: 'staff', full_name: 'Habiba Juma', title: 'Office Assistant', person_key: 'HJ', is_admin: false, is_demo: false });
+    render(<App />);
+    await screen.findByText('SIGN IN');
+    signInAs('new@tm.co.tz', 'Welcome-2026');
+    expect(await screen.findByText('Welcome, Habiba')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'Welcome-2026' } });
+    fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'Welcome-2026' } });
+    await act(async () => { fireEvent.click(screen.getByText('Save and continue')); });
+    expect(await screen.findByText('Choose a password different from the one you were given.')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'Habiba-own-1' } });
+    fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'Habiba-own-1' } });
+    await act(async () => { fireEvent.click(screen.getByText('Save and continue')); });
+    expect(db.users['new@tm.co.tz'].password).toBe('Habiba-own-1');
+    expect(screen.queryByText('Welcome, Habiba')).toBeNull();
+  });
+
   it('removes all demo accounts and demo data in one tap, leaving an empty workspace', async () => {
     window.confirm = () => true;
     await asAdmin();

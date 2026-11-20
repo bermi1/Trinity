@@ -82,7 +82,7 @@ export function renderVals() {
     toggleRemember:() => this.setState({remember:!s.remember}), rememberBg:s.remember ? '#6D3CC2' : '#fff', rememberBd:s.remember ? '#6D3CC2' : '#D5CFE0',
     loginKey:e => { if (e.key === 'Enter') this.signIn(); },
     forgot:e => { e.preventDefault(); this.forgotPassword(); },
-    signOut:() => this.signOut(),
+    signOut:() => this.signOut(), setOwnPassword:pw => this.setOwnPassword(pw),
     resetDemo:() => this.resetDemo(),
     loginNote:s.db ? 'Sign in with your Trinity Mark account' : 'Demo workspace · any password of 4+ characters', dataBadge:s.db ? 'LIVE DATA' : 'DEMO DATA',
     page:s.page, pageKey:s.page + '|' + (s.page === 'project' ? s.projectId : s.page === 'job' ? s.jobId : ''), navDir:s.navDir || 'tab', online:s.online !== false, signingIn:!!s.signingIn, db:!!s.db,

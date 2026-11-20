@@ -165,7 +165,7 @@ export const flowMethods = {
     const p = this.state.projects.find(x => x.id === pid); if (!p) return 'Project not found';
     const open = this.state.tasks.filter(t => t.p === pid && t.kind !== 'brief' && t.st !== 'done').length;
     if (open) return open + ' task(s) still open';
-    this.setProject(pid, { flow: 'closed', st: 'done', prog: 100 });
+    this.setProject(pid, { flow: 'closed', st: 'done', prog: 100, closedAt: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) });
     this.pnote(pid, 'Project closed');
     [this.ROLES.ceo.k, this.ROLES.gm.k, this.ROLES.finance.k].filter(k => k !== this.me().k).forEach(k => this.remind(k, 'Project closed · ' + p.client, 'project', 'check', p.name));
     this.toast(p.name + ' closed');

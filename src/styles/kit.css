@@ -303,6 +303,12 @@
 .cr-cust-card { background: #fff; border: 1px solid #ECE8F3; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 4px; }
 .cr-cust-card header { display: flex; justify-content: space-between; gap: 8px; font-size: 15px; }
 .cr-cust-card p { margin: 0; font-size: 13.5px; }
+.cr-hist { border-top: 1px solid #ECE8F3; margin-top: 8px; padding-top: 8px; }
+.cr-hist-body h4 { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #6E6A7C; }
+.cr-hist-body ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.cr-hist-body li button { width: 100%; text-align: left; background: #F7F5FB; border: 0; border-radius: 10px; padding: 8px 10px; display: grid; gap: 2px; cursor: pointer; font: inherit; color: #17152A; }
+.cr-hist-body li button:hover { background: #EFE8FA; }
+.cr-hist-none { margin-top: 6px !important; }
 .cr-cust-card footer { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; padding-top: 10px; border-top: 1px solid #F1EEF6; font-size: 12.5px; font-weight: 700; color: #3C3752; }
 .cr-active { font-size: 11px; font-weight: 800; color: #1F7549; background: #E6F4EC; border-radius: 8px; padding: 3px 8px; white-space: nowrap; }
 @media (max-width: 899px) {

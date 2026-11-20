@@ -1,5 +1,6 @@
 // Client Service CRM: customers, leads and proposals.
 // Leads move New → Contacted → Meeting → Proposal sent → Negotiation → Won / Lost. Each move records
+import { FLOW, FLOW_L } from './flow';
 // who and when; "Proposal sent" needs the proposal file, "Lost" a reason, "Won" the agreed value.
 // Mixed into TrinityApp, so `this` is the app.
 import { supabase } from '../lib/supabase';
@@ -127,8 +128,20 @@ export function crmVals(s) {
   };
   const open = leads.filter(l => l.st < WON);
   const cust = (s.customers || []).map(c => {
-    const jobs = s.projects.filter(p => p.client === c.n), active = jobs.filter(p => p.st !== 'done').length;
-    return Object.assign({}, c, { jobs: jobs.length, active, value: fmtM(jobs.reduce((a, b) => a + (b.val || 0), 0)), ownerN: this.av(c.owner).n, leads: open.filter(l => l.c === c.n).length });
+    const jobs = s.projects.filter(p => (p.client || '').toLowerCase() === c.n.toLowerCase()), active = jobs.filter(p => p.st !== 'done').length;
+    const same = x => (x || '').toLowerCase() === c.n.toLowerCase();
+    const job = p => {
+      const step = this.flowOf(p), done = p.st === 'done' || step === 'closed', inv = (s.invoices || []).filter(i => i.p === p.id);
+      return { id: p.id, name: p.name, done, stage: FLOW_L[FLOW.indexOf(step)] || '', due: p.due || '', when: p.closedAt || p.due || '',
+        pm: p.pm ? this.av(p.pm).n : '', value: fmtM(p.val || 0), po: p.po && p.po.no ? 'PO ' + p.po.no : 'No PO yet',
+        billed: showV && inv.length ? fmtM(inv.reduce((a, b) => a + (b.v || 0), 0)) + ' invoiced · ' + inv.filter(i => i.st === 'paid').length + '/' + inv.length + ' paid' : '',
+        open: () => this.go('project', { projectId: p.id }) };
+    };
+    const hist = jobs.map(job);
+    return Object.assign({}, c, { jobs: jobs.length, active, value: fmtM(jobs.reduce((a, b) => a + (b.val || 0), 0)), ownerN: this.av(c.owner).n, leads: open.filter(l => l.c === c.n).length,
+      ongoing: hist.filter(h => !h.done), past: hist.filter(h => h.done),
+      dealt: leads.filter(l => same(l.c) && (l.st === WON || l.st === LOST)).map(l => ({ id: l.id, t: l.t, won: l.st === WON, why: l.lost || '', open: () => this.setState({ crmTab: l.st === WON ? 'won' : 'lost', leadSel: l.id }) })),
+      openLeads: open.filter(l => same(l.c)).map(row) });
   }).sort((a, b) => b.active - a.active || a.n.localeCompare(b.n));
   const sel = leads.find(l => l.id === s.leadSel);
   let L = null;

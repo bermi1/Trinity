@@ -6,6 +6,7 @@ import Splash from './components/Splash';
 import MobileLogin from './mobile/MobileLogin';
 import MobileApp from './mobile/MobileApp';
 import PinScreen from './components/PinScreen';
+import SetPassword from './components/SetPassword';
 
 // Hosts the application logic and re-renders whenever it changes state.
 export default class App extends Component {
@@ -24,6 +25,7 @@ export default class App extends Component {
   render() {
     if (this.logic.state.booting) return <Splash />;
     const v = this.logic.renderVals();
+    if (v.showApp && this.logic.state.mustSetPw) return <SetPassword v={v} />;
     // Quick unlock: the PIN screen covers everything until it's entered (or set up).
     if (v.showApp && v.PIN.mode) return <PinScreen v={v} />;
     // Phones get the app-style shell; tablets and computers the full desktop layout.

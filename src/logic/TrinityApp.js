@@ -257,6 +257,13 @@ export default class TrinityApp extends Logic {
       if (session) await this.enter(session.user); else this.setState({booting:false});
     } catch (err) { console.error(err); this.setState({booting:false, loginErr:OFFLINE}); }
   }
+  async setOwnPassword(pw) {
+    const { error } = await supabase.auth.updateUser({password:pw, data:{pw_set:true}});
+    if (error) return /same|different/i.test(error.message) ? 'Choose a password different from the one you were given.' : error.message;
+    this.setState({mustSetPw:false, pin:this.afterPasswordPin(this.state.pinUser)});
+    this.toast('Password saved');
+    return null;
+  }
   async choosePassword() {
     const pw = window.prompt('Choose a new password (at least 8 characters):');
     if (!pw) return;
@@ -294,7 +301,8 @@ export default class TrinityApp extends Logic {
       const r = role === 'ceo' && ROLES[pick] ? pick : role;
       const keepPage = !fresh && r === s.role && s.page;
       const who = user.email.toLowerCase();
-      this.setState({pinUser:who, pin:quick ? null : fresh ? this.afterPasswordPin(who) : pinFor(who) && !isUnlocked() ? 'lock' : null, auth:true, booting:false, signingIn:false, loginErr:'', pw:'', email:user.email, role:r, loginRole:r, page:keepPage ? s.page : this.ROLES[r].home, taskFilter:r === 'staff' ? 'mine' : 'all'});
+      const mustSetPw = !acc.is_demo && !(user.user_metadata && user.user_metadata.pw_set);
+      this.setState({mustSetPw, pinUser:who, pin:mustSetPw ? null : quick ? null : fresh ? this.afterPasswordPin(who) : pinFor(who) && !isUnlocked() ? 'lock' : null, auth:true, booting:false, signingIn:false, loginErr:'', pw:'', email:user.email, role:r, loginRole:r, page:keepPage ? s.page : this.ROLES[r].home, taskFilter:r === 'staff' ? 'mine' : 'all'});
     } catch (err) {
       console.error(err);
       const missing = err && (err.code === '42P01' || err.code === 'PGRST205' || /does not exist|schema cache/i.test(err.message || ''));
