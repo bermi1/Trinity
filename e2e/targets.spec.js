@@ -70,3 +70,46 @@ test('no target yet: Management sets the year’s targets', async ({ page }) => 
   await btn(page.getByRole('region', { name: 'Set targets' }), 'Save targets').click();
   await expect(page.getByRole('region', { name: 'Company target' })).toContainText('of TZS 1.5B');
 });
+
+// The Client Service Manager sets each team member's targets; results come from their work in the system.
+test('Client Service team targets: manager sets them, results counted, GM sees them, member sees their own', async ({ page }) => {
+  const errors = watchErrors(page);
+  await openAs(page, 'clientservice', 'dept');
+  const team = page.getByRole('region', { name: 'Company target' }).locator('.tg-team');
+  await expect(team).toContainText('Client Service team');
+  await expect(team.locator('[data-member="NL"]')).toContainText('Proposals');
+  await team.getByRole('button', { name: 'Set team targets' }).click();
+  const set = page.getByRole('region', { name: 'Set team targets' });
+  await set.getByLabel('Revenue · Neema Lyimo').fill('5000000000');
+  await btn(set, 'Save team targets').click();
+  await expect(set.getByRole('alert')).toContainText('more than the Client Service target');
+  await set.getByLabel('Revenue · Neema Lyimo').fill('500000000');
+  await set.getByLabel('Projects · Neema Lyimo').fill('15');
+  await set.getByLabel('Clients · Neema Lyimo').fill('7');
+  await set.getByLabel('Proposals · Neema Lyimo').fill('20');
+  await btn(set, 'Save team targets').click();
+  await toast(page, 'Team targets saved');
+  const t = (await saved(page)).targets[0];
+  expect(t.people.NL).toEqual({ revenue: 500000000, projects: 15, clients: 7, proposals: 20 });
+
+  // A new client added by Neema counts towards her clients.
+  const clientsBefore = await team.locator('[data-member="NL"] .tg-metric').nth(2).locator('b').innerText();
+  await openAs(page, 'clientservice', 'clients', {}, false);
+  await btn(page, 'Add client').click();
+  await page.getByRole('dialog').locator('[data-field="Company name"] input').fill('Zanzibar Spice Co');
+  await btn(page.getByRole('dialog'), 'Add client').click();
+  await toast(page, 'Client added');
+  await openAs(page, 'clientservice', 'dept', {}, false);
+  const after = await page.locator('.tg-team [data-member="NL"] .tg-metric').nth(2).locator('b').innerText();
+  expect(parseInt(after)).toBe(parseInt(clientsBefore) + 1);
+
+  // The GM sees the team, read-only; Neema sees her own targets on My work.
+  await openAs(page, 'gm', 'dashboard', {}, false);
+  await expect(page.locator('.tg-team')).toContainText('Neema Lyimo');
+  await expect(page.locator('.tg-team').getByRole('button', { name: 'Set team targets' })).toHaveCount(0);
+  await openAs(page, 'clientservice', 'today', {}, false);
+  const mine = page.getByRole('region', { name: 'My targets' });
+  await expect(mine).toContainText('TZS 500M');
+  await expect(mine).toContainText('/ 20');
+  expect(errors).toEqual([]);
+});

@@ -49,7 +49,7 @@ export const crmMethods = {
   addCustomer(f) {
     const n = f.n.trim();
     if ((this.state.customers || []).some(c => c.n.toLowerCase() === n.toLowerCase())) { this.toast(n + ' is already a client'); return; }
-    this.setState(x => ({ customers: [{ id: 'C' + Date.now().toString(36), n, contact: [(f.contact || '').trim(), (f.title || '').trim()].filter(Boolean).join(' · '), phone: (f.phone || '').trim(), email: (f.email || '').trim(), tin: (f.tin || '').trim(), vrn: (f.vrn || '').trim(), box: (f.box || '').trim(), address: (f.address || '').trim(), city: (f.city || '').trim(), owner: f.owner || this.me().k }, ...(x.customers || [])] }));
+    this.setState(x => ({ customers: [{ id: 'C' + Date.now().toString(36), n, contact: [(f.contact || '').trim(), (f.title || '').trim()].filter(Boolean).join(' · '), phone: (f.phone || '').trim(), email: (f.email || '').trim(), tin: (f.tin || '').trim(), vrn: (f.vrn || '').trim(), box: (f.box || '').trim(), address: (f.address || '').trim(), city: (f.city || '').trim(), owner: f.owner || this.me().k, at: dayKey(0) }, ...(x.customers || [])] }));
     this.toast('Client added · ' + n);
   },
 
@@ -83,7 +83,7 @@ export const crmMethods = {
     const id = this.newProject({ client: l.c, name: l.t, cs: l.owner, lead: l.id });
     this.setState(x => ({
       leads: x.leads.map(y => (y.id === l.id ? Object.assign({}, y, { job: id }) : y)),
-      customers: (x.customers || []).some(c => c.n.toLowerCase() === l.c.toLowerCase()) ? x.customers : [{ id: 'C' + Date.now().toString(36), n: l.c, contact: l.contact || '', phone: '', email: '', tin: '', city: '', owner: l.owner }, ...(x.customers || [])]
+      customers: (x.customers || []).some(c => c.n.toLowerCase() === l.c.toLowerCase()) ? x.customers : [{ id: 'C' + Date.now().toString(36), n: l.c, contact: l.contact || '', phone: '', email: '', tin: '', city: '', owner: l.owner, at: dayKey(0) }, ...(x.customers || [])]
     }));
     [this.ROLES.gm.k, this.ROLES.ceo.k].filter(k => k !== this.me().k).forEach(k => this.remind(k, 'New job won · ' + l.c, 'project', 'trendUp', l.t + ' · ' + id));
     this.toast('Won · ' + l.c + ' · project ' + id + ' created · next: send the design brief');

@@ -39,7 +39,7 @@ function targetSeed() {
     const depts = {}; Object.keys(share).forEach(k => { depts[k] = Math.round(amt * share[k] / 1e5) * 1e5; });
     weeks[year + '-W' + String(w).padStart(2, '0')] = { amt, projects: (w % 3 === 0) ? 3 : 2, depts, note: '', by: 'GN', at: '' };
   }
-  return [{ id: 'T' + year, year, revenue, projects: 120, depts: { clientservice: 960000000, creative: 360000000, operations: 840000000, production: 240000000 }, weeks, setBy: 'DK', setAt: year + '-01-05' }];
+  return [{ id: 'T' + year, year, revenue, projects: 120, depts: { clientservice: 960000000, creative: 360000000, operations: 840000000, production: 240000000 }, weeks, setBy: 'DK', setAt: year + '-01-05', people: { NL: { revenue: 500000000, projects: 14, clients: 6, proposals: 18 }, KM: { revenue: 420000000, projects: 12, clients: 5, proposals: 15 } } }];
 }
 
 export function seed() {

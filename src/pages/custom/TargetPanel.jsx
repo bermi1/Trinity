@@ -54,6 +54,65 @@ function RecordWeek({ T, onDone }) {
   );
 }
 
+// Client Service Manager: each team member's targets for the year.
+function SetTeam({ T, onDone }) {
+  const [f, setF] = useState(() => Object.fromEntries(T.team.map(r => [r.k, Object.fromEntries(Object.entries(r.form).map(([k, v]) => [k, String(v || '')]))])));
+  const [err, setErr] = useState('');
+  const sum = T.team.reduce((a, r) => a + (+(f[r.k] || {}).revenue || 0), 0);
+  const set = (k, key, v) => setF(x => ({ ...x, [k]: { ...x[k], [key]: v } }));
+  return (
+    <section className="tg-sheet" aria-label="Set team targets">
+      <header><h3>Client Service team targets · {T.year}</h3><button type="button" className="tg-x" onClick={onDone} aria-label="Close">✕</button></header>
+      <p className="tg-hint">Revenue: TZS {sum.toLocaleString('en-US')}{T.csTarget ? ' of the Client Service target ' + T.csTarget : ''}</p>
+      <div className="tg-team-set">
+        {T.team.map(r => (
+          <div key={r.k} className="tg-person" data-person={r.k}>
+            <div className="tg-who"><span className="tg-face" style={{ background: r.ph ? 'center / cover no-repeat url("' + r.ph + '")' : r.c }}>{r.ph ? '' : r.i}</span><b>{r.n}</b></div>
+            <Money label={'Revenue · ' + r.n} value={(f[r.k] || {}).revenue} onChange={v => set(r.k, 'revenue', v)} />
+            {[['projects', 'Projects'], ['clients', 'Clients'], ['proposals', 'Proposals']].map(([key, l]) => (
+              <label key={key} className="tg-money tg-num"><span>{l}</span><div><input inputMode="numeric" value={(f[r.k] || {})[key] || ''} onChange={e => set(r.k, key, digits(e.target.value))} placeholder="0" aria-label={l + ' · ' + r.n} /></div></label>
+            ))}
+          </div>
+        ))}
+      </div>
+      {err ? <div className="fm-err" role="alert">{err}</div> : null}
+      <div className="tg-foot"><button type="button" className="me-cancel" onClick={onDone}>Cancel</button><button type="button" className="me-save" onClick={() => { const m = T.saveTeam(f); if (m) setErr(m); else onDone(); }}>Save team targets</button></div>
+    </section>
+  );
+}
+
+const Metric = ({ l, m }) => (
+  <div className="tg-metric"><small>{l}</small><b>{m.got}{m.target != null ? <span> / {m.target}</span> : null}</b>{m.target != null ? <div className="tg-bar"><i style={{ width: m.pct + '%' }} /></div> : <span className="tg-unset">No target</span>}</div>
+);
+
+// The Client Service team: what each person brought in against their targets.
+function TeamTargets({ T, open, setOpen }) {
+  return (
+    <div className="tg-team" aria-label="Client Service team targets">
+      <header><h3>Client Service team</h3><span className="tg-hint">Counted from the system: projects they lead, clients they own, proposals they uploaded.</span>{T.canSetTeam ? <button type="button" className="me-save" onClick={() => setOpen(open === 'team' ? '' : 'team')}>Set team targets</button> : null}</header>
+      <ul>
+        {T.team.map(r => (
+          <li key={r.k} data-member={r.k}>
+            <div className="tg-who"><span className="tg-face" style={{ background: r.ph ? 'center / cover no-repeat url("' + r.ph + '")' : r.c }}>{r.ph ? '' : r.i}</span><b>{r.n}</b>{r.overall != null ? <span className={'tg-pill is-' + r.status}>{r.overall}%</span> : <span className="tg-unset">Targets not set</span>}</div>
+            <Metric l="Revenue brought in" m={r.revenue} /><Metric l="Projects" m={r.projects} /><Metric l="Clients" m={r.clients} /><Metric l="Proposals" m={r.proposals} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// A team member's own targets, on My work.
+export function MyTargets({ M }) {
+  if (!M) return null;
+  return (
+    <section className="tg-mine" aria-label="My targets">
+      <header><div><small>My targets · {M.year}</small><h3>{M.overall != null ? M.overall + '% speed' : 'Targets'}</h3></div>{M.status ? <span className={'tg-pill is-' + M.status}>{M.status === 'ahead' ? 'Ahead' : M.status === 'close' ? 'Nearly there' : 'Behind'}</span> : null}</header>
+      <div className="tg-mine-grid"><Metric l="Revenue brought in" m={M.revenue} /><Metric l="Projects" m={M.projects} /><Metric l="Clients" m={M.clients} /><Metric l="Proposals" m={M.proposals} /></div>
+    </section>
+  );
+}
+
 // The year's target on the overview: where we are, where we should be, and what each week now needs.
 export default function TargetPanel({ T }) {
   const [open, setOpen] = useState('');
@@ -145,6 +204,8 @@ export default function TargetPanel({ T }) {
           </div>
         ) : null}
       </div>
+      {T.team && T.team.length ? <TeamTargets T={T} open={open} setOpen={setOpen} /> : null}
+      {open === 'team' ? <SetTeam T={T} onDone={() => setOpen('')} /> : null}
     </section>
   );
 }

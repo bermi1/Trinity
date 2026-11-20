@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PageHead, Btn, Avatar, Chips, Empty } from '../../ui/kit';
+import { MyTargets } from './TargetPanel';
 
 // One line to type, Enter to add.
 function QuickAdd({ placeholder, label, onAdd, done }) {
@@ -164,6 +165,7 @@ export default function TodayPage({ v }) {
         {T.canGive ? <Btn kind="dark" onClick={T.give}>Assign a task</Btn> : null}
       </PageHead>
       {tabs.length > 1 ? <Chips items={tabs} /> : null}
+      {!T.isTeam && !T.isGiven && v.MYT ? <MyTargets M={v.MYT} /> : null}
       {T.isTeam && T.canTeam ? <Team T={T} /> : T.isGiven && T.canGive ? <Given T={T} /> : <Mine T={T} />}
     </>
   );

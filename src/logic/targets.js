@@ -63,6 +63,32 @@ export const targetMethods = {
     this.toast('Targets saved · ' + year + ' · ' + tzs(revenue));
     return '';
   },
+  // The Client Service Manager (or Management) gives each team member their targets for the year.
+  canSetTeamTargets() { const r = this.state.role || 'ceo'; return r === 'ceo' || (r === 'clientservice' && this.isManagerOf('clientservice')); },
+  saveTeamTargets(year, map) {
+    if (!this.canSetTeamTargets()) return 'The Client Service Manager sets the team’s targets';
+    const t = this.targetFor(year);
+    if (!t) return 'Management sets the year’s targets first';
+    const people = {};
+    Object.keys(map || {}).forEach(k => { const m = map[k] || {}; const v = { revenue: Math.round(+m.revenue || 0), projects: Math.round(+m.projects || 0), clients: Math.round(+m.clients || 0), proposals: Math.round(+m.proposals || 0) }; if (v.revenue || v.projects || v.clients || v.proposals) people[k] = v; });
+    const sum = Object.values(people).reduce((a, b) => a + b.revenue, 0), dept = (t.depts || {}).clientservice || 0;
+    if (dept && sum > dept) return 'The team’s revenue targets add up to more than the Client Service target (' + tzs(dept) + ')';
+    this.setState(x => ({ targets: (x.targets || []).map(y => y.year === year ? Object.assign({}, y, { people }) : y) }));
+    Object.keys(people).filter(k => k !== this.me().k).forEach(k => this.remind(k, 'Your targets for ' + year + ' are set', 'today', 'chart', tzs(people[k].revenue) + ' · ' + people[k].projects + ' projects · ' + people[k].clients + ' clients · ' + people[k].proposals + ' proposals'));
+    this.toast('Team targets saved');
+    return '';
+  },
+  // What one person brought in this year, counted from their work in the system.
+  personResults(k, year) {
+    const s = this.state, inYear = d => !d || String(d).slice(0, 4) === String(year);
+    const projects = (s.projects || []).filter(p => p.cs === k && inYear(p.at));
+    const revenue = projects.reduce((a, p) => a + ((p.budget && p.budget.value) || (p.val || 0) * 1e6), 0);
+    const clients = (s.customers || []).filter(c => c.owner === k && inYear(c.at)).length;
+    const props = new Set();
+    (s.leads || []).forEach(l => { if (l.proposal && l.proposal.by === k && inYear(l.proposal.at)) props.add('L' + l.id); });
+    (s.projects || []).forEach(p => { if (p.proposal && p.proposal.by === k && inYear(p.proposal.at)) props.add('P' + p.id); });
+    return { revenue, projects: projects.length, clients, proposals: props.size };
+  },
   recordWeek(year, week, f) {
     if (!this.canRecordWeek()) return 'The GM or Management records the week';
     const t = this.targetFor(year);
@@ -82,16 +108,36 @@ export const targetMethods = {
   }
 };
 
+function personRows(year, t, dayFrac) {
+  const people = t.people || {};
+  const pace = (got, target) => (target ? Math.round(got / (target * (dayFrac || 1e-6)) * 100) : null);
+  return this.teamOf('clientservice').map(k => {
+    const a = this.av(k), tg = people[k] || {}, got = this.personResults(k, year);
+    const m = (key, money) => ({ got: money ? tzs(got[key]) : got[key], target: tg[key] ? (money ? tzs(tg[key]) : tg[key]) : null, pct: tg[key] ? Math.min(100, Math.round(got[key] / tg[key] * 100)) : 0, pace: pace(got[key], tg[key]) });
+    const paces = ['revenue', 'projects', 'clients', 'proposals'].map(x => pace(got[x], tg[x])).filter(x => x != null);
+    const overall = paces.length ? Math.round(paces.reduce((x, y) => x + y, 0) / paces.length) : null;
+    return { k, n: a.n, i: a.i, c: a.c, ph: a.ph, set: !!people[k], form: { revenue: tg.revenue || '', projects: tg.projects || '', clients: tg.clients || '', proposals: tg.proposals || '' }, revenue: m('revenue', true), projects: m('projects'), clients: m('clients'), proposals: m('proposals'), overall, status: overall == null ? '' : overall >= 100 ? 'ahead' : overall >= 90 ? 'close' : 'behind' };
+  });
+}
+
 export function targetVals(s) {
   const role = s.role || 'ceo';
+  // A Client Service team member sees their own targets on My work.
+  const yr = isoWeek(new Date()).year, tt = this.targetFor(yr), meK = this.me().k;
+  let MYT = null;
+  if (tt && tt.people && tt.people[meK]) {
+    const start = new Date(yr, 0, 1), end = new Date(yr + 1, 0, 1), frac = Math.min(1, Math.max(0, (new Date() - start) / (end - start)));
+    MYT = personRows.call(this, yr, tt, frac).find(r => r.k === meK) || null;
+    if (MYT) MYT = Object.assign({ year: yr }, MYT);
+  }
   // Management and the GM run the targets; Client Service sees the company target and its own.
-  if (!['ceo', 'gm', 'clientservice'].includes(role)) return { TG: null };
+  if (!['ceo', 'gm', 'clientservice'].includes(role)) return { TG: null, MYT };
   const cs = role === 'clientservice';
   const today = new Date(), { year, week: cur } = isoWeek(today), W = weeksInYear(year);
   const t = this.targetFor(year);
   const setForm = { year, revenue: t ? t.revenue : '', projects: t ? t.projects || '' : '', depts: t ? Object.assign({}, t.depts) : {} };
   const base = { year, week: cur, weeks: W, canSet: this.canSetTargets(), canRecord: this.canRecordWeek(), setForm, saveTargets: f => this.saveTargets(f), deptChoices: TARGET_DEPTS.map(([v, l]) => ({ v, l })) };
-  if (!t) return { TG: Object.assign(base, { empty: true }) };
+  if (!t) return { TG: Object.assign(base, { empty: true }), MYT };
   const start = new Date(year, 0, 1), end = new Date(year + 1, 0, 1);
   const dayFrac = Math.min(1, Math.max(0, (today - start) / (end - start)));
   const dayNo = Math.floor((today - start) / 864e5) + 1, daysLeft = Math.max(0, Math.ceil((end - today) / 864e5));
@@ -132,6 +178,8 @@ export function targetVals(s) {
     projects: { done: projDone, target: projTarget, pace: projPace, closed: closedInSystem },
     recent,
     record: (w, f) => this.recordWeek(year, w, f),
+    team: personRows.call(this, year, t, dayFrac), canSetTeam: this.canSetTeamTargets(), saveTeam: map => this.saveTeamTargets(year, map),
+    csTarget: (t.depts || {}).clientservice ? tzs(t.depts.clientservice) : '',
     weekChoices: [cur, cur - 1, cur - 2].filter(w => w >= 1).map(w => ({ w, l: w === cur ? 'This week' : w === cur - 1 ? 'Last week' : 'Week ' + w, sub: weekLabel(year, w), prev: wk(w) || null }))
-  }) };
+  }), MYT };
 }
