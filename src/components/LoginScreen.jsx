@@ -1,5 +1,6 @@
 // Generated from the Claude Design file by scripts/dc-to-jsx.mjs.
 import { Fragment } from 'react';
+import PasswordField from './PasswordField';
 
 export default function LoginScreen({ v }) {
   return (
@@ -77,7 +78,7 @@ export default function LoginScreen({ v }) {
               {' '}
               <label style={{ display: "flex", flexDirection: "column", gap: "7px", fontSize: "12.5px", fontWeight: "600" }}>
                 Password
-                <input className="tm-f1" type="password" value={v.pw ?? ''} onChange={v.onPw} onKeyDown={v.loginKey} style={{ height: "46px", border: "1px solid #E8E4EF", borderRadius: "10px", padding: "0 14px", fontSize: "14px", outline: "none" }} />
+                <PasswordField className="tm-f1" value={v.pw ?? ''} onChange={v.onPw} onKeyDown={v.loginKey} autoComplete="current-password" style={{ height: "46px", border: "1px solid #E8E4EF", borderRadius: "10px", padding: "0 48px 0 14px", fontSize: "14px", outline: "none" }} />
               </label>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "13px" }}>
                 <span onClick={v.toggleRemember} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>

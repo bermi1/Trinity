@@ -28,6 +28,17 @@ beforeEach(() => {
 });
 
 describe('live database', () => {
+  it('the eye button shows and hides the password', async () => {
+    render(<App />);
+    await screen.findByText('SIGN IN');
+    const pw = document.querySelectorAll('input')[1];
+    expect(pw.type).toBe('password');
+    fireEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(pw.type).toBe('text');
+    fireEvent.click(screen.getByRole('button', { name: 'Hide password' }));
+    expect(pw.type).toBe('password');
+  });
+
   it('rejects a wrong password', async () => {
     render(<App />);
     await screen.findByText('SIGN IN');
