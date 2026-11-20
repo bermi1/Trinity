@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { PageHead, Btn, Empty, faceStyle, faceText } from '../../ui/kit';
 
 function MyUpdate({ B }) {
@@ -16,7 +16,49 @@ function MyUpdate({ B }) {
   );
 }
 
+// Full-screen presenter: the slides (PDF and images shown here, PowerPoint through the Office viewer) and the key points.
+function Presenter({ B, list, start, onClose }) {
+  const [i, setI] = useState(start); const [url, setUrl] = useState(''); const [err, setErr] = useState(''); const [notes, setNotes] = useState(true);
+  const ref = useRef(null);
+  const p = list[i];
+  const name = (p.file && (p.file.name || p.file.n)) || '';
+  const kind = /\.pdf$/i.test(name) ? 'pdf' : /\.(png|jpe?g|gif|webp)$/i.test(name) ? 'img' : /\.(pptx?|ppsx?)$/i.test(name) ? 'ppt' : 'other';
+  useEffect(() => { let off = false; setUrl(''); setErr(''); B.docUrl({ n: name, url: p.file && p.file.url, path: p.file && p.file.path }).then(u => { if (!off) setUrl(u); }).catch(() => { if (!off) setErr('Could not load the file'); }); return () => { off = true; }; }, [p.id]);
+  useEffect(() => { const el = ref.current; try { if (el && el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => {}); } catch (e) {} 
+    const key = e => { if (e.key === 'Escape') onClose(); if (e.key === 'ArrowRight' && i < list.length - 1) setI(i + 1); if (e.key === 'ArrowLeft' && i > 0) setI(i - 1); };
+    window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key); }, [i]);
+  const close = () => { try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} onClose(); };
+  const remote = url && /^https:/.test(url);
+  return (
+    <div ref={ref} className="br-show" role="dialog" aria-label={'Presenting · ' + p.title}>
+      <header className="br-show-h">
+        <div><b>{p.title}</b><small>{p.by} · {i + 1} of {list.length}</small></div>
+        <div className="br-show-acts">
+          <button type="button" onClick={() => setNotes(!notes)} aria-pressed={notes}>Key points</button>
+          {url ? <a href={url} target="_blank" rel="noreferrer">Open file</a> : null}
+          <button type="button" onClick={close} aria-label="Close presentation">✕</button>
+        </div>
+      </header>
+      <div className={'br-show-body' + (notes ? ' has-notes' : '')}>
+        <div className="br-show-slide">
+          {err ? <p className="br-show-msg">{err}</p> : !url ? <p className="br-show-msg">{p.file ? 'Loading…' : 'No file attached · the key points are shown'}</p>
+            : kind === 'pdf' ? <iframe title={p.title} src={url + '#view=FitH'} />
+            : kind === 'img' ? <img src={url} alt={p.title} />
+            : kind === 'ppt' && remote ? <iframe title={p.title} src={'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(url)} />
+            : <p className="br-show-msg">This file opens in its own app · tap “Open file”</p>}
+        </div>
+        {notes ? <aside className="br-show-notes"><h4>Key points</h4><p>{p.points}</p></aside> : null}
+      </div>
+      <footer className="br-show-f">
+        <button type="button" disabled={i === 0} onClick={() => setI(i - 1)}>‹ Previous</button>
+        <button type="button" disabled={i === list.length - 1} onClick={() => setI(i + 1)}>Next ›</button>
+      </footer>
+    </div>
+  );
+}
+
 function Present({ B }) {
+  const [show, setShow] = useState(null);
   const [f, setF] = useState({ title: '', points: '', file: null }); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [open, setOpen] = useState(false);
   const mine = B.pres.filter(p => p.mine);
   return (
@@ -37,11 +79,15 @@ function Present({ B }) {
             <li key={p.id} data-pres={p.id}>
               <span className="pv-face" style={{ background: p.bc, width: 34, height: 34 }}>{p.bi}</span>
               <span className="br-pres-main"><b>{p.title}</b><small>{p.by} · {p.at}</small><p className="rp-pre">{p.points}</p></span>
-              <button type="button" className="me-save" onClick={p.open} aria-label={'Open presentation · ' + p.title}>Open</button>
+              <span className="br-pres-btns">
+                <button type="button" className="me-save" onClick={() => setShow(B.pres.indexOf(p))} aria-label={'Present · ' + p.title}>Present</button>
+                <button type="button" className="me-cancel" onClick={p.open} aria-label={'Open presentation · ' + p.title}>Open</button>
+              </span>
             </li>
           ))}
         </ul>
       ) : <p className="k-sub">Presenting on Monday? Upload your slides and key points here, then just open them in the room.</p>}
+      {show !== null ? <Presenter B={B} list={B.pres} start={show} onClose={() => setShow(null)} /> : null}
     </section>
   );
 }
@@ -99,7 +145,7 @@ export default function Briefing({ v }) {
         {B.chair && !B.published ? <Decide B={B} /> : null}
       </section></div>
 
-      {B.head ? <section className="hd-kpis br-kpis">{B.stats.map(k => <div key={k.l} className="hd-kpi"><span>{k.l}</span><b>{k.v}</b></div>)}{B.money ? <><div className="hd-kpi"><span>Money in last week</span><b>{B.money.in}</b></div><div className="hd-kpi"><span>Money out last week</span><b>{B.money.out}</b></div></> : null}</section> : null}
+      {B.head ? <section className="hd-kpis br-kpis">{B.stats.map(k => <div key={k.l} className="hd-kpi"><span>{k.l}</span><b>{k.v}</b></div>)}</section> : null}
 
       {B.lastActions.length ? (
         <section className="fh-card"><h3>Last week’s actions</h3>

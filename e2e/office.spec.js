@@ -80,11 +80,11 @@ test('the Personal Assistant schedules for Management and sees no money', async 
 // A customer's invoice details (TIN, VRN, address) are captured once and used on every invoice.
 test('a new customer’s TIN, VRN and address flow into the invoice', async ({ page }) => {
   await openAs(page, 'clientservice', 'clients');
-  await btn(page, 'Add customer').click();
+  await btn(page, 'Add client').click();
   const f = page.getByRole('dialog');
   for (const [l, v] of [['Company name', 'Azam Media Ltd'], ['Contact person', 'Rose Mkapa'], ['TIN', '104-555-210'], ['VRN', '10-031122-K'], ['P.O. Box', 'P.O. Box 2517'], ['City', 'Dar es Salaam']]) await f.locator('[data-field="' + l + '"] input').fill(v);
-  await btn(f, 'Add customer').click();
-  await toast(page, 'Customer added · Azam Media Ltd');
+  await btn(f, 'Add client').click();
+  await toast(page, 'Client added · Azam Media Ltd');
   await openAs(page, 'finance', 'invoices', {}, false);
   await btn(page, 'New invoice').click();
   const ed = page.getByRole('dialog');

@@ -1,4 +1,4 @@
-// Client Service CRM: customers, leads and proposals.
+// Client Service CRM: clients, leads and proposals.
 // Leads move New → Contacted → Meeting → Proposal sent → Negotiation → Won / Lost. Each move records
 import { FLOW, FLOW_L } from './flow';
 // who and when; "Proposal sent" needs the proposal file, "Lost" a reason, "Won" the agreed value.
@@ -48,9 +48,9 @@ export const crmMethods = {
   },
   addCustomer(f) {
     const n = f.n.trim();
-    if ((this.state.customers || []).some(c => c.n.toLowerCase() === n.toLowerCase())) { this.toast(n + ' is already a customer'); return; }
+    if ((this.state.customers || []).some(c => c.n.toLowerCase() === n.toLowerCase())) { this.toast(n + ' is already a client'); return; }
     this.setState(x => ({ customers: [{ id: 'C' + Date.now().toString(36), n, contact: [(f.contact || '').trim(), (f.title || '').trim()].filter(Boolean).join(' · '), phone: (f.phone || '').trim(), email: (f.email || '').trim(), tin: (f.tin || '').trim(), vrn: (f.vrn || '').trim(), box: (f.box || '').trim(), address: (f.address || '').trim(), city: (f.city || '').trim(), owner: f.owner || this.me().k }, ...(x.customers || [])] }));
-    this.toast('Customer added · ' + n);
+    this.toast('Client added · ' + n);
   },
 
   // Moves a lead one step, with what that step needs. Returns an error message, or '' when done.
@@ -78,7 +78,7 @@ export const crmMethods = {
     this.log(to === WON ? 'trendUp' : to === LOST ? 'x' : 'users', to === WON ? 'green' : to === LOST ? 'red' : 'blue', l.c + ' · ' + LEAD_STAGES[to], l.t + ' · ' + this.me().first);
     return '';
   },
-  // A won lead becomes a customer (if new) and a job, and Operations, the GM and Management are told.
+  // A won lead becomes a client (if new) and a job, and Operations, the GM and Management are told.
   wonToJob(l) {
     const id = this.newProject({ client: l.c, name: l.t, cs: l.owner, lead: l.id });
     this.setState(x => ({

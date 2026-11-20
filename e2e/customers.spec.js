@@ -5,7 +5,7 @@ import { openAs, watchErrors } from './helpers';
 test('customer history: ongoing and past projects, open one from the card', async ({ page }) => {
   const errors = watchErrors(page);
   await openAs(page, 'clientservice', 'clients');
-  await page.getByRole('tab', { name: /Customers/ }).click();
+  await page.getByRole('tab', { name: /Clients/ }).click();
 
   const kilimo = page.locator('[data-customer="Kilimo Bank"]');
   await kilimo.getByRole('button', { name: /History · 2 ongoing · 0 past/ }).click();

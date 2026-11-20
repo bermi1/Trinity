@@ -4,7 +4,8 @@
 import { dayKey } from './seed';
 import { DEPTS } from './constants';
 
-const BR_DEPTS = ['clientservice', 'creative', 'operations', 'finance', 'production', 'reception'];
+// No Finance update: money is not discussed in the Monday Briefing.
+const BR_DEPTS = ['clientservice', 'creative', 'operations', 'production', 'reception'];
 // The Monday of the week (this week, or next week from Friday on, so heads prepare ahead).
 export function briefWeek(d = new Date()) {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()), wd = (x.getDay() + 6) % 7;
@@ -40,7 +41,8 @@ export const briefingMethods = {
   saveBrief(b) { this.setState(x => ({ briefings: [...(x.briefings || []).filter(y => y.week !== b.week), b] })); },
   sendBriefUpdate(f) {
     const d = (this.state.role || 'ceo') === 'finance' ? 'finance' : this.myDept();
-    if (!d || !(this.isManagerOf(d) || (this.state.role || 'ceo') === 'finance')) return 'Department heads send the weekly update';
+    if (d === 'finance') return 'Money is not part of the Monday Briefing';
+    if (!d || !this.isManagerOf(d)) return 'Department heads send the weekly update';
     if ((f.done || '').trim().length < 5) return 'Write what your department did last week';
     const b = this.brief(briefWeek());
     this.saveBrief(Object.assign({}, b, { updates: Object.assign({}, b.updates, { [d]: { by: this.me().k, done: f.done.trim(), issues: (f.issues || '').trim(), plan: (f.plan || '').trim(), at: dayKey(0) + ' ' + this.now() } }) }));
@@ -78,15 +80,12 @@ export function briefingVals(s) {
   const role = s.role || 'ceo', top = this.isTop(), me = this.me().k, head = this.isBriefHead();
   const label = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); };
   // Last week from live data.
-  const cash = top ? this.cashEntries().filter(e => e.at >= from && e.at <= to) : [];
   const moved = (s.projects || []).flatMap(p => (p.notes || []).filter(n => n.sys && n.at >= from && n.at <= to).map(n => ({ t: p.client + ' · ' + p.name, s: n.t, at: n.at })));
   const tasksDone = (s.tasks || []).filter(t => t.st === 'done' && t.doneOn >= from && t.doneOn <= to);
   const live = (s.projects || []).filter(p => p.st !== 'done');
   const issues = [
     ...live.filter(p => p.st === 'late' || p.st === 'risk').map(p => ({ tag: p.st === 'late' ? 'Delayed' : 'At risk', t: p.client + ' · ' + p.name, s: 'Due ' + p.due })),
-    ...live.filter(p => this.flowOf(p) === 'approval').map(p => ({ tag: 'Budget', t: p.client + ' · ' + p.name, s: 'Budget waiting for approval' })),
-    ...live.filter(p => this.flowOf(p) === 'execution' && !p.po).map(p => ({ tag: 'No PO', t: p.client + ' · ' + p.name, s: 'Work started without a purchase order' })),
-    ...(top ? (s.invoices || []).filter(i => i.st === 'overdue').map(i => ({ tag: 'Overdue', t: i.c + ' · ' + i.id, s: this.fmtM(i.v) + ' · ' + i.due })) : [])
+    ...live.filter(p => this.flowOf(p) === 'execution' && !p.po).map(p => ({ tag: 'No PO', t: p.client + ' · ' + p.name, s: 'Work started without a purchase order' }))
   ];
   // This week: calendar and project deadlines.
   const weekItems = ((this.officeVals(s).MT || {}).days || []).filter(d => d.k >= week && d.k <= next).map(d => ({ l: d.l, items: d.items.map(i => i.time + ' · ' + i.title) }));
@@ -96,15 +95,15 @@ export function briefingVals(s) {
   return {
     BRF: {
       head,
-      pres: (b.pres || []).map(p => ({ id: p.id, title: p.title, points: p.points, by: this.av(p.by).n, bi: this.av(p.by).i, bc: this.av(p.by).c, at: p.at, mine: p.by === me, open: () => this.openDoc({ n: p.file.name, url: p.file.url, path: p.file.path }), name: p.file.name })),
+      docUrl: d => this.docUrl(d),
+      pres: (b.pres || []).map(p => ({ id: p.id, file: p.file, title: p.title, points: p.points, by: this.av(p.by).n, bi: this.av(p.by).i, bc: this.av(p.by).c, at: p.at, mine: p.by === me, open: () => this.openDoc({ n: p.file.name, url: p.file.url, path: p.file.path }), name: p.file.name })),
       upload: f => this.uploadPresentation(f),
       highlights: (b.highlights || []).map(h => ({ t: h.t, by: this.av(h.by).first })), addHighlight: t => this.addHighlight(t),
       week: label(week), range: label(from) + ' – ' + label(to), chair: this.canChair(), published: b.published ? this.av(b.published.by).n + ' · ' + b.published.at : '',
-      money: top ? { in: this.fmtT(cash.filter(e => e.dir === 'in').reduce((a, e) => a + e.amt, 0)), out: this.fmtT(cash.filter(e => e.dir === 'out').reduce((a, e) => a + e.amt, 0)) } : null,
       stats: !head ? [] : [{ l: 'Projects active', v: String(live.length) }, { l: 'Tasks done last week', v: String(tasksDone.length) }, { l: 'Project steps completed', v: String(moved.length) }, { l: 'Issues to discuss', v: String(issues.length) }],
       moved: head ? moved.slice(0, 10) : [], issues: head ? issues : [], weekItems, lastActions,
       heads: head ? heads : [], sent: heads.filter(h => h.u).length,
-      myUpdate: myDept && b.updates[myDept] ? b.updates[myDept] : null, canUpdate: !!myDept && (this.isManagerOf(myDept) || role === 'finance'), sendUpdate: f => this.sendBriefUpdate(f),
+      myUpdate: myDept && b.updates[myDept] ? b.updates[myDept] : null, canUpdate: !!myDept && myDept !== 'finance' && BR_DEPTS.includes(myDept) && this.isManagerOf(myDept), sendUpdate: f => this.sendBriefUpdate(f),
       decisions: b.decisions.map(x => { const t = (s.tasks || []).find(y => y.id === x.task); return { d: x.d, a: x.a, who: this.av(x.o).n, due: x.due, st: t ? this.tst(t.st)[0] : '' }; }),
       people: [...new Set([this.ROLES.gm.k, ...BR_DEPTS.map(d => this.managerOf(d)), ...(s.staff || []).map(p => p.k)].filter(Boolean))].map(k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c, ph: a.ph }; }),
       projects: live.map(p => ({ v: p.id, l: p.client + ' · ' + p.name })),

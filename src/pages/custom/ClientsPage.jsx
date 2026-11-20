@@ -151,7 +151,7 @@ function Memo({ L }) {
   );
 }
 
-// Everything done with one customer: projects running now, finished projects, open leads, and deals won or lost.
+// Everything done with one client: projects running now, finished projects, open leads, and deals won or lost.
 function History({ c }) {
   const [open, setOpen] = useState(false);
   const n = c.ongoing.length + c.past.length + c.openLeads.length + c.dealt.length;
@@ -184,7 +184,7 @@ function Customers({ C }) {
   const list = q ? C.customers.filter(c => (c.n + ' ' + c.contact + ' ' + c.city).toLowerCase().includes(q.toLowerCase())) : C.customers;
   return (
     <>
-      <div className="cr-search"><input className="ff-search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search customers" aria-label="Search customers" /></div>
+      <div className="cr-search"><input className="ff-search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search clients" aria-label="Search clients" /></div>
       <div className="cr-cust">
         {list.map(c => (
           <article key={c.id} className="cr-cust-card" data-customer={c.n}>
@@ -199,7 +199,7 @@ function Customers({ C }) {
             <History c={c} />
           </article>
         ))}
-        {!list.length ? <Empty>No customers match.</Empty> : null}
+        {!list.length ? <Empty>No clients match.</Empty> : null}
       </div>
     </>
   );
@@ -209,12 +209,12 @@ function Customers({ C }) {
 export default function ClientsPage({ v }) {
   const C = v.CR;
   const [stage, setStage] = useState(0);
-  const tabs = [['leads', 'Leads'], ['customers', 'Customers · ' + C.customers.length], ['won', 'Won · ' + C.won.length], ['lost', 'Lost · ' + C.lost.length]];
+  const tabs = [['leads', 'Leads'], ['customers', 'Clients · ' + C.customers.length], ['won', 'Won · ' + C.won.length], ['lost', 'Lost · ' + C.lost.length]];
   return (
     <>
       <PageHead kicker="Client Service" title="Clients & leads" sub="Every lead has one person following it up. Each step is recorded with who and when.">
         <Btn kind="dark" onClick={C.newWork}>New work</Btn>
-        <Btn kind="ghost" onClick={C.newCustomer}>Add customer</Btn>
+        <Btn kind="ghost" onClick={C.newCustomer}>Add client</Btn>
       </PageHead>
       <Kpis items={C.kpis} />
       <div className="k-chips cr-tabs" role="tablist">

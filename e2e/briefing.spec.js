@@ -15,7 +15,7 @@ test('Monday Briefing: updates, decisions as tasks, minutes, and next week’s f
   expect(data.notes.some(n => n.to === 'GN' && /Briefing update · Operations/.test(n.t))).toBe(true);
 
   await openAs(page, 'gm', 'briefing', {}, false);
-  await expect(page.getByText('Department updates · 1 of 6 in')).toBeVisible();
+  await expect(page.getByText('Department updates · 1 of 5 in')).toBeVisible();
   await expect(page.locator('[data-dept="operations"]')).toContainText('Need a second truck for Arusha');
   await btn(page.locator('[data-dept="creative"]'), 'Remind').click();
   await toast(page, 'Reminder sent to Rehema Said');
@@ -74,6 +74,17 @@ test('presentations uploaded before the meeting, highlights and agreed to-dos fo
   await expect(page.locator('.br-pres')).toContainText('12,400 people reached');
   const [doc] = await Promise.all([page.context().waitForEvent('page'), page.getByRole('button', { name: 'Open presentation · Field team: roadshow results' }).click()]);
   await doc.close();
+  // Present full screen: slides and key points, next/previous, close.
+  await page.getByRole('button', { name: 'Present · Field team: roadshow results' }).click();
+  const show = page.getByRole('dialog', { name: 'Presenting · Field team: roadshow results' });
+  await expect(show).toContainText('12,400 people reached');
+  await show.getByRole('button', { name: 'Close presentation' }).click();
+  await expect(show).toHaveCount(0);
+  // No money in the briefing, not even for Management.
+  await openAs(page, 'ceo', 'briefing', {}, false);
+  await expect(page.getByText(/Money in last week|Money out last week/)).toHaveCount(0);
+  await expect(page.locator('.br-issue, [aria-label="Issues"]').getByText(/Overdue|Budget waiting/)).toHaveCount(0);
+  await openAs(page, 'pa', 'briefing', {}, false);
   const hl = page.getByRole('region', { name: 'Key highlights' });
   await hl.getByLabel('Highlight').fill('Roadshow reached 12,400 people across 6 regions');
   await btn(hl, 'Add').click();
@@ -92,4 +103,23 @@ test('presentations uploaded before the meeting, highlights and agreed to-dos fo
   const data = await saved(page);
   expect(data.notes.some(n => n.to === 'GM' && /minutes published/.test(n.t))).toBe(true);
   expect(errors).toEqual([]);
+});
+
+// On a phone the presenter fills the screen and the key points sit under the slides.
+test('presenting on a phone fits the screen', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openAs(page, 'staff', 'briefing');
+  const pres = page.getByRole('region', { name: 'Presentations' });
+  await btn(pres, 'Upload my presentation').click();
+  await pres.getByLabel('Presentation title').fill('Phone deck');
+  await pres.getByLabel('Key points').fill('One\nTwo\nThree');
+  await pres.getByLabel('Presentation file').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64') });
+  await btn(pres, 'Upload').click();
+  await page.getByRole('button', { name: 'Present · Phone deck' }).click();
+  const show = page.getByRole('dialog', { name: 'Presenting · Phone deck' });
+  await expect(show.locator('img')).toBeVisible();
+  const box = await show.boundingBox();
+  expect(Math.round(box.width)).toBe(390);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await expect(show.getByText('Three')).toBeVisible();
 });
