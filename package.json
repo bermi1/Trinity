@@ -2,7 +2,7 @@
   "name": "trinity-mark-360",
   "private": true,
   "version": "1.0.0",
-  "description": "Trinity Mark 360 \u2014 operations system for Trinity Mark Solutions (projects, money, store, people, portals and mobile apps).",
+  "description": "Trinity Mark 360 — operations system for Trinity Mark Solutions (projects, money, store, people, portals and mobile apps).",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
+    "pdfjs-dist": "^4.10.38",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

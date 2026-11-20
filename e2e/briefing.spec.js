@@ -123,3 +123,28 @@ test('presenting on a phone fits the screen', async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await expect(show.getByText('Three')).toBeVisible();
 });
+
+// A PDF opens inside the site as a document: one page at a time, turned with the arrows.
+test('an uploaded PDF opens inside the site as a flip document', async ({ page, browser }) => {
+  const maker = await browser.newPage();
+  await maker.setContent('<h1 style="page-break-after:always">Page one</h1><h1>Page two</h1>');
+  const buffer = await maker.pdf({ format: 'A4' }); await maker.close();
+  await openAs(page, 'staff', 'briefing');
+  const pres = page.getByRole('region', { name: 'Presentations' });
+  await btn(pres, 'Upload my presentation').click();
+  await pres.getByLabel('Presentation title').fill('PDF deck');
+  await pres.getByLabel('Key points').fill('One\nTwo\nThree');
+  await pres.getByLabel('Presentation file').setInputFiles({ name: 'Deck.pdf', mimeType: 'application/pdf', buffer });
+  await btn(pres, 'Upload').click();
+  await page.getByRole('button', { name: 'Open presentation · PDF deck' }).click();
+  const viewer = page.getByRole('dialog', { name: 'Viewing Deck.pdf' });
+  await expect(viewer.getByText('1 / 2')).toBeVisible();
+  await expect(viewer.locator('canvas.pdf-page')).toBeVisible();
+  expect(page.context().pages().length).toBe(1);
+  await viewer.getByRole('button', { name: 'Next page', exact: true }).click();
+  await expect(viewer.getByText('2 / 2')).toBeVisible();
+  await page.keyboard.press('ArrowLeft');
+  await expect(viewer.getByText('1 / 2')).toBeVisible();
+  await viewer.getByRole('button', { name: 'Close document' }).click();
+  await expect(viewer).toHaveCount(0);
+});

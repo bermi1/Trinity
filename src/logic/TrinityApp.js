@@ -150,12 +150,16 @@ export default class TrinityApp extends Logic {
   }
   async openDoc(d) {
     if (!d.url && !d.path) { this.toast(d.n + ' has no file attached yet · upload it from Documents'); return; }
-    const w = window.open('', '_blank');
+    const name = (d.n || d.path || '') + '', mime = d.mime || '';
+    const kind = /pdf/i.test(mime) || /\.pdf$/i.test(name) || /\.pdf$/i.test(d.path || '') ? 'pdf' : /^image\//i.test(mime) || /\.(png|jpe?g|gif|webp|svg)$/i.test(name) ? 'img' : '';
+    // PDFs and pictures open inside the site; other files (PowerPoint, Excel) open in their own app.
+    const w = kind ? null : window.open('', '_blank');
     try {
       let url = d.url;
       if (d.path) { const { data, error } = await supabase.storage.from('documents').createSignedUrl(d.path, 3600); if (error) throw error; url = data.signedUrl; }
       // Browsers refuse to open data: links in a new tab, so hand over a blob link instead.
       if (url.startsWith('data:')) url = URL.createObjectURL(await (await fetch(url)).blob());
+      if (kind) { this.setState({docView:{n:d.n || 'Document', url, kind}}); return; }
       if (w) w.location.href = url; else window.location.href = url;
     } catch (err) { if (w) w.close(); console.error(err); this.toast('Could not open ' + d.n); }
   }

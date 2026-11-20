@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import PdfReader from '../../components/PdfReader';
 import { PageHead, Btn, Empty, faceStyle, faceText } from '../../ui/kit';
 
 function MyUpdate({ B }) {
@@ -25,7 +26,7 @@ function Presenter({ B, list, start, onClose }) {
   const kind = /\.pdf$/i.test(name) ? 'pdf' : /\.(png|jpe?g|gif|webp)$/i.test(name) ? 'img' : /\.(pptx?|ppsx?)$/i.test(name) ? 'ppt' : 'other';
   useEffect(() => { let off = false; setUrl(''); setErr(''); B.docUrl({ n: name, url: p.file && p.file.url, path: p.file && p.file.path }).then(u => { if (!off) setUrl(u); }).catch(() => { if (!off) setErr('Could not load the file'); }); return () => { off = true; }; }, [p.id]);
   useEffect(() => { const el = ref.current; try { if (el && el.requestFullscreen && !document.fullscreenElement) el.requestFullscreen().catch(() => {}); } catch (e) {} 
-    const key = e => { if (e.key === 'Escape') onClose(); if (e.key === 'ArrowRight' && i < list.length - 1) setI(i + 1); if (e.key === 'ArrowLeft' && i > 0) setI(i - 1); };
+    const key = e => { if (e.key === 'Escape') onClose(); if (kind !== 'pdf' && e.key === 'ArrowRight' && i < list.length - 1) setI(i + 1); if (kind !== 'pdf' && e.key === 'ArrowLeft' && i > 0) setI(i - 1); };
     window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key); }, [i]);
   const close = () => { try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {} onClose(); };
   const remote = url && /^https:/.test(url);
@@ -42,7 +43,7 @@ function Presenter({ B, list, start, onClose }) {
       <div className={'br-show-body' + (notes ? ' has-notes' : '')}>
         <div className="br-show-slide">
           {err ? <p className="br-show-msg">{err}</p> : !url ? <p className="br-show-msg">{p.file ? 'Loading…' : 'No file attached · the key points are shown'}</p>
-            : kind === 'pdf' ? <iframe title={p.title} src={url + '#view=FitH'} />
+            : kind === 'pdf' ? <PdfReader key={p.id} url={url} name={p.title} />
             : kind === 'img' ? <img src={url} alt={p.title} />
             : kind === 'ppt' && remote ? <iframe title={p.title} src={'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(url)} />
             : <p className="br-show-msg">This file opens in its own app · tap “Open file”</p>}

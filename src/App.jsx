@@ -7,6 +7,7 @@ import MobileLogin from './mobile/MobileLogin';
 import MobileApp from './mobile/MobileApp';
 import PinScreen from './components/PinScreen';
 import SetPassword from './components/SetPassword';
+import DocViewer from './components/DocViewer';
 
 // Hosts the application logic and re-renders whenever it changes state.
 export default class App extends Component {
@@ -29,7 +30,8 @@ export default class App extends Component {
     // Quick unlock: the PIN screen covers everything until it's entered (or set up).
     if (v.showApp && v.PIN.mode) return <PinScreen v={v} />;
     // Phones get the app-style shell; tablets and computers the full desktop layout.
-    if (v.phone) return v.showLogin ? <MobileLogin v={v} /> : <MobileApp v={v} />;
-    return v.showLogin ? <LoginScreen v={v} /> : <AppShell v={v} />;
+    const shell = v.phone ? (v.showLogin ? <MobileLogin v={v} /> : <MobileApp v={v} />) : (v.showLogin ? <LoginScreen v={v} /> : <AppShell v={v} />);
+    const doc = this.logic.state.docView;
+    return <>{shell}{doc && v.showApp ? <DocViewer doc={doc} onClose={() => this.logic.setState({ docView: null })} /> : null}</>;
   }
 }
