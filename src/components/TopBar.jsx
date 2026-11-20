@@ -97,6 +97,7 @@ export default function TopBar({ v }) {
           {v.menu ? (
             <>
               <div style={{ position: "absolute", right: "0", top: "50px", width: "270px", background: "#fff", border: "1px solid #E8E4EF", borderRadius: "12px", boxShadow: "0 12px 32px rgba(29,16,61,.14)", padding: "6px", display: "flex", flexDirection: "column", animation: "tmIn .15s ease" }}>
+                {v.canSwitch ? <>
                 <div style={{ padding: "10px 12px", fontSize: "11px", fontWeight: "700", letterSpacing: ".08em", color: "#6E6A7C" }}>
                   SWITCH PORTAL
                 </div>
@@ -167,6 +168,7 @@ export default function TopBar({ v }) {
                   Printing portal
                 </div>
                 <div style={{ height: "1px", background: "#E8E4EF", margin: "6px 0" }} />
+                </> : null}
                 <div className="tm-h3" onClick={v.pinMenu.on} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer" }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6E6A7C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d={v.ic.shield} />

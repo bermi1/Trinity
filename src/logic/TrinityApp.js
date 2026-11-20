@@ -296,9 +296,9 @@ export default class TrinityApp extends Logic {
       this.sync.unsubscribe();
       this.sync.subscribe((c, change) => { const next = applyChange(this.state[c], change); if (next !== undefined) this.applyRemote({[c]:next}); });
       const s = this.state;
-      // Management may open any portal; everyone else gets their own.
+      // Only an administrator may open other portals; everyone else gets their own.
       const pick = fresh ? wanted : s.role;
-      const r = role === 'ceo' && ROLES[pick] ? pick : role;
+      const r = acc.is_admin && ROLES[pick] ? pick : role;
       const keepPage = !fresh && r === s.role && s.page;
       const who = user.email.toLowerCase();
       const mustSetPw = !acc.is_demo && !(user.user_metadata && user.user_metadata.pw_set);
@@ -473,7 +473,7 @@ export default class TrinityApp extends Logic {
     try { this.applyRemote(await withTimeout(this.sync.load(this.seed()), 20000)); this.toast('Up to date'); } catch (err) { console.error(err); this.toast(OFFLINE); }
   }
   haptic(ms) { try { if (this.state.w < 700 && navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) {} }
-  asRole(r, page, extra) { return () => { if (this.state.db && this.account && this.account.role !== 'ceo' && r !== this.account.role) { this.setState({menu:false, more:false}); this.toast('Your account uses the ' + this.ROLES[this.account.role].label + ' portal'); return; } this.setState(Object.assign({role:r, menu:false, drawer:false, more:false, page:page || this.ROLES[r].home, tip:-1, taskFilter:r === 'staff' ? 'mine' : 'all'}, extra || {})); try { window.scrollTo(0,0); } catch (e) {} }; }
+  asRole(r, page, extra) { return () => { if (this.state.db && this.account && !this.account.isAdmin && r !== this.account.role) { this.setState({menu:false, more:false}); this.toast('Your account uses the ' + this.ROLES[this.account.role].label + ' portal'); return; } this.setState(Object.assign({role:r, menu:false, drawer:false, more:false, page:page || this.ROLES[r].home, tip:-1, taskFilter:r === 'staff' ? 'mine' : 'all'}, extra || {})); try { window.scrollTo(0,0); } catch (e) {} }; }
   goTarget(g) { if (g && g.indexOf('project:') === 0) this.go('project',{projectId:g.slice(8)}); else this.go(g || 'dashboard'); }
   toast(t) { this.haptic(10); const id = Date.now() + Math.random(); this.setState(s => ({toasts:[...s.toasts,{id,t}]})); setTimeout(() => this.setState(s => ({toasts:s.toasts.filter(x => x.id !== id)})), 3200); }
   notify(n) {

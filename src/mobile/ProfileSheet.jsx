@@ -11,14 +11,14 @@ export default function ProfileSheet({ v }) {
           <span className="m-avatar is-lg" style={faceStyle(v.me)}>{faceText(v.me)}</span>
           <div><b>{v.me.n}</b><span>{v.me.t} · {v.me.label.charAt(0) + v.me.label.slice(1).toLowerCase()} portal</span></div>
         </div>
-        <div className="m-group">
+        {v.portalChips.length ? <div className="m-group">
           <span className="m-group-label">Switch portal</span>
           <div className="m-segment is-wrap">
             {v.portalChips.map(pc => (
               <button key={pc.l} className={pc.bg === '#2B1459' ? 'is-on' : ''} onClick={() => { v.haptic(6); pc.on(); }}>{pc.l}</button>
             ))}
           </div>
-        </div>
+        </div> : null}
         <div className="m-list">
           <label className="m-photo-btn"><input type="file" accept="image/*" capture="user" onChange={async e => { const f = e.target.files[0]; e.target.value = ''; if (f) await v.setMyPhoto(f); }} aria-label="Change my photo" /><Icon d={v.ic.user} size={20} />Change my photo<Icon d={v.ic.chevR} size={18} /></label>
           <button onClick={v.goNotes}><Icon d={v.ic.bell} size={20} />Notifications{v.hasUnread ? <span className="m-count">{v.unread}</span> : null}<Icon d={v.ic.chevR} size={18} /></button>

@@ -85,6 +85,28 @@ describe('live database', () => {
     vi.unstubAllEnvs();
   });
 
+  it('only an administrator can switch portals; Management without admin cannot', async () => {
+    window.innerWidth = 1440;
+    render(<App />);
+    await screen.findByText('SIGN IN');
+    signInAs('daniel@tm.co.tz', 'secret123');
+    await skipPin();
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening),/ });
+    fireEvent.click(screen.getAllByText('Daniel K.')[0]);
+    expect(screen.queryByText('SWITCH PORTAL')).toBeNull();
+  });
+
+  it('an administrator sees the portal switcher', async () => {
+    window.innerWidth = 1440;
+    render(<App />);
+    await screen.findByText('SIGN IN');
+    signInAs('admin@tm.co.tz', 'admin12345');
+    await skipPin();
+    await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening),/ });
+    fireEvent.click(screen.getAllByText('Administrator')[0]);
+    expect(await screen.findByText('SWITCH PORTAL')).toBeTruthy();
+  });
+
   it('keeps non-management staff in their own portal', async () => {
     render(<App />);
     await screen.findByText('SIGN IN');

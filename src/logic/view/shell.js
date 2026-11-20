@@ -28,7 +28,8 @@ export function renderVals() {
   const mobileTabs = tabDefs.map(([k,l,ic,_b,ex]) => { const a = k === navPage && !s.more; const b = BADGE[k] || 0; return {l, ic:IC[ic], c:a ? '#2B1459' : '#8A8698', bar:a ? '#6D3CC2' : 'transparent', fw:a ? 800 : 600, b, hb:b > 0, on:() => this.go(k, ex)}; });
   mobileTabs.push({l:'More', ic:IC.grid, c:moreActive ? '#2B1459' : '#8A8698', bar:moreActive ? '#6D3CC2' : 'transparent', fw:moreActive ? 800 : 600, b:0, hb:false, on:() => this.setState({more:!s.more})});
   const moreItems = flatNav.filter(i => !tabDefs.some(t => t[0] === i[0]) && !(phone && i[0] === 'ceomobile')).map(([k,l,ic,b,ex]) => { const a = k === navPage; return {l, ic:IC[ic], b:b || 0, hb:!!b, bg:a ? '#EFE8FA' : '#fff', bd:a ? '#6D3CC2' : '#E8E4EF', on:() => this.go(k, ex)}; });
-  const portalChips = Object.keys(this.ROLES).filter(k => !HIDDEN_ROLES.includes(k)).map(k => ({l:this.ROLES[k].label, bg:role === k ? '#2B1459' : '#fff', c:role === k ? '#fff' : '#17152A', bd:role === k ? '#2B1459' : '#E8E4EF', on:() => this.asRole(k)()}));
+  const canSwitch = !s.db || !!(this.account && this.account.isAdmin);
+  const portalChips = !canSwitch ? [] : Object.keys(this.ROLES).filter(k => !HIDDEN_ROLES.includes(k)).map(k => ({l:this.ROLES[k].label, bg:role === k ? '#2B1459' : '#fff', c:role === k ? '#fff' : '#17152A', bd:role === k ? '#2B1459' : '#E8E4EF', on:() => this.asRole(k)()}));
   const is = {}; ['dashboard','briefing','notifications','crm','finance','projects','project','tasks','procurement','store','requests','staff','field','staffportal','financeportal','reception','storekeeper','rooms','ceomobile','proposals','production','logistics','documents','reports','calendar','settings'].forEach(k => is[k] = s.page === k);
   const hr = new Date().getHours();
   const d = new Date();
@@ -86,7 +87,7 @@ export function renderVals() {
     resetDemo:() => this.resetDemo(),
     loginNote:s.db ? 'Sign in with your Trinity Mark account' : 'Demo workspace · any password of 4+ characters', dataBadge:s.db ? 'LIVE DATA' : 'DEMO DATA',
     page:s.page, pageKey:s.page + '|' + (s.page === 'project' ? s.projectId : s.page === 'job' ? s.jobId : ''), navDir:s.navDir || 'tab', online:s.online !== false, signingIn:!!s.signingIn, db:!!s.db,
-    isAdmin:this.isAdmin(), workspaceLive:!!s.workspaceLive, colorFor,
+    isAdmin:this.isAdmin(), canSwitch, workspaceLive:!!s.workspaceLive, colorFor,
     pinMenu:pinFor(s.pinUser) ? {l:'Turn off PIN unlock', on:() => this.turnOffPin()} : {l:'Set up PIN unlock', on:() => this.setState({pin:'setup', menu:false})},
     photos:s.photos || {},
     ADM:{db:!!s.db, photo:(k, f) => this.setPhoto(k, f), users:s.users || null, busy:!!s.usersBusy, me:this.state.pinUser, load:() => this.loadUsers(), create:f => this.createUser(f), update:(u, c) => this.updateUser(u, c),

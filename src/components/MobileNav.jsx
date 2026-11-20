@@ -38,6 +38,7 @@ export default function MobileNav({ v }) {
                 </Fragment>
               ))}
             </div>
+            {(v.portalChips || []).length ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               <span style={{ fontSize: "11px", fontWeight: "700", letterSpacing: ".08em", color: "#6E6A7C" }}>
                 SWITCH PORTAL
@@ -52,6 +53,7 @@ export default function MobileNav({ v }) {
                 ))}
               </div>
             </div>
+            ) : null}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
 
               <button onClick={v.signOut} style={{ height: "46px", border: "1px solid #F0C9CD", background: "#fff", color: "#B23A46", borderRadius: "12px", fontSize: "13px", fontWeight: "700" }}>
