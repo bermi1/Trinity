@@ -103,6 +103,7 @@ export default function LoginScreen({ v }) {
             <button className="tm-h2" onClick={v.signIn} style={{ height: "48px", border: "none", borderRadius: "10px", background: "#2B1459", color: "#fff", fontWeight: "700", fontSize: "14px", letterSpacing: ".06em" }}>
               SIGN IN
             </button>
+            {(v.loginRoles || []).length ? <>
             <div style={{ display: "flex", alignItems: "center", gap: "12px", color: "#6E6A7C", fontSize: "12px" }}>
               <span style={{ flex: "1", height: "1px", background: "#E8E4EF" }} />
               or open a demo portal
@@ -117,6 +118,7 @@ export default function LoginScreen({ v }) {
                 </Fragment>
               ))}
             </div>
+            </> : null}
             <p style={{ margin: "0", fontSize: "12px", color: "#6E6A7C", textAlign: "center" }}>
               {v.loginNote}
             </p>

@@ -76,12 +76,12 @@ describe('live database', () => {
     vi.unstubAllEnvs();
   });
 
-  it('without a demo password, a demo portal asks for the password', async () => {
+  it('without a demo password (production), the login shows no demo portals', async () => {
     vi.stubEnv('VITE_DEMO_PASSWORD', '');
     render(<App />);
     await screen.findByText('SIGN IN');
-    fireEvent.click(screen.getByRole('button', { name: 'Finance' }));
-    expect(await screen.findByText('Enter the password for rose.t@trinitymark.co.tz.')).toBeTruthy();
+    expect(screen.queryByRole('group', { name: 'Demo portals' })).toBeNull();
+    expect(screen.queryByText('or open a demo portal')).toBeNull();
     vi.unstubAllEnvs();
   });
 

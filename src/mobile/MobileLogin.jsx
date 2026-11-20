@@ -61,12 +61,14 @@ export default function MobileLogin({ v }) {
           {busy ? <span className="m-spinner" aria-hidden="true" /> : null}{busy ? 'Signing in…' : 'Sign in'}
         </button>
 
+        {v.loginRoles.length ? <>
         <p className="m-login-or">or open a demo portal</p>
         <div className="m-login-alt m-login-demo" role="group" aria-label="Demo portals">
           {v.loginRoles.map(r => (
             <button type="button" key={r.l} onClick={() => { v.haptic(6); r.on(); }}>{r.l}</button>
           ))}
         </div>
+        </> : null}
 
         {mode ? (
           <button type="button" className="m-install" onClick={() => (mode === 'prompt' ? install() : setIosHelp(true))}>
