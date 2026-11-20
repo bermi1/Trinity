@@ -104,7 +104,7 @@ describe('live database', () => {
     await skipPin();
     await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening),/ });
     fireEvent.click(screen.getAllByText('Daniel K.')[0]);
-    expect(screen.queryByText('SWITCH PORTAL')).toBeNull();
+    expect(screen.queryByText('OPEN A DASHBOARD')).toBeNull();
   });
 
   it('an administrator sees the portal switcher', async () => {
@@ -115,7 +115,11 @@ describe('live database', () => {
     await skipPin();
     await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening),/ });
     fireEvent.click(screen.getAllByText('Administrator')[0]);
-    expect(await screen.findByText('SWITCH PORTAL')).toBeTruthy();
+    expect(await screen.findByText('OPEN A DASHBOARD')).toBeTruthy();
+    const group = screen.getByRole('group', { name: 'Open a dashboard' });
+    for (const l of ['Management', 'Finance', 'Reception', 'Creative', 'Operations']) expect(within(group).getAllByRole('button').some(b => b.textContent.includes(l))).toBe(true);
+    fireEvent.click(within(group).getAllByRole('button').find(b => b.textContent.includes('Finance')));
+    expect(await screen.findByText(/FINANCE/)).toBeTruthy();
   });
 
   it('keeps non-management staff in their own portal', async () => {

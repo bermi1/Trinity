@@ -308,8 +308,8 @@ export default class TrinityApp extends Logic {
       this.sync.subscribe((c, change) => { const next = applyChange(this.state[c], change); if (next !== undefined) this.applyRemote({[c]:next}); });
       const s = this.state;
       // Only an administrator may open other portals; everyone else gets their own.
-      const pick = fresh ? wanted : s.role;
-      const r = acc.is_admin && ROLES[pick] ? pick : role;
+      // A fresh sign-in opens the person's own portal; an administrator keeps the portal they switched to on reload.
+      const r = !fresh && acc.is_admin && ROLES[s.role] ? s.role : role;
       const keepPage = !fresh && r === s.role && s.page;
       const who = user.email.toLowerCase();
       const mustSetPw = !acc.is_demo && !(user.user_metadata && user.user_metadata.pw_set);

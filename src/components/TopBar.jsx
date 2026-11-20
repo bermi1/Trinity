@@ -99,73 +99,14 @@ export default function TopBar({ v }) {
               <div style={{ position: "absolute", right: "0", top: "50px", width: "270px", background: "#fff", border: "1px solid #E8E4EF", borderRadius: "12px", boxShadow: "0 12px 32px rgba(29,16,61,.14)", padding: "6px", display: "flex", flexDirection: "column", animation: "tmIn .15s ease" }}>
                 {v.canSwitch ? <>
                 <div style={{ padding: "10px 12px", fontSize: "11px", fontWeight: "700", letterSpacing: ".08em", color: "#6E6A7C" }}>
-                  SWITCH PORTAL
+                  OPEN A DASHBOARD
                 </div>
-                <div className="tm-h3" onClick={v.asCeo} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={v.ic.grid} />
-                  </svg>
-                  Management · Command Center
-                </div>
-                <div className="tm-h3" onClick={v.asGm} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={v.ic.chart} />
-                  </svg>
-                  General Manager
-                </div>
-                <div className="tm-h3" onClick={v.asCs} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={v.ic.users} />
-                  </svg>
-                  Client Service
-                </div>
-                <div className="tm-h3" onClick={v.asCreative} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={v.ic.sparkle} />
-                  </svg>
-                  Creative
-                </div>
-                <div className="tm-h3" onClick={v.asOps} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={v.ic.folder} />
-                  </svg>
-                  Operations
-                </div>
-                <div className="tm-h3" onClick={v.asCeoMobile} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={v.ic.phone} />
-                  </svg>
-                  Mobile apps · phone preview
-                </div>
-                <div className="tm-h3" onClick={v.asStaffMobile} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={v.ic.phone} />
-                  </svg>
-                  Field capture app
-                </div>
-                <div className="tm-h3" onClick={v.asStaff} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={v.ic.user} />
-                  </svg>
-                  Staff portal
-                </div>
-                <div className="tm-h3" onClick={v.asFinance} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={v.ic.banknote} />
-                  </svg>
-                  Finance portal
-                </div>
-                <div className="tm-h3" onClick={v.asReception} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={v.ic.message} />
-                  </svg>
-                  Office front · Reception
-                </div>
-                <div className="tm-h3" onClick={v.asProduction} style={{ padding: "10px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", display: "flex", gap: "10px", alignItems: "center", cursor: "pointer" }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d={v.ic.printer} />
-                  </svg>
-                  Printing portal
+                <div role="group" aria-label="Open a dashboard" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px", padding: "0 4px 6px" }}>
+                  {(v.portalChips || []).map(pc => (
+                    <button key={pc.l} type="button" onClick={pc.on} aria-pressed={pc.bg === '#2B1459'} className="tm-h3" style={{ textAlign: "left", padding: "9px 10px", borderRadius: "8px", border: "none", fontSize: "13px", fontWeight: "600", cursor: "pointer", background: pc.bg === '#2B1459' ? "#F1ECFA" : "transparent", color: pc.bg === '#2B1459' ? "#4B2A8C" : "#17152A" }}>
+                      {pc.l}
+                    </button>
+                  ))}
                 </div>
                 <div style={{ height: "1px", background: "#E8E4EF", margin: "6px 0" }} />
                 </> : null}

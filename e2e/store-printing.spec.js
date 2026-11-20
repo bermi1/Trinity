@@ -11,7 +11,8 @@ test.afterEach(() => expect(errors).toEqual([]));
 
 const switchTo = async (page, portal) => {
   await page.locator('header div[style*="cursor: pointer"]').last().click();
-  await page.getByText(portal, { exact: true }).click();
+  const map = { 'Management · Command Center': 'Management', 'Finance portal': 'Finance', 'Printing portal': 'Printing', 'Staff portal': 'Staff', 'Storekeeper portal': 'Store' };
+  await page.getByRole('group', { name: 'Open a dashboard' }).getByRole('button', { name: map[portal] || portal, exact: true }).click();
 };
 const card = (page, id) => page.locator(`[data-req="${id}"]`);
 const stock = async (page, sku) => (await saved(page)).stock.find(i => i.sku === sku).q;
