@@ -570,7 +570,7 @@
 .fr-chart-h { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .fr-legend { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #6E6A7C; font-weight: 600; }
 .fr-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-left: 8px; }
-.is-in { background: #2E9B63; } .is-out { background: #D9535F; }
+.fr-legend i.is-in, .fr-pair i.is-in { background: #6D3CC2; } .fr-legend i.is-out, .fr-pair i.is-out { background: #E3A93B; }
 .fr-tip { min-height: 20px; font-size: 13px; }
 .fr-bars { display: flex; align-items: stretch; gap: 3px; height: 210px; padding-top: 6px; border-bottom: 1px solid #E8E4EF; }
 .fr-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 4px; border: none; background: none; padding: 0; cursor: pointer; border-radius: 6px; }
@@ -1085,3 +1085,27 @@
   .br-pres-btns { width: 100%; }
   .br-pres-btns button { flex: 1; }
 }
+
+/* Finance refresh: calm and neutral. One purple accent; meaning shown by small dots and soft pills, never filled red or green boxes. */
+.fr-pair i.is-in { background: #A98BE0; } .fr-pair i.is-out { background: #EFCB86; }
+.fr-col.is-on .fr-pair i.is-in { background: #6D3CC2; } .fr-col.is-on .fr-pair i.is-out { background: #D99A2B; }
+.fr-break-bar i.is-in { background: linear-gradient(90deg, #6D3CC2, #A98BE0); } .fr-break-bar i.is-out { background: linear-gradient(90deg, #D99A2B, #F1CF86); }
+.fr-dir button.is-on.is-in, .fr-dir button.is-on.is-out { background: #1B1036; border-color: #1B1036; }
+.fr-up { color: #5A2FA8; } .fr-down { color: #9A5B12; }
+.fr-table .is-green { color: #17152A; } .fr-table .is-red { color: #9A3A48; }
+.fr-table td { padding: 12px 8px; font-variant-numeric: tabular-nums; }
+.fr-table tbody tr:hover td { background: #FAF8FD; }
+.me.is-out .me-seg button.is-on, .me.is-in .me-seg button.is-on { color: #17152A; }
+.me.is-in .me-save { background: #2B1459; }
+.fh-inv-bar i { background: #6D3CC2; }
+.fh-ok { display: inline-flex; align-items: center; gap: 6px; color: #4B2A8C; background: #F1ECFA; padding: 5px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700; }
+.fh-kpis { gap: 16px; }
+.fh-kpi { position: relative; padding: 20px 22px; border-radius: 18px; border: 1px solid #ECE8F2; box-shadow: 0 1px 2px rgba(23,21,42,.04), 0 8px 24px rgba(23,21,42,.04); gap: 6px; }
+.fh-kpi span { display: flex; align-items: center; gap: 8px; font-size: 11.5px; letter-spacing: .06em; color: #7A7590; }
+.fh-kpi b { font-size: 24px; font-weight: 700; letter-spacing: -.02em; color: #17152A; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fh-kpi.is-red b, .fh-kpi.is-green b, .fh-kpi.is-gold b { color: #17152A; }
+.fh-kpi.is-red span::before, .fh-kpi.is-green span::before, .fh-kpi.is-gold span::before { content: ''; width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.fh-kpi.is-red span::before { background: #D9534F; } .fh-kpi.is-green span::before { background: #6D3CC2; } .fh-kpi.is-gold span::before { background: #E3A93B; }
+.fh-kpi.is-red .ring, .fh-kpi.is-green .ring, .fh-kpi.is-gold .ring { --c: #6D3CC2; }
+.fh-kpi.is-dark { background: linear-gradient(140deg, #1B1036, #3A1F78); border: none; box-shadow: 0 12px 30px rgba(43,20,89,.25); }
+.fh-kpi.is-dark b { color: #fff; }
