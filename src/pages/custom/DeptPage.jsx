@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import BriefItem from '../../components/BriefItem';
 import TargetPanel from './TargetPanel';
+import { MemoCard } from './MemoPage';
 import { PageHead, Card, Btn, Avatar, Kpis, Pill, Empty } from '../../ui/kit';
 
 function Briefs({ list, designers, from }) {
@@ -95,7 +96,11 @@ export default function DeptPage({ v }) {
         {D.dept === 'operations' ? <Btn kind="dark" onClick={D.request}>Request money</Btn> : null}
       </PageHead>
       <div className="dp-kpis"><Kpis items={D.kpis} /></div>
-      <Memos list={D.memos || []} />
+      {v.MEMO && v.MEMO.inbox.filter(m => m.st !== 'done').length ? (
+        <Card title={'Memos · ' + v.MEMO.inbox.filter(m => m.st !== 'done').length + ' open'} aside={<Btn kind="ghost" onClick={v.MEMO.goList}>All memos</Btn>}>
+          <ul className="mm-list">{v.MEMO.inbox.filter(m => m.st !== 'done').slice(0, 5).map(m => <MemoCard key={m.id} m={m} />)}</ul>
+        </Card>
+      ) : null}
       {D.dept === 'clientservice' && v.TG ? <TargetPanel T={v.TG} /> : null}
 
       {D.dept === 'clientservice' ? (

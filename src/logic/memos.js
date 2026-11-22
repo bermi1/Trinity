@@ -106,7 +106,7 @@ export function memoVals(s) {
       cur: visible(cur) ? memoRow.call(this, cur) : null, back: () => this.go('memos'),
       inbox: mineIn.map(m => memoRow.call(this, m)), sent: all.filter(m => m.from === me).map(m => memoRow.call(this, m)),
       all: this.isTop() || role === 'pa' ? all.map(m => memoRow.call(this, m)) : null,
-      tab: s.memoTab || 'in', setTab: t => this.setState({ memoTab: t }),
+      tab: s.memoTab || 'in', setTab: t => this.setState({ memoTab: t }), goList: () => this.go('memos', { memoTab: 'in' }),
       pop: pop ? memoRow.call(this, pop) : null, skip: id => this.skipMemoPop(id),
       forProject: pid => all.filter(m => m.project === pid).map(m => memoRow.call(this, m)),
       send: f => this.sendMemo(f),
