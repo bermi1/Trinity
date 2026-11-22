@@ -385,7 +385,7 @@ export default class TrinityApp extends Logic {
     };
     const slips = ['payslips','My payslips','wallet'];
     // The Personal Assistant runs Management's diary and records purchase orders; no money.
-    N.pa = [['Office',[['meetings','Calendar','calendar'],['briefing','Monday Briefing','presentation'],['reception','Front desk','message'],['projects','Projects','folder'],['clients','Clients & leads','users'],['today','My work','checkSquare',myOpen],['reporting','Reports','fileText',rptN],slips]]];
+    N.pa = [['Office',[['dashboard','Management overview','grid'],['meetings','Calendar','calendar'],['requests','Approvals','banknote'],['briefing','Monday Briefing','presentation'],['reception','Front desk','message'],['projects','Projects','folder'],['clients','Clients & leads','users'],['today','My work','checkSquare',myOpen],['reporting','Reports','fileText',rptN],slips]]];
     // Department portals: their dashboard first, then what that department works with.
     const myReqs = ['requests','My requests','banknote'], deptMore = [['payslips','My payslips','wallet'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['briefing','Monday Briefing','presentation'],['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['rooms','Meeting rooms','calendar'],['settings','Settings','settings']];
     N.clientservice = [['Client Service',[['dept','Client Service','home'],['today','My work','checkSquare',myOpen],['clients','Clients & leads','users'],['proposals','Proposals','clipboard'],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
@@ -435,7 +435,7 @@ export default class TrinityApp extends Logic {
   allowedPage(role, page) {
     const home = (this.ROLES[role] || ROLES.ceo).home;
     if (!page || PARKED.includes(page) || (this.state && this.isOff(page))) return home;
-    if (page === 'dashboard' && !['ceo','gm','finance'].includes(role)) return home;
+    if (page === 'dashboard' && !['ceo','gm','finance','pa'].includes(role)) return home;
     if (page === 'crm') return 'clients';
     // Tasks and the daily to-do are one page: My work.
     if (page === 'tasks') return 'today';
@@ -493,7 +493,10 @@ export default class TrinityApp extends Logic {
   goTarget(g) { if (g && g.indexOf('project:') === 0) this.go('project',{projectId:g.slice(8)}); else if (g && g.indexOf('memo:') === 0) this.openMemo(g.slice(5)); else this.go(g || 'dashboard'); }
   toast(t) { this.haptic(10); const id = Date.now() + Math.random(); this.setState(s => ({toasts:[...s.toasts,{id,t}]})); setTimeout(() => this.setState(s => ({toasts:s.toasts.filter(x => x.id !== id)})), 3200); }
   notify(n) {
-    this.setState(s => ({notes:[Object.assign({id:Date.now()+Math.random(),read:false,time:this.now()}, n), ...s.notes]}));
+    // The PA sees everything that reaches Management (except salaries), to follow it up.
+    const mg = this.ROLES.ceo && this.ROLES.ceo.k, pa = this.ROLES.pa && this.ROLES.pa.k;
+    const copy = n.to && n.to === mg && pa && pa !== mg && pa !== this.me().k && n.go !== 'payroll' ? Object.assign({}, n, { to: pa, t: 'Management · ' + n.t }) : null;
+    this.setState(s => ({notes:[Object.assign({id:Date.now()+Math.random(),read:false,time:this.now()}, n), ...(copy ? [Object.assign({id:Date.now()+Math.random()+1,read:false,time:this.now()}, copy)] : []), ...s.notes]}));
     this.queueOutside(n);
   }
   // Alerts that should reach people outside the system (WhatsApp, SMS, email) go to an outbox.

@@ -21,7 +21,7 @@ export const crmMethods = {
   leadStage(l) { return l.sv === 2 ? l.s : OLD[l.s] != null ? OLD[l.s] : 1; },
   // The owner, the Client Service Manager, Management and the GM move leads.
   canMoveLead(l) { return this.isTop() || this.isManagerOf('clientservice') || l.owner === this.me().k; },
-  canSeeValues() { return this.isTop() || ['clientservice', 'finance'].includes(this.state.role || 'ceo'); },
+  canSeeValues() { return this.isTop() || ['clientservice', 'finance', 'pa'].includes(this.state.role || 'ceo'); },
 
   // Saves a file: to the database storage when live, in this browser (small files) in the demo.
   async storeFile(file) {

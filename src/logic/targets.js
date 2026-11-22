@@ -131,7 +131,7 @@ export function targetVals(s) {
     if (MYT) MYT = Object.assign({ year: yr }, MYT);
   }
   // Management and the GM run the targets; Client Service sees the company target and its own.
-  if (!['ceo', 'gm', 'clientservice'].includes(role)) return { TG: null, MYT };
+  if (!['ceo', 'gm', 'clientservice', 'pa'].includes(role)) return { TG: null, MYT };
   const cs = role === 'clientservice';
   const today = new Date(), { year, week: cur } = isoWeek(today), W = weeksInYear(year);
   const t = this.targetFor(year);

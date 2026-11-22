@@ -2,7 +2,8 @@
 // projects by stage, cash this month and recent activity.
 export function homeVals(s) {
   const role = s.role || 'ceo';
-  if (!['ceo', 'gm', 'finance'].includes(role)) return { HD: null };
+  // The PA sees Management's overview, to run Management's day.
+  if (!['ceo', 'gm', 'finance', 'pa'].includes(role)) return { HD: null };
   const me = this.me(), open = (s.leads || []).filter(l => this.leadStage(l) < 5), live = s.projects.filter(p => p.st !== 'done');
   const myAppr = s.reqs.filter(r => r.st === 'pending' && this.canAct(r) && (role !== 'ceo' || r.step === 4));
   const unpaid = (s.invoices || []).filter(i => i.st !== 'paid' && i.st !== 'draft');
