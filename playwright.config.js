@@ -6,7 +6,7 @@ export default defineConfig({
   timeout: 60000,
   fullyParallel: true,
   reporter: [['list']],
-  use: { baseURL: 'http://localhost:4174', acceptDownloads: true, trace: 'retain-on-failure' },
+  use: { baseURL: 'http://localhost:4174', acceptDownloads: true, trace: 'retain-on-failure', launchOptions: process.env.PW_CHROMIUM ? { executablePath: process.env.PW_CHROMIUM } : {} },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } }, testIgnore: /phone/ },
     { name: 'phone', use: { ...devices['Pixel 7'] }, testMatch: /phone/ }

@@ -15,7 +15,8 @@ beforeEach(() => {
   staff.forEach(([k, role, n], i) => { users[k.toLowerCase() + '@tm.co.tz'] = { id: 'u' + (i + 1), password: 'Trinity@2026' }; profiles['u' + (i + 1)] = { role, full_name: n, title: '', person_key: k, is_admin: false, is_demo: false }; });
   db = createFakeSupabase({ users, profiles });
   db.tables.app_records.set('_meta|workspace', { collection: '_meta', id: 'workspace', position: 0, data: { mode: 'live' } });
-  rows.forEach(r => db.tables.app_records.set(r.collection + '|' + r.id, structuredClone(r)));
+  const today = new Date().toISOString().slice(0, 10);
+  rows.forEach(r => { const c = structuredClone(r); if (c.collection === 'visitors') c.data.date = today; db.tables.app_records.set(c.collection + '|' + c.id, c); });
 });
 
 async function signIn(email, pw) {

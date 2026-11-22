@@ -21,7 +21,7 @@ function ledgerSeed() {
 // Pay records (TZS a month) and last month's paid payroll.
 const PAY = { GN: [4500000, 500000], MM: [2800000, 300000], SK: [2200000, 250000], NL: [2400000, 250000], RT: [2000000, 200000], RS: [2100000, 200000], DS: [1300000, 100000], KM: [1200000, 100000], JM: [1100000, 100000], JA: [900000, 80000], GM: [850000, 80000, true], FH: [750000, 60000], AM: [700000, 60000], AJ: [650000, 60000], PL: [600000, 50000], UK: [1000000, 100000] };
 function payrollSeed() {
-  const emp = {}; Object.keys(PAY).forEach(k => { const [basic, allow, heslb] = PAY[k]; emp[k] = { basic, allow, heslb: !!heslb, bank: 'CRDB Bank', acc: '015' + String(1000000 + basic).slice(0, 7), nssfNo: 'NSSF-' + (480000 + basic / 1000), tin: '1' + String(basic).slice(0, 2) + '-' + String(allow).slice(0, 3) + '-448', active: true }; });
+  const emp = {}; Object.keys(PAY).forEach(k => { const [basic, allow, heslb] = PAY[k]; emp[k] = { basic, allow, heslb: !!heslb, nssf: k !== 'JA', paye: k !== 'JA', sdl: true, wcf: true, bank: 'CRDB Bank', acc: '015' + String(1000000 + basic).slice(0, 7), nssfNo: 'NSSF-' + (480000 + basic / 1000), tin: '1' + String(basic).slice(0, 2) + '-' + String(allow).slice(0, 3) + '-448', active: true }; });
   const d = new Date(); d.setMonth(d.getMonth() - 1); const month = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   const lines = Object.keys(emp).map(k => Object.assign({ k }, payLine(emp[k])));
   const sum = key => lines.reduce((a, l) => a + l[key], 0);

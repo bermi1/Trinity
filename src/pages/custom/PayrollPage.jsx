@@ -6,14 +6,14 @@ const digits = v => String(v || '').replace(/\D/g, '');
 
 function Employee({ e, admin }) {
   const [open, setOpen] = useState(false);
-  const [f, setF] = useState({ basic: String(e.e.basic || ''), allow: String(e.e.allow || ''), heslb: !!e.e.heslb, bank: e.e.bank || '', acc: e.e.acc || '', nssfNo: e.e.nssfNo || '', tin: e.e.tin || '' });
+  const [f, setF] = useState({ basic: String(e.e.basic || ''), allow: String(e.e.allow || ''), heslb: !!e.e.heslb, nssf: !!e.e.nssf, paye: !!e.e.paye, sdl: !!e.e.sdl, wcf: !!e.e.wcf, bank: e.e.bank || '', acc: e.e.acc || '', nssfNo: e.e.nssfNo || '', tin: e.e.tin || '' });
   const [err, setErr] = useState('');
   const set = (k, v) => setF(x => Object.assign({}, x, { [k]: v }));
   return (
     <li className="py-emp" data-emp={e.k}>
       <button type="button" className="py-emp-row" onClick={() => admin && setOpen(!open)} aria-expanded={open}>
         <span className="pv-face" style={faceStyle(e, { width: 34, height: 34 })}>{faceText(e)}</span>
-        <span className="py-emp-n"><b>{e.n}</b><small>{e.role || '—'}</small></span>
+        <span className="py-emp-n"><b>{e.n}</b><small>{e.role || '—'}{e.stat ? ' · ' + e.stat : ''}</small></span>
         <span className="py-num"><small>Gross</small><b>{e.gross}</b></span>
         <span className="py-num"><small>Net</small><b>{e.net}</b></span>
         {!e.has ? <span className="br-tag">No pay record</span> : null}
@@ -23,7 +23,7 @@ function Employee({ e, admin }) {
           <div className="fh-three">
             <label className="ff"><span className="ff-l">Basic salary (TZS)</span><input inputMode="numeric" value={f.basic ? n(f.basic) : ''} onChange={x => set('basic', digits(x.target.value))} aria-label={'Basic salary · ' + e.n} /></label>
             <label className="ff"><span className="ff-l">Allowances (TZS)</span><input inputMode="numeric" value={f.allow ? n(f.allow) : ''} onChange={x => set('allow', digits(x.target.value))} aria-label={'Allowances · ' + e.n} /></label>
-            <div className="ff"><span className="ff-l">HESLB loan</span><div className="me-mini"><button type="button" className={f.heslb ? 'is-on' : ''} onClick={() => set('heslb', !f.heslb)}>{f.heslb ? 'Yes · 15%' : 'No'}</button></div></div>
+            <div className="ff py-stat"><span className="ff-l">Statutory deductions · only those switched on apply</span><div className="me-mini" role="group" aria-label={'Statutory deductions · ' + e.n}>{[['nssf', 'NSSF 10%'], ['paye', 'PAYE'], ['heslb', 'HESLB 15%'], ['sdl', 'SDL 3.5% (employer)'], ['wcf', 'WCF 0.5% (employer)']].map(([k, l]) => <button key={k} type="button" aria-pressed={!!f[k]} className={f[k] ? 'is-on' : ''} onClick={() => set(k, !f[k])}>{f[k] ? '✓ ' : ''}{l}</button>)}</div></div>
             <label className="ff"><span className="ff-l">Bank</span><input value={f.bank} onChange={x => set('bank', x.target.value)} /></label>
             <label className="ff"><span className="ff-l">Account no.</span><input value={f.acc} onChange={x => set('acc', x.target.value)} /></label>
             <label className="ff"><span className="ff-l">NSSF no.</span><input value={f.nssfNo} onChange={x => set('nssfNo', x.target.value)} /></label>
@@ -37,7 +37,30 @@ function Employee({ e, admin }) {
   );
 }
 
+// The GM's deduction lines for one employee: description and amount, as many as needed.
+function Deductions({ l, onDone }) {
+  const [rows, setRows] = useState(l.deds.length ? l.deds.map(d => ({ d: d.d, amt: String(d.amt) })) : [{ d: '', amt: '' }]);
+  const [err, setErr] = useState('');
+  const set = (i, k, v) => setRows(x => x.map((r, j) => (j === i ? Object.assign({}, r, { [k]: v }) : r)));
+  const total = rows.reduce((a, r) => a + (+r.amt || 0), 0);
+  return (
+    <div className="py-deds" aria-label={'Deductions · ' + l.n}>
+      {rows.map((r, i) => (
+        <div key={i} className="py-ded">
+          <input value={r.d} onChange={e => set(i, 'd', e.target.value)} placeholder="Description (e.g. Salary advance, Loan, Uniform)" aria-label={'Deduction ' + (i + 1) + ' description · ' + l.n} />
+          <input inputMode="numeric" value={r.amt ? n(r.amt) : ''} onChange={e => set(i, 'amt', digits(e.target.value))} placeholder="TZS" aria-label={'Deduction ' + (i + 1) + ' amount · ' + l.n} />
+          <button type="button" className="td-x" onClick={() => setRows(x => x.filter((_, j) => j !== i))} aria-label={'Remove deduction ' + (i + 1)}>×</button>
+        </div>
+      ))}
+      <div className="fh-row"><button type="button" className="fh-addline" onClick={() => setRows(x => [...x, { d: '', amt: '' }])}>+ Add deduction</button><span className="k-sub">Total TZS {n(total)}</span></div>
+      {err ? <div className="fm-err" role="alert">{err}</div> : null}
+      <div className="fh-row"><button type="button" className="me-cancel" onClick={onDone}>Cancel</button><button type="button" className="me-save" onClick={() => { const m = l.setDeds(rows); if (m) setErr(m); else onDone(); }}>Save deductions</button></div>
+    </div>
+  );
+}
+
 function Run({ r }) {
+  const [ded, setDed] = useState('');
   const [ref, setRef] = useState(''); const [back, setBack] = useState(''); const [showBack, setShowBack] = useState(false); const [err, setErr] = useState('');
   const run = fn => { const m = fn(); setErr(m || ''); };
   return (
@@ -54,17 +77,18 @@ function Run({ r }) {
       </div>
       <div className="fr-table-wrap">
         <table className="fr-table py-table">
-          <thead><tr><th>Employee</th><th className="r">Basic</th><th className="r">Allow.</th><th className="r">Gross</th><th className="r">NSSF</th><th className="r">PAYE</th><th className="r">HESLB</th><th className="r">Advance</th><th className="r">Net</th><th /></tr></thead>
+          <thead><tr><th>Employee</th><th className="r">Basic</th><th className="r">Allow.</th><th className="r">Gross</th><th className="r">NSSF</th><th className="r">PAYE</th><th className="r">HESLB</th><th className="r">Other deductions</th><th className="r">Net</th><th /></tr></thead>
           <tbody>{r.lines.map(l => (
             <tr key={l.k}>
               <td><b>{l.n}</b></td><td className="r">{l.basicT}</td><td className="r">{l.allowT}</td><td className="r">{l.grossT}</td><td className="r">{l.nssfT}</td><td className="r">{l.payeT}</td><td className="r">{l.heslbT}</td>
-              <td className="r">{r.canEdit ? <input className="py-adv" inputMode="numeric" defaultValue={l.otherN || ''} onBlur={e => l.setOther(digits(e.target.value))} aria-label={'Advance · ' + l.n} placeholder="0" /> : l.otherT}</td>
+              <td className="r">{r.canEdit ? <button type="button" className="td-start" onClick={() => setDed(ded === l.k ? '' : l.k)} aria-label={'Deductions · ' + l.n}>{l.otherN ? l.otherT : 'Add'}</button> : <span title={l.deds.map(d => d.d + ': ' + n(d.amt)).join(', ')}>{l.otherT}</span>}</td>
               <td className="r"><b>{l.netT}</b></td>
               <td>{r.st === 'paid' ? <button type="button" className="td-start" onClick={l.slip}>Payslip</button> : null}</td>
             </tr>
           ))}</tbody>
         </table>
       </div>
+      {ded ? <Deductions key={ded} l={r.lines.find(x => x.k === ded)} onDone={() => setDed('')} /> : null}
       <p className="k-sub">{[r.gm ? 'GM: ' + r.gm : '', r.mgmt ? 'Management: ' + r.mgmt : '', r.paid ? 'Paid: ' + r.paid : ''].filter(Boolean).join(' · ')}</p>
       {err ? <div className="fm-err" role="alert">{err}</div> : null}
       <div className="fh-row">
@@ -89,7 +113,7 @@ export default function PayrollPage({ v }) {
   const cur = P.runs.filter(r => r.st !== 'paid'), past = P.runs.filter(r => r.st === 'paid');
   return (
     <>
-      <PageHead kicker="People" title="Payroll" sub="NSSF, PAYE, HESLB and employer costs (NSSF, SDL, WCF) are worked out from each pay record. GM prepares and approves, Management approves, Finance pays.">
+      <PageHead kicker="People" title="Payroll" sub="NSSF, PAYE, HESLB and employer costs (NSSF, SDL, WCF) are worked out from each pay record. Only the deductions switched on in each pay record apply. The GM prepares and approves, Management approves, then the payment is recorded.">
         {P.admin && !P.hasThisMonth ? <Btn kind="dark" onClick={() => setErr(P.prepare())}>Prepare {P.thisMonth} payroll</Btn> : null}
       </PageHead>
       {err ? <div className="fm-err" role="alert">{err}</div> : null}

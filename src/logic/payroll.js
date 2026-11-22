@@ -16,13 +16,18 @@ export function paye(taxable) {
 }
 export const RATES = { nssfEmp: 0.10, nssfEr: 0.10, sdl: 0.035, wcf: 0.005, heslb: 0.15 };
 
-// One employee's pay for the month.
-export function payLine(e, other = 0) {
+// One employee's pay for the month. Statutory items apply only when switched on in that employee's
+// pay record (NSSF, PAYE, HESLB, SDL, WCF); nothing is deducted that was not set. Other deductions are
+// lines with a description, entered by the GM on the month's payroll.
+export const STAT = [['nssf', 'NSSF 10% (+10% employer)'], ['paye', 'PAYE'], ['heslb', 'HESLB loan 15%'], ['sdl', 'SDL 3.5% (employer)'], ['wcf', 'WCF 0.5% (employer)']];
+export function payLine(e, deds) {
   const basic = Math.round(+e.basic || 0), allow = Math.round(+e.allow || 0), gross = basic + allow;
-  const nssf = Math.round(gross * RATES.nssfEmp), taxable = gross - nssf, tax = paye(taxable);
-  const heslb = e.heslb ? Math.round(basic * RATES.heslb) : 0, adv = Math.round(+other || 0);
-  return { basic, allow, gross, nssf, taxable, paye: tax, heslb, other: adv, net: gross - nssf - tax - heslb - adv,
-    erNssf: Math.round(gross * RATES.nssfEr), sdl: Math.round(gross * RATES.sdl), wcf: Math.round(gross * RATES.wcf) };
+  const nssf = e.nssf ? Math.round(gross * RATES.nssfEmp) : 0, taxable = gross - nssf, tax = e.paye ? paye(taxable) : 0;
+  const heslb = e.heslb ? Math.round(basic * RATES.heslb) : 0;
+  const list = (Array.isArray(deds) ? deds : []).map(d => ({ d: String(d.d || '').trim(), amt: Math.max(0, Math.round(+d.amt || 0)) })).filter(d => d.amt > 0);
+  const other = list.reduce((a, d) => a + d.amt, 0);
+  return { basic, allow, gross, nssf, taxable, paye: tax, heslb, other, deds: list, net: gross - nssf - tax - heslb - other,
+    erNssf: e.nssf ? Math.round(gross * RATES.nssfEr) : 0, sdl: e.sdl ? Math.round(gross * RATES.sdl) : 0, wcf: e.wcf ? Math.round(gross * RATES.wcf) : 0 };
 }
 const sumBy = (lines, k) => lines.reduce((a, l) => a + (l[k] || 0), 0);
 export const monthLabel = m => { const [y, mo] = m.split('-').map(Number); return new Date(y, mo - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }); };
@@ -30,12 +35,13 @@ export const monthLabel = m => { const [y, mo] = m.split('-').map(Number); retur
 export const payrollMethods = {
   pr() { return Object.assign({ emp: {}, runs: [] }, this.state.payroll || {}); },
   canPayrollAdmin() { return ['gm', 'ceo'].includes(this.state.role || 'ceo'); },
-  canSeePayroll() { return ['gm', 'ceo', 'finance'].includes(this.state.role || 'ceo'); },
+  // Payroll is seen only by the GM and Management; everyone sees their own payslips.
+  canSeePayroll() { return ['gm', 'ceo'].includes(this.state.role || 'ceo'); },
   setEmployee(k, f) {
     if (!this.canPayrollAdmin()) return 'The GM keeps the pay records';
     if (!(+f.basic > 0)) return 'Enter the basic salary';
     const P = this.pr();
-    this.setState({ payroll: Object.assign({}, P, { emp: Object.assign({}, P.emp, { [k]: { basic: Math.round(+f.basic), allow: Math.round(+f.allow || 0), heslb: !!f.heslb, bank: (f.bank || '').trim(), acc: (f.acc || '').trim(), nssfNo: (f.nssfNo || '').trim(), tin: (f.tin || '').trim(), active: f.active !== false } }) }) });
+    this.setState({ payroll: Object.assign({}, P, { emp: Object.assign({}, P.emp, { [k]: { basic: Math.round(+f.basic), allow: Math.round(+f.allow || 0), heslb: !!f.heslb, nssf: !!f.nssf, paye: !!f.paye, sdl: !!f.sdl, wcf: !!f.wcf, bank: (f.bank || '').trim(), acc: (f.acc || '').trim(), nssfNo: (f.nssfNo || '').trim(), tin: (f.tin || '').trim(), active: f.active !== false } }) }) });
     this.toast('Pay record saved · ' + this.av(k).n);
     return '';
   },
@@ -51,10 +57,19 @@ export const payrollMethods = {
     this.toast(monthLabel(month) + ' payroll prepared · ' + lines.length + ' employees');
     return '';
   },
-  setDeduction(runId, k, amt) {
-    const P = this.pr(), run = P.runs.find(r => r.id === runId); if (!run || run.st !== 'draft') return;
-    const lines = run.lines.map(l => (l.k === k ? Object.assign({ k }, payLine(P.emp[k] || l, amt)) : l));
-    this.setState({ payroll: Object.assign({}, P, { runs: P.runs.map(r => (r.id === runId ? Object.assign({}, r, { lines }) : r)) }) });
+  // The GM's deduction lines for one employee on a draft payroll: each with a description and an amount.
+  setDeductions(runId, k, list) {
+    if (!this.canPayrollAdmin()) return 'The GM sets the deductions';
+    const P = this.pr(), run = P.runs.find(r => r.id === runId); if (!run || run.st !== 'draft') return 'Only a draft payroll can change';
+    const clean = (list || []).map(d => ({ d: String(d.d || '').trim(), amt: Math.round(+d.amt || 0) })).filter(d => d.amt > 0 || d.d);
+    if (clean.some(d => d.amt > 0 && !d.d)) return 'Describe every deduction';
+    if (clean.some(d => d.d && !(d.amt > 0))) return 'Enter an amount for every deduction';
+    const line = run.lines.find(l => l.k === k); if (!line) return 'Not on this payroll';
+    const next = Object.assign({ k }, payLine(P.emp[k] || line, clean));
+    if (next.net < 0) return 'Deductions are more than the pay';
+    this.setState({ payroll: Object.assign({}, P, { runs: P.runs.map(r => (r.id === runId ? Object.assign({}, r, { lines: r.lines.map(l => (l.k === k ? next : l)) }) : r)) }) });
+    this.toast('Deductions saved · ' + this.av(k).n);
+    return '';
   },
   updateRun(runId, patch) { const P = this.pr(); this.setState({ payroll: Object.assign({}, P, { runs: P.runs.map(r => (r.id === runId ? Object.assign({}, r, patch) : r)) }) }); },
   // GM approves and sends to Management; Management approves; Finance pays.
@@ -68,8 +83,8 @@ export const payrollMethods = {
     }
     if ((run.st === 'mgmt' || run.st === 'draft') && role === 'ceo') {
       this.updateRun(runId, { st: 'approved', gm: run.gm || at, mgmt: at });
-      this.remind(this.ROLES.finance.k, 'Payroll approved: pay salaries · ' + monthLabel(run.month), 'payroll', 'wallet', 'Net ' + net);
-      this.toast('Payroll approved · Finance told to pay'); return '';
+      this.remind(this.ROLES.gm.k, 'Payroll approved: pay salaries · ' + monthLabel(run.month), 'payroll', 'wallet', 'Net ' + net);
+      this.toast('Payroll approved · ready to pay'); return '';
     }
     return 'Not waiting for you';
   },
@@ -81,10 +96,11 @@ export const payrollMethods = {
     this.remind(this.ROLES.gm.k, 'Payroll sent back · ' + monthLabel(run.month), 'payroll', 'wallet', note.trim());
     this.toast('Sent back to the GM'); return '';
   },
-  // Finance pays: net salaries go into the cash book; statutory amounts become this month's payments due.
+  // The GM or Management records the payment: net salaries go into the cash book; statutory amounts
+  // become this month's payments due for Finance (totals only, no individual salaries).
   payRun(runId, ref) {
     const run = this.pr().runs.find(r => r.id === runId); if (!run) return 'Not found';
-    if ((this.state.role || 'ceo') !== 'finance') return 'Finance pays the salaries';
+    if (!this.canPayrollAdmin()) return 'The GM or Management records the salary payment';
     if (run.st !== 'approved') return 'The payroll must be approved by the GM and Management first';
     if (!(ref || '').trim()) return 'Enter the bank reference';
     const net = sumBy(run.lines, 'net'), today = dayKey(0);
@@ -112,7 +128,7 @@ h3{margin:18px 0 4px;font-size:12px;letter-spacing:.12em;text-transform:uppercas
 <div class=top><img src="${location.origin}/brand/trinity-logo-full.png" alt=""><div><h1>PAYSLIP</h1><div>${monthLabel(run.month)}</div></div></div>
 <div class=g><span>Employee</span><b>${esc(this.av(k).n)}</b><span>Position</span><b>${esc(st.role || '')}</b><span>NSSF no.</span><b>${esc(e.nssfNo || '—')}</b><span>TIN</span><b>${esc(e.tin || '—')}</b><span>Bank</span><b>${esc([e.bank, e.acc].filter(Boolean).join(' · ') || '—')}</b><span>Paid on</span><b>${esc(run.paid ? run.paid.at : '')}</b></div>
 <h3>Earnings</h3><table>${row('Basic salary', n(l.basic))}${row('Allowances', n(l.allow))}${row('Gross pay', n(l.gross), true)}</table>
-<h3>Deductions</h3><table>${row('NSSF (10%)', n(l.nssf))}${row('PAYE', n(l.paye))}${l.heslb ? row('HESLB loan (15%)', n(l.heslb)) : ''}${l.other ? row('Salary advance / other', n(l.other)) : ''}${row('Total deductions', n(l.nssf + l.paye + l.heslb + l.other), true)}</table>
+<h3>Deductions</h3><table>${l.nssf ? row('NSSF (10%)', n(l.nssf)) : ''}${l.paye ? row('PAYE', n(l.paye)) : ''}${l.heslb ? row('HESLB loan (15%)', n(l.heslb)) : ''}${(l.deds && l.deds.length ? l.deds : (l.other ? [{ d: 'Other deductions', amt: l.other }] : [])).map(d => row(esc(d.d), n(d.amt))).join('')}${row('Total deductions', n(l.nssf + l.paye + l.heslb + l.other), true)}</table>
 <div class=net><span>Net pay</span><span>TZS ${n(l.net)}</span></div>
 <p style="color:#6E6A7C;font-size:11px;margin-top:14px">TRINITY MARK SOLUTIONS LIMITED · P.O. Box 15617, Dar es Salaam</p></div></body></html>`;
     const w = window.open('', '_blank'); if (!w) { this.toast('Allow pop-ups to open the payslip'); return; }
@@ -127,15 +143,15 @@ export function payrollVals(s) {
   const staff = (s.staff || []).filter(p => p.k !== this.ROLES.ceo.k);
   const keys = [...new Set([this.ROLES.gm.k, ...staff.map(p => p.k), ...Object.keys(P.emp)])].filter(k => k !== this.ROLES.ceo.k);
   const emps = keys.map(k => { const e = P.emp[k], a = this.av(k), st = (s.staff || []).find(p => p.k === k) || {}; const l = e ? payLine(e) : null;
-    return { k, n: a.n, i: a.i, c: a.c, ph: a.ph, role: st.role || (k === this.ROLES.gm.k ? 'General Manager' : ''), has: !!e, e: e || { basic: '', allow: '', heslb: false, bank: '', acc: '', nssfNo: '', tin: '' }, gross: l ? f(l.gross) : '—', net: l ? f(l.net) : '—', save: x => this.setEmployee(k, x) }; });
+    return { k, n: a.n, i: a.i, c: a.c, ph: a.ph, role: st.role || (k === this.ROLES.gm.k ? 'General Manager' : ''), has: !!e, e: e || { basic: '', allow: '', heslb: false, nssf: false, paye: false, sdl: false, wcf: false, bank: '', acc: '', nssfNo: '', tin: '' }, stat: e ? STAT.filter(([k]) => e[k]).map(x => x[1].split(' ')[0]).join(' · ') || 'No statutory deductions' : '', gross: l ? f(l.gross) : '—', net: l ? f(l.net) : '—', save: x => this.setEmployee(k, x) }; });
   const runs = P.runs.map(r => {
     const T = k => sumBy(r.lines, k);
-    return { id: r.id, month: monthLabel(r.month), st: r.st, stl: { draft: 'Draft · GM', mgmt: 'Waiting for Management', approved: 'Approved · Finance to pay', paid: 'Paid' }[r.st], note: r.note || '',
+    return { id: r.id, month: monthLabel(r.month), st: r.st, stl: { draft: 'Draft · GM', mgmt: 'Waiting for Management', approved: 'Approved · record the payment', paid: 'Paid' }[r.st], note: r.note || '',
       gm: r.gm ? this.av(r.gm.by).n + ' · ' + r.gm.at : '', mgmt: r.mgmt ? this.av(r.mgmt.by).n + ' · ' + r.mgmt.at : '', paid: r.paid ? this.av(r.paid.by).n + ' · ' + r.paid.at + ' · ref ' + r.paid.ref : '',
       totals: { gross: f(T('gross')), nssf: f(T('nssf')), paye: f(T('paye')), heslb: f(T('heslb')), other: f(T('other')), net: f(T('net')), erNssf: f(T('erNssf')), sdl: f(T('sdl')), wcf: f(T('wcf')), cost: f(T('gross') + T('erNssf') + T('sdl') + T('wcf')) },
-      lines: r.lines.map(l => Object.assign({ n: this.av(l.k).n, i: this.av(l.k).i, c: this.av(l.k).c }, Object.fromEntries(['basic', 'allow', 'gross', 'nssf', 'paye', 'heslb', 'other', 'net'].map(k => [k + 'T', f(l[k])])), { k: l.k, otherN: l.other, setOther: a => this.setDeduction(r.id, l.k, a), slip: () => this.printPayslip(r.id, l.k) })),
+      lines: r.lines.map(l => Object.assign({ n: this.av(l.k).n, i: this.av(l.k).i, c: this.av(l.k).c }, Object.fromEntries(['basic', 'allow', 'gross', 'nssf', 'paye', 'heslb', 'other', 'net'].map(k => [k + 'T', f(l[k])])), { k: l.k, otherN: l.other, deds: l.deds || (l.other ? [{ d: 'Other deductions', amt: l.other }] : []), setDeds: list => this.setDeductions(r.id, l.k, list), slip: () => this.printPayslip(r.id, l.k) })),
       canEdit: r.st === 'draft' && this.canPayrollAdmin(),
-      canApprove: (r.st === 'draft' && role === 'gm') || ((r.st === 'mgmt' || r.st === 'draft') && role === 'ceo'), canReturn: r.st === 'mgmt' && role === 'ceo', canPay: r.st === 'approved' && role === 'finance',
+      canApprove: (r.st === 'draft' && role === 'gm') || ((r.st === 'mgmt' || r.st === 'draft') && role === 'ceo'), canReturn: r.st === 'mgmt' && role === 'ceo', canPay: r.st === 'approved' && this.canPayrollAdmin(),
       approve: () => this.approveRun(r.id), sendBack: n => this.returnRun(r.id, n), pay: ref => this.payRun(r.id, ref) };
   });
   const month = dayKey(0).slice(0, 7);
