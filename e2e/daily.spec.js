@@ -166,3 +166,21 @@ test.fixme('projects have five stages; older projects are shown in the new stage
   await toast(page, /closed/);
   expect((await saved(page)).projects.find(p => p.id === 'PRJ-0226')).toMatchObject({ stage: 5, sv: 2, st: 'done' });
 });
+
+test('an internal office request carries its category through the approvals', async ({ page }) => {
+  await openAs(page, 'staff', 'staffportal');
+  await btn(page, 'Request money').click();
+  await chooseRequest(page, 'Internal office request');
+  await modal(page).locator('button').last().click();
+  await expect(modal(page).getByText(/Category/).first()).toBeVisible();
+  await fillModal(page, { Category: 'Internet & phone', Title: 'Office internet, November', 'Amount (TZS)': '450000', Purpose: 'Monthly fibre bill' });
+  await modal(page).locator('button').last().click();
+  await toast(page, 'submitted · waiting for General Manager');
+  const r = (await saved(page)).reqs[0];
+  expect(r).toMatchObject({ type: 'internal', cat: 'Internet & phone', title: 'Office internet, November' });
+
+  await switchTo(page, 'General Manager');
+  await side(page, 'Approvals');
+  await btn(page, /^All ·/).click();
+  await expect(page.getByText(/Internal · Internet & phone/).first()).toBeVisible();
+});

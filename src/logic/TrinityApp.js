@@ -2,7 +2,7 @@
 // State lives here; the view modules turn it into the flat values the
 // components render (see src/logic/view).
 import Logic from './Logic';
-import { IC, PPL, ROLES, TABS, ST, STAGES, OLD_STAGE, CHAIN, CH, REQ_TYPES, PARKED } from './constants';
+import { IC, PPL, ROLES, TABS, ST, STAGES, OLD_STAGE, CHAIN, CH, REQ_TYPES, PARKED, INTERNAL_CATS } from './constants';
 import { seed, dayKey } from './seed';
 import { renderVals } from './view/shell';
 import { pageVals } from './view/workflow';
@@ -519,7 +519,7 @@ export default class TrinityApp extends Logic {
       customer:{title:'Add client',sub:'Everything an invoice needs about the client. The PO number, PO date and vendor number come later, per project.',submit:'Add client',wide:true,fields:[{k:'n',l:'Company name',ph:'e.g. CRDB Bank PLC',req:1},{k:'contact',l:'Contact person',ph:'Name'},{k:'title',l:'Contact title',ph:'e.g. Head of Marketing'},{k:'phone',l:'Phone',ph:'+255 7xx xxx xxx'},{k:'email',l:'Email',ph:'name@company.co.tz'},{k:'tin',l:'TIN',ph:'100-000-000'},{k:'vrn',l:'VRN',ph:'10-000000-X'},{k:'address',l:'Physical address',ph:'Street, building, area'},{k:'box',l:'P.O. Box',ph:'e.g. P.O. Box 268'},{k:'city',l:'City',ph:'Dar es Salaam'},{k:'owner',l:'Account owner',opts:this.teamOf('clientservice').map(k => ({v:k,l:this.av(k).n}))}]},
       brief:{title:'Send brief to Creative',sub:'The Creative lead receives it and assigns a designer. You are told when artwork goes to the client.',submit:'Send brief',fields:[{k:'t',l:'What is needed',ph:'e.g. Stage backdrop and 3 roll-up banners',req:1},{k:'p',l:'Project',opts:PO},{k:'place',l:'For',opts:O(['Indoor event','Outdoor event','Print','Digital'])},{k:'note',l:'Brief memo',ph:'Theme, sizes, client wishes, deadlines'},{k:'due',l:'Needed by',ph:'e.g. Fri 21'}]},
       reqProject:{title:'Project request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'amt',l:'Amount (TZS)',type:'number',ph:'300000',req:1},{k:'cat',l:'Category',opts:O(['Team','Operations','Supplies'])},{k:'p',l:'Project',opts:PO},{k:'purpose',l:'Purpose',ph:'What is the money for?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'}]},
-      reqInternal:{title:'Internal office request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'title',l:'Title',ph:'e.g. Office internet, May',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'150000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for and why?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'},...(this.fl().allocs.some(a => a.to.indexOf('office:') === 0) ? [{k:'alloc',l:'From the office float',opts:this.fl().allocs.filter(a => a.to.indexOf('office:') === 0).map(a => ({v:a.to,l:a.to.slice(7) + ' · ' + this.fmtT(this.allocUse(a).left) + ' left'}))}] : [])]},
+      reqInternal:{title:'Internal office request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'cat',l:'Category',opts:O(INTERNAL_CATS),req:1},{k:'title',l:'Title',ph:'e.g. Office internet, May',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'150000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for and why?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'},...(this.fl().allocs.some(a => a.to.indexOf('office:') === 0) ? [{k:'alloc',l:'From the office float',opts:this.fl().allocs.filter(a => a.to.indexOf('office:') === 0).map(a => ({v:a.to,l:a.to.slice(7) + ' · ' + this.fmtT(this.allocUse(a).left) + ' left'}))}] : [])]},
       reqEmergency:{title:'Emergency request',sub:'Goes to GM → Management → Finance pays. Use only when it cannot wait.',submit:'Submit emergency',fields:[{k:'title',l:'Title',ph:'e.g. Generator repair on site',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'250000',req:1},{k:'p',l:'Project',opts:[{v:'',l:'Not for a project'}, ...PO]},{k:'purpose',l:'What happened, and what is it for?',ph:'Explain the emergency',req:1}]},
       reqMgmt:{title:'Management request',sub:'Finance checks, then pays.',submit:'Submit request',fields:[{k:'title',l:'Title',ph:'e.g. Client meeting expenses',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'500000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for?',req:1}]},
       lead:{title:'New lead',sub:'Leads move Lead → Qualified → Proposal → Negotiation → Won.',submit:'Add lead',fields:[{k:'c',l:'Client',ph:'Company name',req:1},{k:'t',l:'Opportunity',ph:'e.g. Product launch event',req:1},{k:'v',l:'Estimated value (TZS M)',type:'number',ph:'80'},{k:'src',l:'Source',opts:O(['Website','Referral','Tender','Existing client','Walk-in'])}]},
@@ -611,7 +611,7 @@ export default class TrinityApp extends Logic {
     const id = this.nextId('REQ', s.reqs), draft = {type, amt};
     const step = this.nextStep(draft, 0), log = [this.now()];
     for (let i = 1; i < step; i++) log.push('Not needed');
-    const r = {id, type, who, amt, cat:type === 'project' ? (f.cat || 'Operations') : REQ_TYPES[type].l.replace(' request', ''), title:(f.title || '').trim(), purpose:(f.purpose || '').trim(), p:f.p || '', alloc:f.alloc || '', need:f.need || (type === 'emergency' ? 'Today' : 'This week'), step, st:step >= 5 ? 'approved' : 'pending', log};
+    const r = {id, type, who, amt, cat:type === 'project' ? (f.cat || 'Operations') : type === 'internal' && f.cat ? f.cat : REQ_TYPES[type].l.replace(' request', ''), title:(f.title || '').trim(), purpose:(f.purpose || '').trim(), p:f.p || '', alloc:f.alloc || '', need:f.need || (type === 'emergency' ? 'Today' : 'This week'), step, st:step >= 5 ? 'approved' : 'pending', log};
     this.setState(x => ({reqs:[r, ...x.reqs], reqSel:id}));
     const to = step >= 5 ? 'RT' : this.approverAt(r, step);
     this.remind(to, step >= 5 ? id + ' is ready to pay' : id + ' needs your approval', 'requests', 'banknote', this.av(who).n + ' · ' + this.fmtT(amt));
@@ -620,7 +620,7 @@ export default class TrinityApp extends Logic {
     return id;
   }
   // What a request is for, in a few words.
-  reqWhat(r) { const t = r.type || 'project'; return t === 'project' ? (r.cat || 'Project') + ' · ' + (this.proj(r.p).name || 'Project') : REQ_TYPES[t].l.replace(' request', '') + ' · ' + (r.title || r.purpose || ''); }
+  reqWhat(r) { const t = r.type || 'project'; return t === 'project' ? (r.cat || 'Project') + ' · ' + (this.proj(r.p).name || 'Project') : (t === 'internal' && r.cat && r.cat !== 'Internal office' ? 'Internal · ' + r.cat : REQ_TYPES[t].l.replace(' request', '')) + ' · ' + (r.title || r.purpose || ''); }
   decide(r, ok) {
     const t = this.now(), skip = [];
     const n = this.nextStep(r, r.step);

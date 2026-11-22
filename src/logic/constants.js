@@ -80,6 +80,8 @@ export const OLD_STAGE = [1,1,1,2,2,2,3,3,3,3,4,4,4,5,5,5];
 // Approval positions. Each request type skips the ones it does not use (see TrinityApp.skipsFor);
 // position 1 (Project Manager) only appears on requests made before the request types existed.
 export const CHAIN = ['Requested','Project Manager','General Manager','Finance','Management','Payment'];
+// Categories of an internal office request.
+export const INTERNAL_CATS = ['Office supplies', 'Internet & phone', 'Utilities (power, water)', 'Rent', 'Repairs & maintenance', 'Cleaning', 'Refreshments', 'Transport', 'Staff welfare', 'Equipment', 'Other'];
 export const REQ_TYPES = {
   project:{l:'Project request', skip:[1]},
   internal:{l:'Internal office request', skip:[1]},
