@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MemoCard, MemoComposer } from './MemoPage';
 import { Btn, Pill, Empty, faceStyle, faceText } from '../../ui/kit';
 import BriefItem from '../../components/BriefItem';
 import ProjectNow from './ProjectNow';
@@ -66,7 +67,7 @@ function PurchaseOrder({ P }) {
   );
 }
 
-function Overview({ P }) {
+function Overview({ P, M }) {
   return (
     <div className="rc-sections">
       {P.po && (P.po.can || P.po.has || P.money) ? <PurchaseOrder key={P.po.no + P.po.date} P={P} /> : null}
@@ -86,6 +87,8 @@ function Overview({ P }) {
         </section>
       ) : null}
 
+      <ProjectMemos P={P} M={M} />
+
       <section className="rc-sec">
         <h3><span className="rc-dot" style={{ background: '#B49A5A' }} />{P.budget || P.pmOpts ? 'Operations' : 'Team'}</h3>
         {P.pmOpts ? (
@@ -101,6 +104,18 @@ function Overview({ P }) {
           </div>
         ) : null}
         <div className="pv-team">{P.team.length ? P.team.map(p => <span key={p.k} className="pv-member"><Face p={p} size={26} />{p.n.split(' ')[0]}</span>) : <span className="k-sub">No team yet</span>}</div>
+        {P.teamPick ? (
+          <div className="ff" data-field="Execution team">
+            <span className="ff-l">Execution team · tap to add or remove</span>
+            <div className="ff-people" role="group" aria-label="Execution team">
+              {P.teamPick.people.map(p => (
+                <button key={p.k} type="button" aria-pressed={P.teamPick.on.includes(p.k)} aria-label={p.n} className={P.teamPick.on.includes(p.k) ? 'is-on' : ''} onClick={() => P.teamPick.toggle(p.k)}>
+                  <span className="ff-face" style={faceStyle(p)}>{faceText(p)}</span><span className="ff-name">{p.n.split(' ')[0]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
         {P.budget ? (
           <div className="pv-budget">
             <div className="pv-budnums">
@@ -147,6 +162,20 @@ function Overview({ P }) {
 // A project as one record, the way Odoo and Zoho show it: breadcrumb and actions, the stage bar,
 // the key fields, count buttons that open each part, and the activity on the side.
 // What appears depends on the person: each department sees the part it adds.
+// Memos about this project, and the work attached through them.
+function ProjectMemos({ P, M }) {
+  const [write, setWrite] = useState(false);
+  if (!P.memos.length && !P.files.length && !P.canMemo) return null;
+  return (
+    <section className="rc-sec" aria-label="Memos and files">
+      <h3><span className="rc-dot" style={{ background: '#6D3CC2' }} />Memos & files{P.canMemo ? <button type="button" className="td-start" style={{ marginLeft: 'auto' }} onClick={() => setWrite(!write)}>Send memo</button> : null}</h3>
+      {write ? <MemoComposer M={M} project={P.id} onDone={() => setWrite(false)} /> : null}
+      {P.memos.length ? <ul className="mm-list">{P.memos.map(m => <MemoCard key={m.id} m={m} />)}</ul> : <p className="k-sub">No memos on this project yet.</p>}
+      {P.files.length ? <div className="mm-files">{P.files.map((f, i) => <button key={i} type="button" className="mm-file" onClick={f.open} title={f.name}>{f.img ? <img src={f.img} alt="" /> : <span className="bi-doc">FILE</span>}<span><b>{f.name}</b><small>{f.by} · {f.at}</small></span></button>)}</div> : null}
+    </section>
+  );
+}
+
 export default function ProjectView({ v }) {
   const P = v.PV;
   if (P.none) return <div className="rc-sheet"><Empty>This project is not shared with you.</Empty><Btn kind="ghost" onClick={P.back}>Back to projects</Btn></div>;
@@ -193,7 +222,7 @@ export default function ProjectView({ v }) {
           </div>
 
           <div className="rc-tab">
-            {tab === 'overview' ? <Overview P={P} /> : null}
+            {tab === 'overview' ? <Overview P={P} M={v.MEMO} /> : null}
             {tab === 'designs' ? (P.briefs.length ? <ul className="bi-list">{P.briefs.map(b => <BriefItem key={b.id} b={b} designers={P.designers} showFrom />)}</ul> : <Empty>No design brief yet.</Empty>) : null}
             {tab === 'tasks' ? (
               P.tasks.length ? (

@@ -22,6 +22,7 @@ import { projectMethods, projectVals, reqFlowMethods } from './projectview';
 import { financeMethods, financeVals, reportMethods, reportVals } from './finance';
 import { homeVals } from './home';
 import { targetVals, targetMethods } from './targets';
+import { memoVals, memoMethods } from './memos';
 import { officeMethods, officeVals } from './office';
 import { flowMethods, FLOW } from './flow';
 import { reportChannel, reportingVals } from './reports';
@@ -393,6 +394,9 @@ export default class TrinityApp extends Logic {
     // The General Manager sees what Management sees, without company setup and accounts.
     N.gm = N.ceo.map(([t, items, more]) => [t, items.filter(i => !['company','users','field','ceomobile'].includes(i[0])).map(i => (i[0] === 'requests' ? ['requests','Approvals','banknote',s.reqs.filter(q => q.st === 'pending' && q.step === 2).length] : i[0] === 'finance' ? ['finance','Invoices','fileText'] : i)), more]);
     let G = N[role] || N.ceo;
+    // Memos sit with each person's everyday pages, with a count of the ones waiting on them.
+    const meK = this.me().k, memoN = (s.memos || []).filter(m => m.st !== 'done' && (m.who === meK || (!m.who && (m.to === meK || this.isManagerOf(m.dept))))).length;
+    if (role !== 'store') G = G.map(([t, items, more], gi) => [t, gi === 0 && !items.some(i => i[0] === 'memos') ? [...items.slice(0, 2), ['memos', 'Memos', 'fileText', memoN], ...items.slice(2)] : items, more]);
     // Sections the administrator switched off are hidden everywhere.
     // Notifications open from the bell (and the Alerts tab on phones), not from the side menu.
     G = G.map(([t, items, more]) => [t, items.filter(i => !this.isOff(i[0]) && i[0] !== 'notifications' && i[0] !== 'settings' && !(i[0] === 'briefing' && !this.canBriefing()) && !(s.embed && i[0] === 'ceomobile')), more]).filter(g => g[1].length);
@@ -486,7 +490,7 @@ export default class TrinityApp extends Logic {
   }
   haptic(ms) { try { if (this.state.w < 700 && navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) {} }
   asRole(r, page, extra) { return () => { if (this.state.db && this.account && !this.account.isAdmin && r !== this.account.role) { this.setState({menu:false, more:false}); this.toast('Your account uses the ' + this.ROLES[this.account.role].label + ' portal'); return; } this.setState(Object.assign({role:r, menu:false, drawer:false, more:false, page:page || this.ROLES[r].home, tip:-1, taskFilter:r === 'staff' ? 'mine' : 'all'}, extra || {})); try { window.scrollTo(0,0); } catch (e) {} }; }
-  goTarget(g) { if (g && g.indexOf('project:') === 0) this.go('project',{projectId:g.slice(8)}); else this.go(g || 'dashboard'); }
+  goTarget(g) { if (g && g.indexOf('project:') === 0) this.go('project',{projectId:g.slice(8)}); else if (g && g.indexOf('memo:') === 0) this.openMemo(g.slice(5)); else this.go(g || 'dashboard'); }
   toast(t) { this.haptic(10); const id = Date.now() + Math.random(); this.setState(s => ({toasts:[...s.toasts,{id,t}]})); setTimeout(() => this.setState(s => ({toasts:s.toasts.filter(x => x.id !== id)})), 3200); }
   notify(n) {
     this.setState(s => ({notes:[Object.assign({id:Date.now()+Math.random(),read:false,time:this.now()}, n), ...s.notes]}));
@@ -662,4 +666,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, targetVals, officeVals, reportingVals, pettyVals, briefingVals, payrollVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods, briefingMethods, payrollMethods, targetMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, targetVals, memoVals, officeVals, reportingVals, pettyVals, briefingVals, payrollVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods, briefingMethods, payrollMethods, targetMethods, memoMethods);

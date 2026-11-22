@@ -99,11 +99,13 @@ export const crmMethods = {
     const text = (f.text || '').trim(); if (!f.dept) return 'Choose the department'; if (text.length < 5) return 'Write the memo';
     let file = null; if (f.file) { try { file = await this.storeFile(f.file); } catch (e) { return 'Upload failed · ' + (e.message || e); } }
     const to = this.managerOf(f.dept), id = 'MEMO' + Date.now().toString(36), at = dayKey(0);
-    const m = { id, from: this.me().k, dept: f.dept, to, text, file, lead: f.lead || '', st: 'sent', at, log: [{ by: this.me().k, at, t: 'Sent' }] };
+    const cat = ['project', 'internal', 'emergency', 'management'].includes(f.cat) ? f.cat : 'project';
+    const m = { id, cat, from: this.me().k, dept: f.dept, to, text, file, lead: f.lead || '', project: f.project || '', st: 'sent', at, files: [], log: [{ by: this.me().k, at, t: 'Sent' }] };
     this.setState(x => ({ memos: [m, ...(x.memos || [])] }));
     const L = (this.state.leads || []).find(l => l.id === f.lead);
     if (L) this.setState(x => ({ leads: x.leads.map(l => (l.id === L.id ? Object.assign({}, l, { hist: [...(l.hist || []), { s: this.leadStage(l), by: this.me().k, at, note: 'Memo sent to ' + this.av(to).n + ': ' + text.slice(0, 80) }] }) : l)) }));
-    if (to && to !== this.me().k) this.notify({ to, ic: 'fileText', t: 'Memo from ' + this.me().n + (L ? ' · ' + L.c : ''), s: text.slice(0, 120), go: 'dept' });
+    if (f.project) this.pnote(f.project, 'Memo sent to ' + this.av(to).n + ': ' + text.slice(0, 60));
+    if (to && to !== this.me().k) this.notify({ to, ic: 'fileText', t: 'Memo from ' + this.me().n + (L ? ' · ' + L.c : ''), s: text.slice(0, 120), go: 'memo:' + id });
     this.toast('Memo sent to ' + this.av(to).n);
     return '';
   },

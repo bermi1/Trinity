@@ -8,6 +8,7 @@ import TodayPage from './TodayPage';
 import CompanyPage from './CompanyPage';
 import DeptPage from './DeptPage';
 import ClientsPage from './ClientsPage';
+import { MemoPage, MemosPage } from './MemoPage';
 import MeetingsPage from './MeetingsPage';
 import FinanceHub from './FinanceHub';
 import ReportingPage from './ReportingPage';
@@ -23,6 +24,8 @@ export default {
   company: CompanyPage,
   dept: DeptPage,
   clients: ClientsPage,
+  memo: MemoPage,
+  memos: MemosPage,
   meetings: MeetingsPage,
   invoices: FinanceHub,
   cashbook: FinanceHub,

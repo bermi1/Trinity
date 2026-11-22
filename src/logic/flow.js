@@ -24,6 +24,14 @@ export const flowMethods = {
     return 'execution';
   },
   setProject(id, patch) { this.setState(x => ({ projects: x.projects.map(p => (p.id === id ? Object.assign({}, p, typeof patch === 'function' ? patch(p) : patch) : p)) })); },
+  toggleTeam(pid, k) {
+    const p = this.state.projects.find(x => x.id === pid); if (!p) return;
+    const on = (p.team || []).includes(k);
+    this.setProject(pid, { team: on ? p.team.filter(x => x !== k) : [...(p.team || []), k] });
+    this.pnote(pid, (on ? 'Removed from' : 'Added to') + ' the team: ' + this.av(k).n);
+    if (!on && k !== this.me().k) this.notify({ to: k, ic: 'users', t: 'You are on the team · ' + p.client, s: p.name + ' · added by ' + this.me().n, go: 'project:' + pid });
+    this.toast((on ? 'Removed ' : 'Added ') + this.av(k).n.split(' ')[0]);
+  },
   pnote(id, t) { this.setProject(id, p => ({ notes: [...(p.notes || []), { by: this.me().k, at: dayKey(0), t, sys: true }] })); },
   canCS() { return this.isTop() || this.myDept() === 'clientservice'; },
   canOps() { return this.isTop() || this.isManagerOf('operations'); },

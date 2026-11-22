@@ -1,4 +1,25 @@
 import { useState } from 'react';
+
+// Reads an internal budget from Excel or CSV: finds the header row (item/description, qty/quantity,
+// unit cost/rate/price) and returns the lines. Totals and empty rows are skipped.
+export async function readBudgetSheet(file) {
+  try {
+    const XLSX = await import('xlsx');
+    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+    const norm = v => String(v).toLowerCase().trim();
+    let h = -1, ci = -1, cq = -1, cc = -1;
+    for (let r = 0; r < Math.min(rows.length, 15) && h < 0; r++) {
+      const row = rows[r].map(norm);
+      const i = row.findIndex(x => /^(item|description|items|particulars|details)/.test(x)), q = row.findIndex(x => /^(qty|quantity|units|no\.?)$|quantity/.test(x)), c = row.findIndex(x => /(unit cost|unit price|rate|price|cost)/.test(x) && !/total/.test(x));
+      if (i >= 0 && c >= 0) { h = r; ci = i; cq = q; cc = c; }
+    }
+    if (h < 0) return [];
+    const num = v => +String(v).replace(/[^0-9.]/g, '') || 0;
+    return rows.slice(h + 1).map(r => ({ item: String(r[ci] || '').trim(), qty: String(cq >= 0 ? num(r[cq]) || 1 : 1), cost: String(Math.round(num(r[cc]))) }))
+      .filter(l => l.item && +l.cost > 0 && !/^(total|sub ?total|grand total)/i.test(l.item));
+  } catch (e) { console.error(e); return []; }
+}
 import { Btn, faceStyle, faceText } from '../../ui/kit';
 
 const n = v => Math.round(+v || 0).toLocaleString('en-US');
@@ -44,7 +65,7 @@ function Budget({ B }) {
           <button type="button" className="fh-addline" onClick={() => setLines(ls => [...ls, { item: '', qty: '1', cost: '' }])}>+ Add line</button>
         </div>
       </div>
-      <label className="bi-up"><input type="file" accept=".xlsx,.xls,.csv,.pdf" onChange={async e => { const f = e.target.files[0]; if (f) { const m = await B.attach(f); setErr(m); setOk(m ? '' : 'Budget file attached'); } }} aria-label="Budget file" />{B.file ? '✓ ' + B.file.name : '↑ Attach the budget file (Excel or PDF, optional)'}</label>
+      <label className="bi-up"><input type="file" accept=".xlsx,.xls,.csv,.pdf" onChange={async e => { const f = e.target.files[0]; if (!f) return; let filled = 0; if (/\.(xlsx|xls|csv)$/i.test(f.name)) { const got = await readBudgetSheet(f); if (got.length) { setLines(got); filled = got.length; } } const m = await B.attach(f); setErr(m); setOk(m ? '' : filled ? 'Budget file attached · ' + filled + ' lines read from the sheet' : 'Budget file attached'); }} aria-label="Budget file" />{B.file ? '✓ ' + B.file.name : '↑ Attach the budget file (Excel or PDF, optional)'}</label>
       <div className="pn-totals">
         <span>Internal budget <b>TZS {n(internal)}</b></span>
         <label className="fh-amt"><span>Project value TZS</span><input inputMode="numeric" value={value ? n(value) : ''} onChange={e => setValue(digits(e.target.value))} placeholder="What the client pays" aria-label="Project value" /></label>

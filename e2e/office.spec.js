@@ -18,15 +18,33 @@ test('a memo from a lead reaches the department head and the answer comes back',
   expect(memo).toMatchObject({ dept: 'operations', to: 'MM', from: 'NL', lead: 'L1', st: 'sent' });
   expect(data.notes.some(n => n.to === 'MM' && /Memo from Neema Lyimo/.test(n.t))).toBe(true);
 
+  // The Operations Manager gets a pop-up, opens the memo full page and assigns it.
   await openAs(page, 'operations', 'dept', {}, false);
-  const card = page.locator('[data-memo="' + memo.id + '"]');
-  await expect(card).toContainText('Please quote transport for 3 trucks');
-  await card.getByRole('button', { name: 'Mark seen' }).click();
-  await card.getByLabel('Reply to memo from Neema Lyimo').fill('Quote is TZS 2.4M, sent by email');
-  await btn(card, 'Done').click();
+  const pop = page.getByRole('dialog', { name: 'New memo arrived' });
+  await expect(pop).toContainText('Please quote transport for 3 trucks');
+  await btn(pop, 'Open memo').click();
+  const full = page.getByRole('article', { name: 'Memo' });
+  await expect(full).toContainText('Seen');
+  await full.getByRole('radiogroup', { name: 'Assign memo to' }).getByRole('radio', { name: 'Grace Mrema' }).click();
+  await toast(page, 'Assigned to Grace Mrema');
+  data = await saved(page);
+  expect(data.memos[0]).toMatchObject({ st: 'assigned', who: 'GM' });
+  expect(data.tasks.some(t => t.memo === memo.id && t.who === 'GM')).toBe(true);
+
+  // Grace gets her own pop-up, attaches the quote and finishes.
+  await openAs(page, 'staff', 'today', {}, false);
+  const pop2 = page.getByRole('dialog', { name: 'New memo arrived' });
+  await expect(pop2).toContainText('Assigned to you');
+  await btn(pop2, 'Open memo').click();
+  await page.getByLabel('Attach work').setInputFiles({ name: 'Transport quote.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 quote') });
+  await toast(page, 'Attached · Transport quote.pdf');
+  await page.getByLabel('What was done').fill('Quote is TZS 2.4M, sent by email');
+  await btn(page.getByRole('article', { name: 'Memo' }), 'Mark done').click();
   await toast(page, 'Memo done · Neema Lyimo told');
   data = await saved(page);
   expect(data.memos[0]).toMatchObject({ st: 'done', reply: 'Quote is TZS 2.4M, sent by email' });
+  expect(data.memos[0].files[0]).toMatchObject({ name: 'Transport quote.pdf', by: 'GM' });
+  expect(data.tasks.find(t => t.memo === memo.id).st).toBe('done');
 
   await openAs(page, 'clientservice', 'clients', {}, false);
   await page.locator('[data-lead="L1"]').click();

@@ -39,6 +39,13 @@ export function projectVals(s) {
 
   // Delivery: everyone sees who runs it; the Operations Manager chooses the Project Manager.
   V.team = [...new Set([P.pm, ...(P.team || [])].filter(Boolean))].map(face);
+  // The execution team: the PM, the Operations Manager or Management pick who works on the job.
+  const canTeam = this.isTop() || this.isManagerOf('operations') || (P.pm && P.pm === me);
+  V.teamPick = canTeam ? { on: P.team || [], people: [...new Set([...this.teamOf('operations'), ...this.teamOf('production'), ...this.teamOf('creative'), ...this.teamOf('clientservice')].filter(k => k && k !== P.pm))].map(face), toggle: k => this.toggleTeam(P.id, k) } : null;
+  // Memos about this project and the work attached through them.
+  V.memos = this.memoVals(s).MEMO.forProject(P.id);
+  V.files = (P.files || []).map(f => ({ name: f.name, by: this.av(f.by).n, at: f.at, dept: f.dept || '', img: /^image\//.test(f.mime || '') && f.url ? f.url : '', open: () => this.openDoc({ n: f.name, url: f.url, path: f.path, mime: f.mime }) }));
+  V.canMemo = !!this.myDept() || this.isTop() || (s.role || 'ceo') === 'pa';
   // What happens now: the current step, who is responsible, and the action for the person looking.
   const flow = this.flowOf(P), B = P.budget || {}, role = s.role || 'ceo';
   const briefs = (s.tasks || []).filter(t => t.kind === 'brief' && t.p === P.id);

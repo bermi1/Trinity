@@ -8,6 +8,7 @@ import MobileApp from './mobile/MobileApp';
 import PinScreen from './components/PinScreen';
 import SetPassword from './components/SetPassword';
 import DocViewer from './components/DocViewer';
+import { MemoPop } from './pages/custom/MemoPage';
 
 // Hosts the application logic and re-renders whenever it changes state.
 export default class App extends Component {
@@ -32,6 +33,6 @@ export default class App extends Component {
     // Phones get the app-style shell; tablets and computers the full desktop layout.
     const shell = v.phone ? (v.showLogin ? <MobileLogin v={v} /> : <MobileApp v={v} />) : (v.showLogin ? <LoginScreen v={v} /> : <AppShell v={v} />);
     const doc = this.logic.state.docView;
-    return <>{shell}{doc && v.showApp ? <DocViewer doc={doc} onClose={() => this.logic.setState({ docView: null })} /> : null}</>;
+    return <>{shell}{v.showApp && !doc ? <MemoPop M={v.MEMO} /> : null}{doc && v.showApp ? <DocViewer doc={doc} onClose={() => this.logic.setState({ docView: null })} /> : null}</>;
   }
 }
