@@ -32,12 +32,12 @@ export function printPoster(ev, qrDataUrl) {
 .p{width:190mm;min-height:270mm;box-sizing:border-box;text-align:center;background:linear-gradient(#FFFDF6 55%,#FDE9C4);position:relative;overflow:hidden}
 .p img.l{width:100%;max-width:170mm}.p h1{margin:12mm 0 3mm;font-size:34px;color:#0B5A2A;line-height:1.05}.p .s{font-size:14px;color:#2F4A39;margin:0 10mm}
 .tag{display:inline-block;margin-top:5mm;background:#0B5A2A;color:#F5C04A;font-weight:800;padding:6px 14px;border-radius:8px;font-size:15px}
-.qr{margin:9mm auto 4mm;background:#fff;padding:5mm;border-radius:6mm;display:inline-block;box-shadow:0 2mm 6mm rgba(0,0,0,.12)}.qr img{width:85mm;height:85mm;display:block}
+.qr{margin:7mm auto 4mm;background:#fff;padding:5mm;border-radius:6mm;display:inline-block;box-shadow:0 2mm 6mm rgba(0,0,0,.12)}.qr img{width:85mm;height:85mm;display:block}
 .cta{font-size:22px;font-weight:800;color:#0B5A2A;margin:2mm 0}.en{color:#3E5546;font-size:14px}.url{font-family:monospace;font-size:12px;color:#3E5546;margin-top:3mm}.when{margin-top:4mm;font-weight:700;color:#13261A}
 .pl{position:absolute;left:0;right:0;bottom:0;width:100%;opacity:.55}.pfoot{position:absolute;left:10mm;right:10mm;bottom:6mm}.pfoot .tm{position:static;background:transparent}
 @page{size:A4;margin:8mm}</style></head><body><div class=bar><button onclick="print()">Print / Save PDF</button></div><div class=p>
 <img class=pl src="${o}/event/pylons.jpg" alt=""><img class=l src="${o}/event/logos.png" alt="">
-<h1>${esc(ev.title).toUpperCase()}</h1><p class=s>${esc(ev.subtitle)}</p>${ev.tagline ? `<div class=tag>${esc(ev.tagline)}</div>` : ''}
+<h1>${esc(ev.title).toUpperCase()}</h1><p class=s>${esc(ev.subtitle)}</p>${ev.tagline ? `<div><span class=tag>${esc(ev.tagline)}</span></div>` : ''}
 <div class=qr><img src="${qrDataUrl}" alt="QR"></div><div class=cta>Scan ujisajili</div><div class=en>Scan to register</div><div class=url>${esc(registerUrl())}</div>${when ? `<div class=when>${esc(when)}</div>` : ''}
 <div class=pfoot>${FOOT(o, 'TRINITY.MARK.SOLUTIONS © ' + new Date().getFullYear())}</div></div></body></html>`);
 }
