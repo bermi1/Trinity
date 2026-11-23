@@ -1,5 +1,22 @@
 // Generated from the Claude Design file by scripts/dc-to-jsx.mjs.
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
+
+// Change the sign-in email (staff start with firstname@trinitymark.co.tz).
+function ChangeEmail({ v }) {
+  const [em, setEm] = useState(''), [msg, setMsg] = useState(''), [ok, setOk] = useState(false), [busy, setBusy] = useState(false);
+  const save = async () => { setBusy(true); const m = await v.changeEmail(em); setBusy(false); setOk(!m); setMsg(m || 'Saved. Sign in with ' + em.trim().toLowerCase() + ' from now on.'); if (!m) setEm(''); };
+  return (
+    <div className="set-email" style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '12px', borderTop: '1px solid #F1EEF6' }}>
+      <b style={{ fontSize: '13px' }}>Change sign-in email</b>
+      <span style={{ fontSize: '12.5px', color: '#6E6A7C' }}>Now: {v.meP.e}. Your password stays the same.</span>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <input value={em} onChange={e => { setEm(e.target.value); setMsg(''); }} type="email" autoCapitalize="none" placeholder="new.email@example.com" aria-label="New sign-in email" style={{ flex: '1 1 200px', minWidth: 0, height: '40px', border: '1px solid #E8E4EF', borderRadius: '9px', padding: '0 12px', fontSize: '14px' }} />
+        <button type="button" className="tm-h2" disabled={busy || !em.trim()} onClick={save} style={{ height: '40px', padding: '0 16px', border: 'none', borderRadius: '9px', background: '#2B1459', color: '#fff', fontWeight: 700, fontSize: '13px' }}>{busy ? 'Saving…' : 'Save email'}</button>
+      </div>
+      {msg ? <div role="status" style={{ fontSize: '12.5px', borderRadius: '8px', padding: '8px 10px', background: ok ? '#E6F4EC' : '#FBEDEE', color: ok ? '#1F7549' : '#B23A46' }}>{msg}</div> : null}
+    </div>
+  );
+}
 
 export default function SettingsPage({ v }) {
   return (
@@ -42,6 +59,7 @@ export default function SettingsPage({ v }) {
             </svg>
             {"Portal access · "}<span>{v.meP.role}</span>
           </div>
+          {v.changeEmail ? <ChangeEmail v={v} /> : null}
         </div>
         <div style={{ flex: "1 1 300px", minWidth: "0", background: "#fff", border: "1px solid #E8E4EF", borderRadius: "14px", padding: "20px", display: "flex", flexDirection: "column", gap: "4px" }}>
           <h3 style={{ margin: "0 0 8px", fontSize: "15px", fontWeight: "700" }}>

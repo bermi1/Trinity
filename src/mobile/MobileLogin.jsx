@@ -35,8 +35,8 @@ export default function MobileLogin({ v }) {
         </div>
 
         <label className="m-field">
-          <span>Email</span>
-          <input type="email" inputMode="email" autoComplete="username" autoCapitalize="none" value={v.email ?? ''} onChange={v.onEmail} placeholder="name@trinitymark.co.tz" />
+          <span>First name or email</span>
+          <input type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={v.email ?? ''} onChange={v.onEmail} placeholder="e.g. faith" aria-label="First name or email" />
         </label>
         <label className="m-field">
           <span>Password</span>
@@ -54,6 +54,8 @@ export default function MobileLogin({ v }) {
           </button>
           <a href="#" onClick={v.forgot}>Forgot password?</a>
         </div>
+
+        <p className="m-first-hint"><b>First time?</b> Type your first name, and use your first name in small letters as the password. You will then choose your own password.</p>
 
         {err ? <div className="m-alert" role="alert">{err}</div> : null}
 

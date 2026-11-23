@@ -72,8 +72,8 @@ export default function LoginScreen({ v }) {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <label style={{ display: "flex", flexDirection: "column", gap: "7px", fontSize: "12.5px", fontWeight: "600" }}>
-                Email or username
-                <input className="tm-f1" value={v.email ?? ''} onChange={v.onEmail} onKeyDown={v.loginKey} style={{ height: "46px", border: "1px solid #E8E4EF", borderRadius: "10px", padding: "0 14px", fontSize: "14px", outline: "none" }} />
+                First name or email
+                <input className="tm-f1" value={v.email ?? ''} onChange={v.onEmail} onKeyDown={v.loginKey} autoCapitalize="none" autoComplete="username" placeholder="e.g. faith" aria-label="First name or email" style={{ height: "46px", border: "1px solid #E8E4EF", borderRadius: "10px", padding: "0 14px", fontSize: "14px", outline: "none" }} />
               </label>
               {' '}
               <label style={{ display: "flex", flexDirection: "column", gap: "7px", fontSize: "12.5px", fontWeight: "600" }}>
@@ -93,6 +93,9 @@ export default function LoginScreen({ v }) {
                   Forgot password?
                 </a>
               </div>
+              <p className="tm-first-hint" style={{ margin: "0", fontSize: "12.5px", color: "#6E6A7C", background: "#F6F3FB", borderRadius: "8px", padding: "10px 12px", lineHeight: "1.45" }}>
+                <b style={{ color: "#2B1459" }}>First time?</b> Type your first name, and use your first name in small letters as the password. You will then choose your own password.
+              </p>
               {v.loginErr ? (
                 <>
                   <div style={{ fontSize: "13px", color: "#B23A46", background: "#FBEDEE", borderRadius: "8px", padding: "10px 12px" }}>

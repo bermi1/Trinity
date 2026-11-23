@@ -43,7 +43,7 @@ describe('live database', () => {
     render(<App />);
     await screen.findByText('SIGN IN');
     signInAs('daniel@tm.co.tz', 'nope1234');
-    expect(await screen.findByText('Wrong email or password.')).toBeTruthy();
+    expect(await screen.findByText(/Wrong name or password/)).toBeTruthy();
   });
 
   it('signs in, seeds the empty database and saves changes to it', async () => {

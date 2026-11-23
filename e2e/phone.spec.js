@@ -24,7 +24,7 @@ test('sign-in screen works like an app: show password, remember switch, one-tap 
 
   await pw.fill('12');
   await btn(page, 'Sign in').click();
-  await expect(page.getByRole('alert')).toHaveText('Enter your email and a password of at least 4 characters.');
+  await expect(page.getByRole('alert')).toHaveText('Enter your first name (or email) and your password.');
   await expect(page.getByRole('button', { name: 'Google' })).toHaveCount(0);
   await page.getByRole('group', { name: 'Demo portals' }).getByRole('button', { name: 'Finance' }).click();
   await expect(page.getByText('Rose Temba’s queue')).toBeVisible();

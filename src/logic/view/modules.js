@@ -228,6 +228,7 @@ export function pageVals2(s, IC, ST, narrow) {
     V.company = [['Company','Trinity Mark Solutions Ltd'],['Location','Dar es Salaam, Tanzania'],['Currency','TZS · Tanzanian shilling'],['Time zone','Africa/Dar_es_Salaam (EAT)'],['Financial year','January – December'],['Data',s.db ? 'Live · Supabase database' : 'Demo data only']].map(([k,v]) => ({k,v}));
     V.audit = s.activity.slice(0,6).map(e => ({time:e.time, t:e.t, s:e.s}));
     V.meP = {n:me.n, t:me.t, e:me.email, i:me.k, c:this.av(me.k).c, role:me.label};
+    V.changeEmail = em => this.changeMyEmail(em);
     // Mobile apps preview
     const mr = this.ROLES[s.mobileRole] ? s.mobileRole : 'ceo';
     let pth = ''; try { pth = location.pathname; } catch (e) {} V.devSrc = (pth || '/') + '?embed=1&role=' + mr;

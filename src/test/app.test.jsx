@@ -15,7 +15,7 @@ describe('sign in', () => {
     fireEvent.change(email, { target: { value: 'daniel.k@trinitymark.co.tz' } });
     fireEvent.change(pw, { target: { value: '12' } });
     fireEvent.click(screen.getByText('SIGN IN'));
-    expect(screen.getByText(/at least 4 characters/)).toBeTruthy();
+    expect(screen.getByText(/Enter your first name \(or email\) and your password/)).toBeTruthy();
     fireEvent.change(pw, { target: { value: 'demo1234' } });
     fireEvent.click(screen.getByText('SIGN IN'));
     expect(screen.getByText('Set a PIN for quick sign-in')).toBeTruthy();

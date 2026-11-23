@@ -59,7 +59,8 @@ test.fixme('calendar: scheduling a meeting puts it on the right day and notifies
 
 test('settings: notification switches and the signed-in profile', async ({ page }) => {
   await openAs(page, 'ceo', 'settings');
-  await expect(page.getByText('daniel.k@trinitymark.co.tz')).toBeVisible();
+  await expect(page.getByText('daniel.k@trinitymark.co.tz').first()).toBeVisible();
+  await expect(page.getByLabel('New sign-in email')).toBeVisible();
   await page.getByText('SMS', { exact: true }).click();
   await toast(page, 'SMS turned on');
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('tm360')).prefs.sms)).toBe(true);

@@ -22,6 +22,7 @@ import { projectMethods, projectVals, reqFlowMethods } from './projectview';
 import { financeMethods, financeVals, reportMethods, reportVals } from './finance';
 import { homeVals } from './home';
 import { targetVals, targetMethods } from './targets';
+import { teamVals, teamMethods } from './team';
 import { memoVals, memoMethods } from './memos';
 import { officeMethods, officeVals } from './office';
 import { flowMethods, FLOW } from './flow';
@@ -211,16 +212,18 @@ export default class TrinityApp extends Logic {
   // ---- Sign-in and data, in demo mode (browser only) or against Supabase.
   signIn() {
     const s = this.state;
-    if (!s.email.trim() || s.pw.length < 4) { this.setState({loginErr:'Enter your email and a password of at least 4 characters.'}); return; }
+    if (!s.email.trim() || s.pw.length < 4) { this.setState({loginErr:'Enter your first name (or email) and your password.'}); return; }
     this.rememberChoice();
     if (!s.db) { const who = s.email.trim().toLowerCase(); this.setState({auth:true,role:s.loginRole,page:this.ROLES[s.loginRole].home,taskFilter:s.loginRole === 'staff' ? 'mine' : 'all',pinUser:who,pin:this.afterPasswordPin(who)}); return; }
     if (s.signingIn) return;
     this.setState({signingIn:true, loginErr:'Signing in…'});
-    this.passwordSignIn(s.email.trim(), s.pw, s.loginRole, false);
+    this.passwordSignIn(this.signInEmail(s.email), s.pw, s.loginRole, false);
   }
+  // Staff sign in with just their first name: "faith" means faith@trinitymark.co.tz.
+  signInEmail(typed) { const t = String(typed || '').trim().toLowerCase(); return t.includes('@') ? t : t.replace(/[^a-z]/g, '') + '@trinitymark.co.tz'; }
   passwordSignIn(email, pw, role, quick) {
     withTimeout(supabase.auth.signInWithPassword({email, password:pw})).then(({data, error}) => {
-      if (error) { this.setState({signingIn:false, loginErr:error.message === 'Invalid login credentials' ? (quick ? 'This demo account is not available any more.' : 'Wrong email or password.') : /fetch|network/i.test(error.message) || !error.status ? OFFLINE : error.message}); return; }
+      if (error) { this.setState({signingIn:false, loginErr:error.message === 'Invalid login credentials' ? (quick ? 'This demo account is not available any more.' : 'Wrong name or password. First time? Your password is your first name in small letters.') : /fetch|network/i.test(error.message) || !error.status ? OFFLINE : error.message}); return; }
       return this.enter(data.user, role, true, quick);
     }).catch(err => { console.error(err); this.setState({signingIn:false, loginErr:OFFLINE}); });
   }
@@ -270,6 +273,21 @@ export default class TrinityApp extends Logic {
       if (session) await this.enter(session.user); else this.setState({booting:false});
     } catch (err) { console.error(err); this.setState({booting:false, loginErr:OFFLINE}); }
   }
+  // Changes the sign-in email of the person signed in (they keep their password).
+  async changeMyEmail(typed) {
+    const em = String(typed || '').trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) return 'Enter a valid email address';
+    if (this.state.db) {
+      const { error } = await supabase.rpc('change_my_email', { p_email: em });
+      if (error) return String(error.message || error).replace(/^.*?ERROR:\s*/, '');
+      try { await supabase.auth.refreshSession(); } catch (e) { /* the new email shows after the next sign-in */ }
+    }
+    const r = this.state.role || 'ceo';
+    this.ROLES = Object.assign({}, this.ROLES, { [r]: Object.assign({}, this.ROLES[r], { email: em }) });
+    this.setState({ email: em, pinUser: em });
+    this.toast('Sign-in email changed · ' + em);
+    return '';
+  }
   async setOwnPassword(pw) {
     const { error } = await supabase.auth.updateUser({password:pw, data:{pw_set:true}});
     if (error) return /same|different/i.test(error.message) ? 'Choose a password different from the one you were given.' : error.message;
@@ -291,7 +309,8 @@ export default class TrinityApp extends Logic {
       const acc = prof || {role:'staff'};
       const role = ROLES[acc.role] ? acc.role : 'staff';
       this.account = {role, isAdmin:!!acc.is_admin, isDemo:!!acc.is_demo};
-      const { data: everyone } = await withTimeout(supabase.from('profiles').select('full_name,person_key,role,title,is_demo'));
+      const { data: everyone } = await withTimeout(supabase.from('profiles').select('full_name,person_key,role,title,is_demo,phone'));
+      this.phones = Object.fromEntries((everyone || []).filter(p => p.person_key && p.phone).map(p => [p.person_key.toUpperCase(), p.phone]));
       this.setPeople(everyone);
       // Who holds each portal: alerts for "the GM", "Finance", "Reception" or a department head reach the real person.
       const holders = {};
@@ -370,7 +389,7 @@ export default class TrinityApp extends Logic {
     const mob = ['ceomobile','Mobile app','phone',0,{mobileRole:role}];
     const company = [['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']];
     const N = {
-      ceo:[['Every day',[['dashboard','Dashboard','grid'],['today','My work','checkSquare',myOpen],['briefing','Monday Briefing','presentation'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['requests','Approvals','banknote',myReq],['projects','Projects','folder'],['clients','Clients & leads','users'],['event','Event registration','clipboard'],['finance','Finance & Invoices','chart'],['payroll','Payroll','user']]],
+      ceo:[['Every day',[['dashboard','Dashboard','grid'],['today','My work','checkSquare',myOpen],['briefing','Monday Briefing','presentation'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['requests','Approvals','banknote',myReq],['projects','Projects','folder'],['clients','Clients & leads','users'],['team','Team & departments','users'],['event','Event registration','clipboard'],['finance','Finance & Invoices','chart'],['payroll','Payroll','user']]],
         ['More',[['calendar','Calendar','calendar'],['notifications','Notifications','bell',unread],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['procurement','Procurement','cart'],['store','Store & Inventory','package'],['requisitions','Store requisitions','clipboard',srqN],['movements','Stock ledger','receipt'],['logistics','Logistics','truck'],['staff','Staff & Reports','user'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['ceomobile','Mobile apps','phone',0,{mobileRole:'ceo'}],['field','Field capture app','camera'],...(this.canSetup() ? [['company','Company setup','settings']] : []),...(this.isAdmin() ? [['users','Users & access','shield']] : []),['settings','Settings','settings']], true]],
       staff:[['My work',[['staffportal','My Day','home'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['payslips','My payslips','wallet'],['today','My work','checkSquare',myOpen],['requests','My requests','banknote'],['field','Field capture','camera']]],
         ['More',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
@@ -440,6 +459,7 @@ export default class TrinityApp extends Logic {
     // Tasks and the daily to-do are one page: My work.
     if (page === 'tasks') return 'today';
     if (page === 'payroll' && !['ceo','gm'].includes(role)) return 'payslips';
+    if (page === 'team' && !['ceo','gm'].includes(role)) return home;
     if (page === 'briefing' && this.state && !this.canBriefing()) return home;
     // Finance tools: Float for Management and Finance; the rest also for the GM.
     if (page === 'finance' && !['ceo','gm','finance'].includes(role)) return home;
@@ -669,4 +689,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, targetVals, memoVals, officeVals, reportingVals, pettyVals, briefingVals, payrollVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods, briefingMethods, payrollMethods, targetMethods, memoMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, targetVals, teamVals, memoVals, officeVals, reportingVals, pettyVals, briefingVals, payrollVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods, briefingMethods, payrollMethods, targetMethods, teamMethods, memoMethods);

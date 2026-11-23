@@ -46,11 +46,11 @@ export function plan(total, perWeek, year, W, cur, dayFrac) {
 
 export const targetMethods = {
   targetFor(year) { return (this.state.targets || []).find(t => t.year === year) || null; },
-  canSetTargets() { return (this.state.role || 'ceo') === 'ceo'; },
+  canSetTargets() { return ['ceo', 'gm'].includes(this.state.role || 'ceo'); },
   // Client Service sees targets but does not record them.
   canRecordWeek() { return this.isTop() && (this.state.role || 'ceo') !== 'clientservice'; },
   saveTargets(f) {
-    if (!this.canSetTargets()) return 'Only Management sets the targets';
+    if (!this.canSetTargets()) return 'Only Management or the General Manager sets the targets';
     const year = +f.year, revenue = Math.round(+f.revenue || 0);
     if (!revenue) return 'Enter the company target for the year';
     const depts = {}; TARGET_DEPTS.forEach(([k]) => { const v = Math.round(+(f.depts || {})[k] || 0); if (v) depts[k] = v; });
@@ -64,7 +64,7 @@ export const targetMethods = {
     return '';
   },
   // The Client Service Manager (or Management) gives each team member their targets for the year.
-  canSetTeamTargets() { const r = this.state.role || 'ceo'; return r === 'ceo' || (r === 'clientservice' && this.isManagerOf('clientservice')); },
+  canSetTeamTargets() { const r = this.state.role || 'ceo'; return r === 'ceo' || r === 'gm' || (r === 'clientservice' && this.isManagerOf('clientservice')); },
   saveTeamTargets(year, map) {
     if (!this.canSetTeamTargets()) return 'The Client Service Manager sets the team’s targets';
     const t = this.targetFor(year);

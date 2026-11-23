@@ -9,7 +9,8 @@ test('company target: record a week, carry-forward, edit targets, Client Service
   const tg = page.getByRole('region', { name: 'Company target' });
   await expect(tg).toContainText('Company target');
   await expect(tg).toContainText('speed');
-  await expect(tg.getByRole('button', { name: 'Edit targets' })).toHaveCount(0);
+  // The General Manager now sets targets too.
+  await expect(tg.getByRole('button', { name: 'Edit targets' })).toHaveCount(1);
 
   const isoKey = () => { const d = new Date(), x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = x.getUTCDay() || 7; x.setUTCDate(x.getUTCDate() + 4 - day); const y = x.getUTCFullYear(); return y + '-W' + String(Math.ceil(((x - new Date(Date.UTC(y, 0, 1))) / 864e5 + 1) / 7)).padStart(2, '0'); };
   const weekTarget = await tg.locator('.tg-card').first().locator('b').innerText();
@@ -103,10 +104,10 @@ test('Client Service team targets: manager sets them, results counted, GM sees t
   const after = await page.locator('.tg-team [data-member="NL"] .tg-metric').nth(2).locator('b').innerText();
   expect(parseInt(after)).toBe(parseInt(clientsBefore) + 1);
 
-  // The GM sees the team, read-only; Neema sees her own targets on My work.
+  // The GM sees the team and may set its targets; Neema sees her own targets on My work.
   await openAs(page, 'gm', 'dashboard', {}, false);
   await expect(page.locator('.tg-team')).toContainText('Neema Lyimo');
-  await expect(page.locator('.tg-team').getByRole('button', { name: 'Set team targets' })).toHaveCount(0);
+  await expect(page.locator('.tg-team').getByRole('button', { name: 'Set team targets' })).toHaveCount(1);
   await openAs(page, 'clientservice', 'today', {}, false);
   const mine = page.getByRole('region', { name: 'My targets' });
   await expect(mine).toContainText('TZS 500M');

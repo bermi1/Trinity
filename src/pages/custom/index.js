@@ -14,6 +14,7 @@ import FinanceHub from './FinanceHub';
 import ReportingPage from './ReportingPage';
 import PayrollPage from './PayrollPage';
 import EventDesk from '../../event/EventDesk';
+import TeamPage from './TeamPage';
 
 export default {
   requisitions: RequisitionsPage,
@@ -36,5 +37,6 @@ export default {
   petty: FinanceHub,
   payroll: PayrollPage,
   payslips: PayrollPage,
-  event: EventDesk
+  event: EventDesk,
+  team: TeamPage
 };
