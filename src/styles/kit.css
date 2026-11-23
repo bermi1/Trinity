@@ -1315,3 +1315,11 @@
 .tp-pick { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 14px 66px; }
 .tp-empty { padding: 18px; text-align: center; color: #6E6A7C; font-size: 13px; }
 @media (max-width: 600px) { .tp-pick { padding-left: 16px; } .tp-row { grid-template-columns: 38px minmax(0, 1fr); } .tp-dept { grid-column: 2; justify-self: start; } }
+.tp-more { display: grid; gap: 10px; padding: 0 16px 14px 66px; } .tp-more .tp-pick { padding: 0; }
+.tp-phone { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.tp-phone input { height: 34px; width: 170px; border: 1px solid #E8E4EF; border-radius: 8px; padding: 0 10px; font: inherit; font-size: 13px; }
+.tp-phone button { height: 34px; padding: 0 12px; border: none; border-radius: 8px; background: #2B1459; color: #fff; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; } .tp-phone button:disabled { opacity: .45; cursor: default; }
+.tp-phone small { font-size: 12px; font-weight: 600; } .tp-phone .is-ok { color: #1F7549; } .tp-phone .is-err { color: #B23A46; }
+.tp-phone.is-dark input { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.3); color: #fff; } .tp-phone.is-dark input::placeholder { color: rgba(255,255,255,.6); }
+.tp-phone.is-dark button { background: #F5C04A; color: #2B1459; } .tp-phone.is-dark .is-ok { color: #B8F0CB; } .tp-phone.is-dark .is-err { color: #FFC9CF; }
+@media (max-width: 600px) { .tp-more { padding-left: 16px; } }

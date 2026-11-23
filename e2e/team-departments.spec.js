@@ -26,3 +26,14 @@ test('sign-in screen asks for the first name and explains the first password', a
   await expect(page.getByLabel('First name or email')).toBeVisible();
   await expect(page.getByText('use your first name in small letters as the password')).toBeVisible();
 });
+
+test('team: the General Manager saves a phone number', async ({ page }) => {
+  await openAs(page, 'gm', 'team');
+  const row = page.locator('.tp-list li').first();
+  const name = (await row.locator('.tp-who b').textContent()).trim();
+  await row.locator('.tp-row').click();
+  await row.getByLabel('Phone number for ' + name).fill('0712 345 678');
+  await row.getByRole('button', { name: 'Save' }).click();
+  await expect(row.getByRole('status')).toHaveText('Saved');
+  await expect(page.locator('.tp-list li', { hasText: name }).locator('.tp-who small')).toContainText('0712 345 678');
+});
