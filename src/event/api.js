@@ -10,7 +10,7 @@ export const GENDERS = ['Mwanamke', 'Mwanaume'];
 const DEFAULT_EVENT = {
   id: EVENT_ID, title: 'Mpango wa Nishati wa Taifa',
   subtitle: 'Kikao cha Tathmini ya Utekelezaji wa Mpango wa Kuharakisha Uanganishaji wa Umeme kwa Kaya',
-  tagline: 'Kila Kaya Itwaka', event_date: '', event_time: '', venue: '',
+  tagline: 'Kila Kaya Itawaka', event_date: '', event_time: '', venue: '',
   message: 'Asante kwa kujisajili. Tunakukaribisha kuhudhuria kikao hiki muhimu. Tafadhali fika mapema na uonyeshe namba yako ya usajili mezani.', open: true
 };
 

@@ -93,6 +93,6 @@ grant select, update on public.event_registrations to authenticated;
 insert into public.events (id, title, subtitle, tagline, event_date, event_time, venue, message, open)
 values ('nishati-2026', 'Mpango wa Nishati wa Taifa',
         'Kikao cha Tathmini ya Utekelezaji wa Mpango wa Kuharakisha Uanganishaji wa Umeme kwa Kaya',
-        'Kila Kaya Itwaka', '', '', '',
+        'Kila Kaya Itawaka', '', '', '',
         'Asante kwa kujisajili. Tunakukaribisha kuhudhuria kikao hiki muhimu. Tafadhali fika mapema na uonyeshe namba yako ya usajili mezani.', true)
 on conflict (id) do nothing;
