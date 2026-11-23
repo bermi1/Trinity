@@ -13,7 +13,7 @@ export default function EventDesk() {
   const [q, setQ] = useState(''), [cat, setCat] = useState(''), [mode, setMode] = useState(''), [last, setLast] = useState(null), [err, setErr] = useState(''), [qr, setQr] = useState('');
   const load = async () => { try { const [e, r] = await Promise.all([getEvent(), listRegs()]); setEv(e); setRegs(r); setErr(''); } catch (x) { setErr(x.message); } };
   useEffect(() => { load(); const t = setInterval(load, 8000); return () => clearInterval(t); }, []);
-  useEffect(() => { QRCode.toDataURL(registerUrl(), { width: 600, margin: 1, color: { dark: '#0B3D1F', light: '#FFFFFF' } }).then(setQr); }, []);
+  useEffect(() => { QRCode.toDataURL(registerUrl(), { width: 1000, margin: 1, color: { dark: '#0B3D1F', light: '#FFFFFF' } }).then(setQr); }, []);
   // A scanned pass reads "NISHATI-2026 · 001 · Name": search by its number.
   const pq = (q.match(/NISHATI-2026\s*·\s*(\d{3})/i) || [])[1];
   const list = useMemo(() => regs.filter(r => (!cat || r.category === cat) && (!mode || (mode === 'in' ? r.checked_in : r.mode === mode)) && (!q || (pq ? badge(r.badge_no) === pq : (r.full_name + ' ' + r.phone + ' ' + r.organization + ' ' + badge(r.badge_no)).toLowerCase().includes(q.toLowerCase())))), [regs, q, pq, cat, mode]);
@@ -70,7 +70,7 @@ export default function EventDesk() {
           <div className="evd-qrside">
             <h3>Usajili kwa QR</h3>
             <p>Washiriki wanascan QR hii kwa simu, wanajaza fomu fupi, na wanapata namba yao ya usajili pamoja na ujumbe wa kuwakaribisha.</p>
-            <div className="ev-row"><button type="button" className="me-save" onClick={() => setErr(printPoster(ev, qr))}>Chapisha bango la QR (PDF)</button><a className="me-cancel" href={registerUrl()} target="_blank" rel="noreferrer">Fungua ukurasa</a></div>
+            <div className="ev-row"><button type="button" className="me-save" onClick={() => setErr(printPoster(ev, qr, 'a3'))}>Bango la QR · A3 (PDF)</button><button type="button" className="me-cancel" onClick={() => setErr(printPoster(ev, qr, 'screen'))}>Bango la skrini kubwa · 16:9</button><a className="me-cancel" href={registerUrl()} target="_blank" rel="noreferrer">Fungua ukurasa</a></div>
             <h3>Ujumbe wa mwaliko · Invitation message</h3>
             <textarea readOnly value={invite} rows={6} aria-label="Invitation message" />
             <div className="ev-row"><a className="me-save" href={'https://wa.me/?text=' + encodeURIComponent(invite)} target="_blank" rel="noreferrer">Tuma kwa WhatsApp</a><button type="button" className="me-cancel" onClick={() => { try { navigator.clipboard.writeText(invite); } catch (e) { /* not allowed */ } }}>Nakili · Copy</button></div>

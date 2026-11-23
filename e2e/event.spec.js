@@ -86,9 +86,12 @@ test('event: QR self-registration, walk-in at the desk, check-in and the printab
   // The QR poster and the event details.
   await page.getByRole('tab', { name: 'QR & mwaliko' }).click();
   await expect(page.getByAltText('QR code ya usajili')).toBeVisible();
-  const [poster] = await Promise.all([context.waitForEvent('page'), page.getByRole('button', { name: 'Chapisha bango la QR (PDF)' }).click()]);
-  await expect(poster.getByText('Scan ujisajili')).toBeVisible();
+  const [poster] = await Promise.all([context.waitForEvent('page'), page.getByRole('button', { name: 'Bango la QR · A3 (PDF)' }).click()]);
+  await expect(poster.locator('.rib')).toHaveText('SCAN · UJISAJILI');
   await poster.close();
+  const [tv] = await Promise.all([context.waitForEvent('page'), page.getByRole('button', { name: 'Bango la skrini kubwa · 16:9' }).click()]);
+  await expect(tv.locator('.pg')).toHaveCSS('width', '1920px');
+  await tv.close();
   await page.getByRole('tab', { name: 'Taarifa za tukio' }).click();
   await page.getByLabel('Venue').fill('Ukumbi wa Mikutano, Dodoma');
   await page.getByRole('button', { name: 'Hifadhi · Save' }).click();
