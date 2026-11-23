@@ -10,7 +10,7 @@ async function fill(scope, d) {
 }
 // The public form has three sections: about you, work and location, category.
 async function fillSteps(page, d) {
-  const next = page.getByRole('button', { name: 'Endelea · Next →' });
+  const next = page.getByRole('button', { name: 'Endelea · Next' });
   await page.getByLabel('Full name').fill(d.name);
   await page.getByLabel('Phone number').fill(d.phone);
   await next.click();
@@ -28,20 +28,20 @@ test('event: QR self-registration, walk-in at the desk, check-in and the printab
   await page.goto('/register');
   await expect(page.getByRole('heading', { name: 'Mpango wa Nishati wa Taifa' })).toBeVisible();
   // Each section is checked before moving on.
-  await page.getByRole('button', { name: 'Endelea · Next →' }).click();
+  await page.getByRole('button', { name: 'Endelea · Next' }).click();
   await expect(page.getByRole('alert')).toContainText('jina');
   await fillSteps(page, { name: 'Asha Juma Mollel', phone: '0712 345 678', org: 'TANESCO Dodoma', cat: 'TANESCO' });
   // Going back keeps what was typed.
-  await page.getByRole('button', { name: '← Rudi · Back' }).click();
+  await page.getByRole('button', { name: 'Rudi · Back' }).click();
   await expect(page.getByLabel('Organisation')).toHaveValue('TANESCO Dodoma');
-  await page.getByRole('button', { name: 'Endelea · Next →' }).click();
+  await page.getByRole('button', { name: 'Endelea · Next' }).click();
   await page.getByRole('button', { name: 'Jisajili · Register' }).click();
   await expect(page.getByText('Karibu, Asha!')).toBeVisible();
   await expect(page.locator('.ev-ticket b')).toHaveText('001');
   await expect(page.getByText('Tunakukaribisha kuhudhuria')).toBeVisible();
   // Their designed pass with a QR code, ready to save.
   await expect(page.getByAltText('Pasi ya Asha Juma Mollel · namba 001')).toBeVisible();
-  const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: '⬇ Hifadhi pasi · Save pass' }).click()]);
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Hifadhi pasi · Save pass' }).click()]);
   expect(dl.suggestedFilename()).toBe('Pasi-Nishati-001.png');
   // Registering again with the same phone gives the same number.
   await page.getByRole('button', { name: 'Sajili mtu mwingine' }).click();

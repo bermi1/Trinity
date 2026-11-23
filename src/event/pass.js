@@ -7,6 +7,12 @@ const G = '#0B5A2A', G2 = '#063A1B', GOLD = '#F5C04A', ORANGE = '#F2A33A', INK =
 const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 const font = (w, px) => `${w} ${px}px Manrope, 'Segoe UI', Arial, sans-serif`;
 
+// Line icons drawn on the pass (same shapes as icons.jsx).
+const ICON = { calendar: ['M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M3 10h18', 'M8 3v4', 'M16 3v4'], pin: ['M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z', 'M14.5 9a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z'] };
+function icon(c, n, x, y, size, color) {
+  c.save(); c.translate(x, y); c.scale(size / 24, size / 24); c.strokeStyle = color; c.lineWidth = 2; c.lineCap = 'round'; c.lineJoin = 'round';
+  ICON[n].forEach(d => c.stroke(new Path2D(d))); c.restore();
+}
 function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
 function lines(c, text, max) {
   const out = []; let cur = '';
@@ -70,8 +76,8 @@ export async function drawPass(ev, reg) {
   // When and where, then the Trinity footer.
   const when = [ev.event_date, ev.event_time].filter(Boolean).join(' · ');
   let wy = ty + th + 80; c.fillStyle = '#fff'; c.font = font(700, 30);
-  if (when) { c.fillText('📅  ' + when, 72, wy); wy += 48; }
-  if (ev.venue) { c.fillText('📍  ' + lines(c, ev.venue, W - 200)[0], 72, wy); }
+  if (when) { icon(c, 'calendar', 72, wy - 28, 34, GOLD); c.fillText(when, 122, wy); wy += 52; }
+  if (ev.venue) { icon(c, 'pin', 72, wy - 28, 34, GOLD); c.fillText(lines(c, ev.venue, W - 220)[0], 122, wy); }
   c.fillStyle = 'rgba(255,255,255,.75)'; c.font = font(600, 22); c.textAlign = 'center'; c.fillText('Imeandaliwa na · Prepared by  TRINITY MARK SOLUTIONS', W / 2, H - 40); c.textAlign = 'left';
   return cv.toDataURL('image/png');
 }

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import RegisterForm from './RegisterForm';
 import { getEvent, registerUrl } from './api';
 import { drawPass, sharePass } from './pass';
+import Icon from './icons';
 import './event.css';
 
 // The page attendees reach by scanning the QR code: no account, a short three-step form, then their pass.
@@ -22,8 +23,8 @@ export default function RegisterPublic() {
           <span className="ev-kicker">Usajili wa washiriki · Registration</span>
           <h1>{ev ? ev.title : 'Mpango wa Nishati wa Taifa'}</h1>
           <p>{ev ? ev.subtitle : ''}</p>
-          {ev && ev.tagline ? <span className="ev-tag">⚡ {ev.tagline}</span> : null}
-          {ev && (ev.event_date || ev.venue) ? <div className="ev-when">{ev.event_date ? <span>📅 {ev.event_date}{ev.event_time ? ' · ' + ev.event_time : ''}</span> : null}{ev.venue ? <span>📍 {ev.venue}</span> : null}</div> : null}
+          {ev && ev.tagline ? <span className="ev-tag"><Icon n="bolt" s={16} fill />{ev.tagline}</span> : null}
+          {ev && (ev.event_date || ev.venue) ? <div className="ev-when">{ev.event_date ? <span><Icon n="calendar" s={16} />{ev.event_date}{ev.event_time ? ' · ' + ev.event_time : ''}</span> : null}{ev.venue ? <span><Icon n="pin" s={16} />{ev.venue}</span> : null}</div> : null}
           <ul className="ev-perks" aria-label="Jinsi inavyofanya kazi">
             <li><b>1</b>Jaza fomu fupi <small>Fill a short form</small></li>
             <li><b>2</b>Pata pasi yako yenye QR <small>Get your QR pass</small></li>
@@ -43,9 +44,9 @@ export default function RegisterPublic() {
               <figcaption>Pasi yako yenye QR · Your QR pass</figcaption>
             </figure>
             <div className="ev-row">
-              <button type="button" className="ev-go is-small" disabled={!pass} onClick={() => sharePass(pass, done)}><span>⬇ Hifadhi pasi · Save pass</span></button>
-              <a className="ev-ghost" href={share} target="_blank" rel="noreferrer">Mwalike mwenzako (WhatsApp)</a>
-              <button type="button" className="ev-ghost" onClick={() => setDone(null)}>Sajili mtu mwingine</button>
+              <button type="button" className="ev-go is-small" disabled={!pass} onClick={() => sharePass(pass, done)}><Icon n="download" s={18} /><span>Hifadhi pasi · Save pass</span></button>
+              <a className="ev-ghost" href={share} target="_blank" rel="noreferrer"><Icon n="share" s={16} />Mwalike mwenzako (WhatsApp)</a>
+              <button type="button" className="ev-ghost" onClick={() => setDone(null)}><Icon n="plus" s={16} />Sajili mtu mwingine</button>
             </div>
           </section>
         ) : !ev.open ? (

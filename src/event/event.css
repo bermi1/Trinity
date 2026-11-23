@@ -182,3 +182,13 @@ html:has(.ev-page), body:has(.ev-page) { background: #FFF8EA; margin: 0; -webkit
 @keyframes evfade { from { opacity: 0; } to { opacity: 1; } }
 .ev-go, .ev-back, .ev-ghost { white-space: nowrap; }
 @media (max-width: 560px) { .ev-go { font-size: 16px; padding: 0 18px; } .ev-back { padding: 0 14px; font-size: 14px; } .ev-nav { gap: 10px; } }
+
+/* Line icons */
+.ev-ic { flex: none; display: block; }
+.ev-tag, .ev-when span, .ev-ghost, .ev-back { display: inline-flex; align-items: center; gap: 8px; }
+.ev-go { display: inline-flex; align-items: center; justify-content: center; gap: 10px; } .ev-go .ev-ic { position: relative; z-index: 1; }
+.ev-tag .ev-ic { color: var(--gold); } .ev-when .ev-ic { color: var(--g2); }
+.ev-steps b .ev-ic { width: 16px; height: 16px; }
+.ev-pane-h > span .ev-ic { color: var(--g); }
+.evd-in { display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 560px) { .ev-when span { border-radius: 14px; text-align: left; padding: 8px 12px; } }

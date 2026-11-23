@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { CATEGORIES, GENDERS, register, badge, checkStep } from './api';
+import Icon from './icons';
 
 const BLANK = { full_name: '', phone: '', email: '', organization: '', position: '', region: '', district: '', gender: '', category: '' };
 
 // The three sections attendees step through (walk-in at the desk shows them all at once).
 export const STEPS = [
-  { k: 'me', sw: 'Taarifa zako', en: 'About you', ic: '👤' },
-  { k: 'work', sw: 'Kazi na mahali', en: 'Work & location', ic: '🏢' },
-  { k: 'cat', sw: 'Unahudhuria kama', en: 'Attending as', ic: '✦' }
+  { k: 'me', sw: 'Taarifa zako', en: 'About you', ic: 'user' },
+  { k: 'work', sw: 'Kazi na mahali', en: 'Work & location', ic: 'building' },
+  { k: 'cat', sw: 'Unahudhuria kama', en: 'Attending as', ic: 'badge' }
 ];
 
 function Field({ sw, en, children, req }) {
@@ -67,19 +68,19 @@ export default function RegisterForm({ mode, onDone, compact }) {
       <ol className="ev-steps" aria-label="Hatua · Steps">
         {STEPS.map((s, i) => (
           <li key={s.k} className={(i === step ? 'is-now' : '') + (i < step ? ' is-done' : '')} aria-current={i === step ? 'step' : undefined}>
-            <button type="button" onClick={() => i < step && move(i)} disabled={i > step} aria-label={'Hatua ' + (i + 1) + ' · ' + s.en}><b>{i < step ? '✓' : i + 1}</b><span>{s.sw}<small>{s.en}</small></span></button>
+            <button type="button" onClick={() => i < step && move(i)} disabled={i > step} aria-label={'Hatua ' + (i + 1) + ' · ' + s.en}><b>{i < step ? <Icon n="check" s={16} /> : i + 1}</b><span>{s.sw}<small>{s.en}</small></span></button>
           </li>
         ))}
       </ol>
       <div className="ev-bar" aria-hidden="true"><i style={{ width: ((step + 1) / STEPS.length) * 100 + '%' }} /></div>
       <section key={step} className={'ev-pane ' + (dir > 0 ? 'is-fwd' : 'is-back')} aria-label={STEPS[step].en}>
-        <h3 className="ev-pane-h"><span aria-hidden="true">{STEPS[step].ic}</span>{STEPS[step].sw}<small>{STEPS[step].en}</small></h3>
+        <h3 className="ev-pane-h"><span aria-hidden="true"><Icon n={STEPS[step].ic} s={20} /></span>{STEPS[step].sw}<small>{STEPS[step].en}</small></h3>
         {step === 2 ? cat : <div className="ev-grid">{step === 0 ? me : work}</div>}
       </section>
       {err ? <div className="ev-err" role="alert">{err}</div> : null}
       <div className="ev-nav">
-        {step > 0 ? <button type="button" className="ev-back" onClick={() => move(step - 1)}>← Rudi · Back</button> : <span />}
-        <button type="submit" className="ev-go" disabled={busy}><span>{busy ? 'Inasajili…' : last ? 'Jisajili · Register' : 'Endelea · Next →'}</span></button>
+        {step > 0 ? <button type="button" className="ev-back" onClick={() => move(step - 1)}><Icon n="back" s={16} />Rudi · Back</button> : <span />}
+        <button type="submit" className="ev-go" disabled={busy}><span>{busy ? 'Inasajili…' : last ? 'Jisajili · Register' : 'Endelea · Next'}</span>{!busy && !last ? <Icon n="next" s={18} /> : null}</button>
       </div>
       <p className="ev-fine">Taarifa zako zitatumika kwa ajili ya kikao hiki pekee. Your details are used only for this event.</p>
     </form>

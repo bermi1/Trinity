@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import RegisterForm from './RegisterForm';
 import { getEvent, saveEvent, listRegs, checkIn, badge, registerUrl, CATEGORIES } from './api';
 import { printList, printPoster } from './print';
+import Icon from './icons';
 import './event.css';
 
 // The registration desk (inside the office system): register walk-ins, see everyone who registered
@@ -18,7 +19,7 @@ export default function EventDesk() {
   const list = useMemo(() => regs.filter(r => (!cat || r.category === cat) && (!mode || (mode === 'in' ? r.checked_in : r.mode === mode)) && (!q || (pq ? badge(r.badge_no) === pq : (r.full_name + ' ' + r.phone + ' ' + r.organization + ' ' + badge(r.badge_no)).toLowerCase().includes(q.toLowerCase())))), [regs, q, pq, cat, mode]);
   if (!ev) return <div className="evd"><p className="k-sub">{err || 'Inapakia…'}</p></div>;
   const n = { all: regs.length, qr: regs.filter(r => r.mode === 'qr').length, walk: regs.filter(r => r.mode === 'walkin').length, inn: regs.filter(r => r.checked_in).length };
-  const invite = 'Habari! Unakaribishwa kuhudhuria ' + ev.title + ' · ' + ev.subtitle + (ev.event_date ? '\n📅 ' + ev.event_date + (ev.event_time ? ' · ' + ev.event_time : '') : '') + (ev.venue ? '\n📍 ' + ev.venue : '') + '\nJisajili hapa: ' + registerUrl();
+  const invite = 'Habari! Unakaribishwa kuhudhuria ' + ev.title + ' · ' + ev.subtitle + (ev.event_date ? '\nTarehe: ' + ev.event_date + (ev.event_time ? ' · ' + ev.event_time : '') : '') + (ev.venue ? '\nMahali: ' + ev.venue : '') + '\nJisajili hapa: ' + registerUrl();
   const toggle = async r => { const m = await checkIn(r.id, !r.checked_in); if (m) setErr(m); else load(); };
   return (
     <div className="evd">
@@ -55,7 +56,7 @@ export default function EventDesk() {
                 <li key={r.id} data-reg={badge(r.badge_no)}>
                   <span className="evd-no">{badge(r.badge_no)}</span>
                   <span className="evd-who"><b>{r.full_name}</b><small>{[r.phone, r.organization, r.position].filter(Boolean).join(' · ')}</small><small>{[r.category, [r.region, r.district].filter(Boolean).join(', '), r.mode === 'qr' ? 'QR' : 'Walk-in'].filter(Boolean).join(' · ')}</small></span>
-                  <button type="button" className={'evd-in' + (r.checked_in ? ' is-on' : '')} aria-pressed={r.checked_in} onClick={() => toggle(r)} aria-label={(r.checked_in ? 'Undo check-in · ' : 'Check in · ') + r.full_name}>{r.checked_in ? '✓ Amefika' : 'Check in'}</button>
+                  <button type="button" className={'evd-in' + (r.checked_in ? ' is-on' : '')} aria-pressed={r.checked_in} onClick={() => toggle(r)} aria-label={(r.checked_in ? 'Undo check-in · ' : 'Check in · ') + r.full_name}>{r.checked_in ? <><Icon n="check" s={15} />Amefika</> : 'Check in'}</button>
                 </li>
               ))}
             </ul>
