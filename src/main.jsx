@@ -7,7 +7,11 @@ import './styles/interactions.css';
 import './styles/mobile.css';
 import './styles/kit.css';
 
-createRoot(document.getElementById('root')).render(
+// The public event registration page (reached by scanning the QR code) needs no account and skips the office system.
+const isRegister = /^\/register\/?$/.test(window.location.pathname);
+const root = createRoot(document.getElementById('root'));
+if (isRegister) import('./event/RegisterPublic').then(m => { const R = m.default; root.render(<StrictMode><ErrorBoundary><R /></ErrorBoundary></StrictMode>); });
+else root.render(
   <StrictMode>
     <ErrorBoundary>
       <App />
