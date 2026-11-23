@@ -6,14 +6,16 @@ import { printList, printPoster } from './print';
 import './event.css';
 
 // The registration desk (inside the office system): register walk-ins, see everyone who registered
-// by QR or at the desk, check people in, print the list and the QR poster, export to Excel.
+// by QR or at the desk, check people in, print the list and the QR poster.
 export default function EventDesk() {
   const [ev, setEv] = useState(null), [regs, setRegs] = useState([]), [tab, setTab] = useState('walkin');
   const [q, setQ] = useState(''), [cat, setCat] = useState(''), [mode, setMode] = useState(''), [last, setLast] = useState(null), [err, setErr] = useState(''), [qr, setQr] = useState('');
   const load = async () => { try { const [e, r] = await Promise.all([getEvent(), listRegs()]); setEv(e); setRegs(r); setErr(''); } catch (x) { setErr(x.message); } };
   useEffect(() => { load(); const t = setInterval(load, 8000); return () => clearInterval(t); }, []);
   useEffect(() => { QRCode.toDataURL(registerUrl(), { width: 600, margin: 1, color: { dark: '#0B3D1F', light: '#FFFFFF' } }).then(setQr); }, []);
-  const list = useMemo(() => regs.filter(r => (!cat || r.category === cat) && (!mode || (mode === 'in' ? r.checked_in : r.mode === mode)) && (!q || (r.full_name + ' ' + r.phone + ' ' + r.organization + ' ' + badge(r.badge_no)).toLowerCase().includes(q.toLowerCase()))), [regs, q, cat, mode]);
+  // A scanned pass reads "NISHATI-2026 · 001 · Name": search by its number.
+  const pq = (q.match(/NISHATI-2026\s*·\s*(\d{3})/i) || [])[1];
+  const list = useMemo(() => regs.filter(r => (!cat || r.category === cat) && (!mode || (mode === 'in' ? r.checked_in : r.mode === mode)) && (!q || (pq ? badge(r.badge_no) === pq : (r.full_name + ' ' + r.phone + ' ' + r.organization + ' ' + badge(r.badge_no)).toLowerCase().includes(q.toLowerCase())))), [regs, q, pq, cat, mode]);
   if (!ev) return <div className="evd"><p className="k-sub">{err || 'Inapakia…'}</p></div>;
   const n = { all: regs.length, qr: regs.filter(r => r.mode === 'qr').length, walk: regs.filter(r => r.mode === 'walkin').length, inn: regs.filter(r => r.checked_in).length };
   const invite = 'Habari! Unakaribishwa kuhudhuria ' + ev.title + ' · ' + ev.subtitle + (ev.event_date ? '\n📅 ' + ev.event_date + (ev.event_time ? ' · ' + ev.event_time : '') : '') + (ev.venue ? '\n📍 ' + ev.venue : '') + '\nJisajili hapa: ' + registerUrl();
@@ -43,7 +45,7 @@ export default function EventDesk() {
       {tab === 'list' ? (
         <section className="evd-card">
           <div className="evd-tools">
-            <input className="ff-search" value={q} onChange={e => setQ(e.target.value)} placeholder="Tafuta jina, simu, taasisi au namba" aria-label="Search attendees" />
+            <input className="ff-search" value={q} onChange={e => setQ(e.target.value)} placeholder="Tafuta jina, simu, namba, au scan pasi" aria-label="Search attendees" />
             <button type="button" className="me-save" onClick={() => setErr(printList(ev, list, [cat, mode === 'qr' ? 'QR' : mode === 'walkin' ? 'Walk-in' : mode === 'in' ? 'Wamefika' : ''].filter(Boolean).join(' · ')))}>Chapisha PDF · Print list</button>
           </div>
           <div className="ev-chips" role="group" aria-label="Filter">{[['', 'Wote'], ['qr', 'QR'], ['walkin', 'Walk-in'], ['in', 'Wamefika']].map(([k, l]) => <button key={k || 'all'} type="button" className={mode === k ? 'is-on' : ''} onClick={() => setMode(k)}>{l}</button>)}<span className="evd-sep" />{CATEGORIES.map(c => <button key={c} type="button" className={cat === c ? 'is-on' : ''} onClick={() => setCat(cat === c ? '' : c)}>{c}</button>)}</div>

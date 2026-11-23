@@ -48,6 +48,16 @@ export function checkForm(f) {
   return '';
 }
 
+// Checks one section of the stepped form: 0 about you, 1 work and location, 2 category.
+export function checkStep(f, step) {
+  if (step === 0) return checkForm(Object.assign({}, f, { category: 'x' }));
+  if (step === 2) return f.category ? '' : 'Chagua kundi lako · Choose your category';
+  return '';
+}
+
+// What the attendee's QR pass holds: the event, their number and name (the desk searches by number).
+export const passCode = (reg) => 'NISHATI-2026 · ' + badge(reg.badge_no) + ' · ' + (reg.full_name || '');
+
 // Registers an attendee; returns { id, badge_no, full_name, existing } or { error }.
 export async function register(f, mode) {
   const bad = checkForm(f); if (bad) return { error: bad };

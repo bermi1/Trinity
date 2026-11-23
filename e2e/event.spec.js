@@ -8,6 +8,17 @@ async function fill(scope, d) {
   await scope.getByLabel('Region').fill('Dodoma');
   await scope.getByRole('radio', { name: d.cat, exact: true }).click();
 }
+// The public form has three sections: about you, work and location, category.
+async function fillSteps(page, d) {
+  const next = page.getByRole('button', { name: 'Endelea · Next →' });
+  await page.getByLabel('Full name').fill(d.name);
+  await page.getByLabel('Phone number').fill(d.phone);
+  await next.click();
+  await page.getByLabel('Organisation').fill(d.org);
+  await page.getByLabel('Region').fill('Dodoma');
+  await next.click();
+  await page.getByRole('radio', { name: d.cat, exact: true }).click();
+}
 
 test('event: QR self-registration, walk-in at the desk, check-in and the printable list', async ({ page, context }) => {
   const errors = watchErrors(page);
@@ -16,16 +27,25 @@ test('event: QR self-registration, walk-in at the desk, check-in and the printab
   // An attendee scans the QR code: the public page, no account.
   await page.goto('/register');
   await expect(page.getByRole('heading', { name: 'Mpango wa Nishati wa Taifa' })).toBeVisible();
-  await page.getByRole('button', { name: 'Jisajili · Register' }).click();
+  // Each section is checked before moving on.
+  await page.getByRole('button', { name: 'Endelea · Next →' }).click();
   await expect(page.getByRole('alert')).toContainText('jina');
-  await fill(page, { name: 'Asha Juma Mollel', phone: '0712 345 678', org: 'TANESCO Dodoma', cat: 'TANESCO' });
+  await fillSteps(page, { name: 'Asha Juma Mollel', phone: '0712 345 678', org: 'TANESCO Dodoma', cat: 'TANESCO' });
+  // Going back keeps what was typed.
+  await page.getByRole('button', { name: '← Rudi · Back' }).click();
+  await expect(page.getByLabel('Organisation')).toHaveValue('TANESCO Dodoma');
+  await page.getByRole('button', { name: 'Endelea · Next →' }).click();
   await page.getByRole('button', { name: 'Jisajili · Register' }).click();
   await expect(page.getByText('Karibu, Asha!')).toBeVisible();
   await expect(page.locator('.ev-ticket b')).toHaveText('001');
   await expect(page.getByText('Tunakukaribisha kuhudhuria')).toBeVisible();
+  // Their designed pass with a QR code, ready to save.
+  await expect(page.getByAltText('Pasi ya Asha Juma Mollel · namba 001')).toBeVisible();
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: '⬇ Hifadhi pasi · Save pass' }).click()]);
+  expect(dl.suggestedFilename()).toBe('Pasi-Nishati-001.png');
   // Registering again with the same phone gives the same number.
   await page.getByRole('button', { name: 'Sajili mtu mwingine' }).click();
-  await fill(page, { name: 'Asha J. Mollel', phone: '+255712345678', org: 'TANESCO', cat: 'TANESCO' });
+  await fillSteps(page, { name: 'Asha J. Mollel', phone: '+255712345678', org: 'TANESCO', cat: 'TANESCO' });
   await page.getByRole('button', { name: 'Jisajili · Register' }).click();
   await expect(page.getByText('Tayari umesajiliwa')).toBeVisible();
   await expect(page.locator('.ev-ticket b')).toHaveText('001');
@@ -49,6 +69,12 @@ test('event: QR self-registration, walk-in at the desk, check-in and the printab
   await expect(page.locator('.evd-kpis .is-in b')).toHaveText('2');
   await page.getByRole('button', { name: 'QR', exact: true }).click();
   await expect(page.locator('.evd-list li')).toHaveCount(1);
+  // Scanning a pass into the search finds that person by number.
+  await page.getByRole('button', { name: 'Wote', exact: true }).click();
+  await page.getByLabel('Search attendees').fill('NISHATI-2026 · 002 · John Mwakyusa');
+  await expect(page.locator('.evd-list li')).toHaveCount(1);
+  await expect(page.locator('.evd-list li')).toContainText('John Mwakyusa');
+  await page.getByLabel('Search attendees').fill('');
   await page.getByRole('button', { name: 'Wote', exact: true }).click();
 
   // The printable PDF list opens with every attendee and the Trinity Mark footer.

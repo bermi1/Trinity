@@ -1,10 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
 
 export default defineConfig({
   plugins: [react()],
   build: {
     rollupOptions: {
+      // Two pages: the office system, and the public event registration page (with its own link-preview tags).
+      input: { main: resolve(__dirname, 'index.html'), register: resolve(__dirname, 'register.html') },
       output: {
         // Libraries change rarely, so they get their own long-cached files.
         manualChunks(id) {
