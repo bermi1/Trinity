@@ -67,3 +67,22 @@ html:has(.ev-page), body:has(.ev-page) { background: #FFF8EA; }
 .evd-qrside .ev-row { justify-content: flex-start; } .evd-qrside a.me-save, .evd-qrside a.me-cancel { display: inline-flex; align-items: center; text-decoration: none; }
 .evd-ok { background: #EAF6EE; color: #14532D; border-radius: 12px; padding: 10px 12px; font-weight: 700; font-size: 14px; }
 @media (max-width: 760px) { .evd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .evd-qr { grid-template-columns: 1fr; } .evd-list li { grid-template-columns: 52px minmax(0, 1fr); } .evd-list li .evd-in { grid-column: 1 / -1; } }
+
+/* Computers: event details on the left, the form on the right, fields in wide rows. Phones keep the stacked layout. */
+@media (min-width: 1000px) {
+  .ev-wrap { max-width: 1280px; padding: 28px 32px 40px; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 32px; row-gap: 20px; align-items: start; }
+  .ev-brand, .ev-foot { grid-column: 1 / -1; }
+  .ev-brand { padding: 10px 24px; }
+  .ev-brand img { max-width: 760px; margin: 0 auto; }
+  .ev-hero { position: sticky; top: 28px; text-align: left; padding: 24px 0 0; }
+  .ev-hero h1 { font-size: 52px; }
+  .ev-hero p { margin: 0; font-size: 17px; max-width: none; }
+  .ev-when { justify-content: flex-start; flex-direction: column; gap: 6px; font-size: 15px; }
+  .ev-card { padding: 26px 28px; }
+  .ev-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 16px; }
+  .ev-grid > .ev-field:last-child { grid-column: span 2; }
+  .ev-form > .ev-go { justify-self: end; min-width: 280px; padding: 0 32px; }
+  .ev-done { justify-items: center; }
+  .evd-card .ev-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .evd-card .ev-grid > .ev-field:last-child { grid-column: auto; }
+}

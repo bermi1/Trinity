@@ -27,7 +27,7 @@ export default function RegisterForm({ mode, onDone, compact }) {
       <div className="ev-grid">
         <Field sw="Jina kamili" en="Full name" req><input value={f.full_name} onChange={e => set('full_name', e.target.value)} autoComplete="name" placeholder="mf. Asha Juma Mollel" aria-label="Full name" /></Field>
         <Field sw="Namba ya simu" en="Phone number" req><input value={f.phone} onChange={e => set('phone', e.target.value)} inputMode="tel" autoComplete="tel" placeholder="07xx xxx xxx" aria-label="Phone number" /></Field>
-        <Field sw="Taasisi / Shirika" en="Organisation"><input value={f.organization} onChange={e => set('organization', e.target.value)} placeholder="mf. TANESCO Mkoa wa Dodoma" aria-label="Organisation" /></Field>
+        <Field sw="Taasisi / Shirika" en="Organisation"><input value={f.organization} onChange={e => set('organization', e.target.value)} placeholder="mf. TANESCO Dodoma" aria-label="Organisation" /></Field>
         <Field sw="Cheo" en="Position / title"><input value={f.position} onChange={e => set('position', e.target.value)} placeholder="mf. Afisa Mipango" aria-label="Position" /></Field>
         <Field sw="Mkoa" en="Region"><input value={f.region} onChange={e => set('region', e.target.value)} placeholder="mf. Dodoma" aria-label="Region" /></Field>
         <Field sw="Wilaya" en="District"><input value={f.district} onChange={e => set('district', e.target.value)} placeholder="mf. Chamwino" aria-label="District" /></Field>
