@@ -4,19 +4,14 @@ import { openAs, watchErrors, side } from './helpers';
 async function fill(scope, d) {
   await scope.getByLabel('Full name').fill(d.name);
   await scope.getByLabel('Phone number').fill(d.phone);
-  await scope.getByLabel('Organisation').fill(d.org);
-  await scope.getByLabel('Region').fill('Dodoma');
+  await scope.getByLabel('Company').fill(d.org);
   await scope.getByRole('textbox', { name: 'Attending as', exact: true }).fill(d.cat);
 }
-// The public form has three sections: about you, work and location, category.
+// The public form is one short page: name, phone, company, title, attending as.
 async function fillSteps(page, d) {
-  const next = page.getByRole('button', { name: 'Endelea · Next' });
   await page.getByLabel('Full name').fill(d.name);
   await page.getByLabel('Phone number').fill(d.phone);
-  await next.click();
-  await page.getByLabel('Organisation').fill(d.org);
-  await page.getByLabel('Region').fill('Dodoma');
-  await next.click();
+  await page.getByLabel('Company').fill(d.org);
   await page.getByRole('textbox', { name: 'Attending as', exact: true }).fill(d.cat);
 }
 
@@ -27,14 +22,10 @@ test('event: QR self-registration, walk-in at the desk, check-in and the printab
   // An attendee scans the QR code: the public page, no account.
   await page.goto('/register');
   await expect(page.getByRole('heading', { name: 'iMbeju Kilimo Sasa' })).toBeVisible();
-  // Each section is checked before moving on.
-  await page.getByRole('button', { name: 'Endelea · Next' }).click();
+  // Name and phone are checked before anything is saved.
+  await page.getByRole('button', { name: 'Jisajili · Register' }).click();
   await expect(page.getByRole('alert')).toContainText('jina');
   await fillSteps(page, { name: 'Asha Juma Mollel', phone: '0712 345 678', org: 'CRDB Bank Foundation', cat: 'CRDB Bank Foundation' });
-  // Going back keeps what was typed.
-  await page.getByRole('button', { name: 'Rudi · Back' }).click();
-  await expect(page.getByLabel('Organisation')).toHaveValue('CRDB Bank Foundation');
-  await page.getByRole('button', { name: 'Endelea · Next' }).click();
   await page.getByRole('button', { name: 'Jisajili · Register' }).click();
   await expect(page.getByText('Karibu, Asha!')).toBeVisible();
   await expect(page.locator('.ev-ticket b')).toHaveText('001');
