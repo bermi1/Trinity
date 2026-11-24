@@ -42,8 +42,8 @@ export function posterHtml(ev, qrDataUrl, format, o, url) {
   const steps = [['scan', 'Scan QR', 'Tumia kamera ya simu'], ['form', 'Jaza fomu fupi', 'Dakika moja tu'], ['pass', 'Pata pasi yako', 'Onyesha mezani']];
   const stepsHtml = steps.map(([ic, a, b], i) => `<div class=st><i>${sv(ic, screen ? 40 : 34)}</i><div><small>Hatua ${i + 1}</small><b>${a}</b><span>${b}</span></div></div>`).join('');
   const qrCard = `<div class=qrc><div class=rib>SCAN · UJISAJILI</div><span class="cn a"></span><span class="cn b"></span><span class="cn c"></span><span class="cn d"></span><img src="${qrDataUrl}" alt="QR"><div class=url>${esc(url.replace(/^https?:\/\//, ''))}</div></div>`;
-  const head = `<div class=k><i></i>Usajili wa washiriki · Self-registration</div><h1>${esc(ev.title)}</h1><p class=sub>${esc(ev.subtitle)}</p>${ev.tagline ? `<div class=tag>${sv('bolt', screen ? 30 : 26)}${esc(ev.tagline)}</div>` : ''}`;
-  const foot = `<div class=ft><span>Imeandaliwa na · Prepared by <img src="${o}/brand/trinity-logo-full.png" alt=""><b>TRINITY MARK SOLUTIONS</b></span><span>Kila Kaya Itawaka</span></div>`;
+  const head = `<div class=k><i></i>Usajili wa washiriki · Self-registration</div><h1${conf().keepCase ? ' style="text-transform:none"' : ''}>${esc(ev.title)}</h1><p class=sub>${esc(ev.subtitle)}</p>${ev.tagline ? `<div class=tag>${sv('bolt', screen ? 30 : 26)}${esc(ev.tagline)}</div>` : ''}`;
+  const foot = `<div class=ft><span>Imeandaliwa na · Prepared by <img src="${o}/brand/trinity-logo-full.png" alt=""><b>TRINITY MARK SOLUTIONS</b></span><span>${esc(ev.tagline || '')}</span></div>`;
   return `<!doctype html><html lang=sw><head><meta charset=utf-8><title>Bango la QR · ${esc(ev.title)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet"><style>
 *{box-sizing:border-box}html,body{margin:0;background:#2a2a2a}body{font-family:Manrope,'Segoe UI',Arial,sans-serif;color:#13261A;-webkit-print-color-adjust:exact;print-color-adjust:exact}
