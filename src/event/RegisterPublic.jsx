@@ -10,7 +10,7 @@ import './event.css';
 // The page attendees reach by scanning the QR code: no account, a short three-step form, then their pass.
 export default function RegisterPublic() {
   const [qr, setQr] = useState('');
-  useEffect(() => { if (window.innerWidth >= 1000) QRCode.toDataURL(registerUrl(), { width: 520, margin: 1, color: { dark: conf().theme.g3, light: '#FFFFFF' } }).then(setQr).catch(() => {}); }, []);
+  useEffect(() => { if (window.innerWidth >= 1000) QRCode.toDataURL(registerUrl(), { width: 900, margin: 2, errorCorrectionLevel: 'M', color: { dark: '#0B3A1C', light: '#FFFFFF' } }).then(setQr).catch(() => {}); }, []);
   const [ev, setEv] = useState(null); const [done, setDone] = useState(null); const [err, setErr] = useState(''); const [pass, setPass] = useState('');
   useEffect(() => { document.title = 'Usajili · ' + conf().title; getEvent().then(setEv).catch(e => setErr(e.message)); }, []);
   useEffect(() => { setPass(''); if (done && ev) drawPass(ev, Object.assign({}, done.form, done)).then(setPass).catch(() => setPass('')); }, [done, ev]);
