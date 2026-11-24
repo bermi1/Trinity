@@ -212,3 +212,8 @@ html:has(.ev-page), body:has(.ev-page) { background: #FAFAF6; margin: 0; -webkit
   .ev-form .ev-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ev-form > .ev-go { justify-self: stretch; }
 }
+/* Computers: the QR card leads the left column, level with the top of the form. */
+@media (min-width: 1000px) {
+  .ev-hero { display: flex; flex-direction: column; align-items: flex-start; padding-top: 0; }
+  .ev-qrcard { order: -1; margin: 0 0 22px; align-self: stretch; }
+}
