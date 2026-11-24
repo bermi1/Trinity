@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import RegisterForm from './RegisterForm';
 import { getEvent, registerUrl } from './api';
+import { conf, themeVars } from './events';
 import { drawPass, sharePass } from './pass';
 import Icon from './icons';
 import './event.css';
@@ -8,20 +9,21 @@ import './event.css';
 // The page attendees reach by scanning the QR code: no account, a short three-step form, then their pass.
 export default function RegisterPublic() {
   const [ev, setEv] = useState(null); const [done, setDone] = useState(null); const [err, setErr] = useState(''); const [pass, setPass] = useState('');
-  useEffect(() => { document.title = 'Usajili · Mpango wa Nishati wa Taifa'; getEvent().then(setEv).catch(e => setErr(e.message)); }, []);
+  useEffect(() => { document.title = 'Usajili · ' + conf().title; getEvent().then(setEv).catch(e => setErr(e.message)); }, []);
   useEffect(() => { setPass(''); if (done && ev) drawPass(ev, Object.assign({}, done.form, done)).then(setPass).catch(() => setPass('')); }, [done, ev]);
-  const share = 'https://wa.me/?text=' + encodeURIComponent('Nimejisajili kuhudhuria ' + (ev ? ev.title : 'Mpango wa Nishati wa Taifa') + '. Jisajili hapa: ' + registerUrl());
+  const share = 'https://wa.me/?text=' + encodeURIComponent('Nimejisajili kuhudhuria ' + (ev ? ev.title : conf().title) + '. Jisajili hapa: ' + registerUrl());
   return (
-    <div className="ev-page">
+    <div className="ev-page" style={themeVars()}>
       <div className="ev-orbs" aria-hidden="true"><i /><i /><i /></div>
-      <div className="ev-sky" aria-hidden="true" />
+      <div className="ev-sky" aria-hidden="true" style={{ backgroundImage: `url(${conf().sky})` }} />
       <main className="ev-wrap">
         <header className="ev-brand">
-          <img src="/event/logos.png" alt="Serikali ya Tanzania · TANESCO · CRDB Bank Foundation · iMbeju Nuru" />
+          <img src={conf().logos} alt={conf().logosAlt} />
         </header>
         <section className="ev-hero">
+          {conf().hero ? <figure className="ev-heroimg"><img src={conf().hero} alt={conf().title} /></figure> : null}
           <span className="ev-kicker">Usajili wa washiriki · Registration</span>
-          <h1>{ev ? ev.title : 'Mpango wa Nishati wa Taifa'}</h1>
+          <h1 style={conf().keepCase ? { textTransform: 'none' } : undefined}>{ev ? ev.title : conf().title}</h1>
           <p>{ev ? ev.subtitle : ''}</p>
           {ev && ev.tagline ? <span className="ev-tag"><Icon n="bolt" s={16} fill />{ev.tagline}</span> : null}
           {ev && (ev.event_date || ev.venue) ? <div className="ev-when">{ev.event_date ? <span><Icon n="calendar" s={16} />{ev.event_date}{ev.event_time ? ' · ' + ev.event_time : ''}</span> : null}{ev.venue ? <span><Icon n="pin" s={16} />{ev.venue}</span> : null}</div> : null}

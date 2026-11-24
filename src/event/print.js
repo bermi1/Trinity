@@ -1,8 +1,9 @@
 // Printable attendee list and QR poster (print or "Save as PDF"), with the Trinity Mark footer on every page.
 import { badge, registerUrl } from './api';
+import { conf, recolor } from './events';
 
 const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const open = html => { const w = window.open('', '_blank'); if (!w) return 'Ruhusu pop-ups ili kufungua · Allow pop-ups to open the PDF'; w.document.open(); w.document.write(html); w.document.close(); return ''; };
+const open = raw => { const html = recolor(raw.split('/event/logos.png').join(conf().logos).split('/event/pylons.jpg').join(conf().sky)); const w = window.open('', '_blank'); if (!w) return 'Ruhusu pop-ups ili kufungua · Allow pop-ups to open the PDF'; w.document.open(); w.document.write(html); w.document.close(); return ''; };
 const BASE = `body{font:12px/1.45 Arial,Helvetica,sans-serif;color:#13261A;background:#EDEAE2;margin:0}.p{background:#fff;margin:14px auto;padding:12mm}
 .bar{position:fixed;top:10px;right:10px}.bar button{padding:9px 16px;border:none;border-radius:9px;background:#0B5A2A;color:#fff;font-weight:700;cursor:pointer}
 @media print{.bar{display:none}body{background:#fff}.p{margin:0;box-shadow:none}}

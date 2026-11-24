@@ -26,26 +26,26 @@ test('event: QR self-registration, walk-in at the desk, check-in and the printab
 
   // An attendee scans the QR code: the public page, no account.
   await page.goto('/register');
-  await expect(page.getByRole('heading', { name: 'Mpango wa Nishati wa Taifa' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'iMbeju Kilimo Sasa' })).toBeVisible();
   // Each section is checked before moving on.
   await page.getByRole('button', { name: 'Endelea · Next' }).click();
   await expect(page.getByRole('alert')).toContainText('jina');
-  await fillSteps(page, { name: 'Asha Juma Mollel', phone: '0712 345 678', org: 'TANESCO Dodoma', cat: 'TANESCO' });
+  await fillSteps(page, { name: 'Asha Juma Mollel', phone: '0712 345 678', org: 'CRDB Bank Foundation', cat: 'CRDB Bank Foundation' });
   // Going back keeps what was typed.
   await page.getByRole('button', { name: 'Rudi · Back' }).click();
-  await expect(page.getByLabel('Organisation')).toHaveValue('TANESCO Dodoma');
+  await expect(page.getByLabel('Organisation')).toHaveValue('CRDB Bank Foundation');
   await page.getByRole('button', { name: 'Endelea · Next' }).click();
   await page.getByRole('button', { name: 'Jisajili · Register' }).click();
   await expect(page.getByText('Karibu, Asha!')).toBeVisible();
   await expect(page.locator('.ev-ticket b')).toHaveText('001');
-  await expect(page.getByText('Tunakukaribisha kuhudhuria')).toBeVisible();
+  await expect(page.getByText('Karibu kwenye uzinduzi wa iMbeju Kilimo Sasa')).toBeVisible();
   // Their designed pass with a QR code, ready to save.
   await expect(page.getByAltText('Pasi ya Asha Juma Mollel · namba 001')).toBeVisible();
   const [dl] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Hifadhi pasi · Save pass' }).click()]);
-  expect(dl.suggestedFilename()).toBe('Pasi-Nishati-001.png');
+  expect(dl.suggestedFilename()).toBe('Pasi-Kilimo-Sasa-001.png');
   // Registering again with the same phone gives the same number.
   await page.getByRole('button', { name: 'Sajili mtu mwingine' }).click();
-  await fillSteps(page, { name: 'Asha J. Mollel', phone: '+255712345678', org: 'TANESCO', cat: 'TANESCO' });
+  await fillSteps(page, { name: 'Asha J. Mollel', phone: '+255712345678', org: 'CRDB', cat: 'CRDB Bank Foundation' });
   await page.getByRole('button', { name: 'Jisajili · Register' }).click();
   await expect(page.getByText('Tayari umesajiliwa')).toBeVisible();
   await expect(page.locator('.ev-ticket b')).toHaveText('001');
@@ -71,7 +71,7 @@ test('event: QR self-registration, walk-in at the desk, check-in and the printab
   await expect(page.locator('.evd-list li')).toHaveCount(1);
   // Scanning a pass into the search finds that person by number.
   await page.getByRole('button', { name: 'Wote', exact: true }).click();
-  await page.getByLabel('Search attendees').fill('NISHATI-2026 · 002 · John Mwakyusa');
+  await page.getByLabel('Search attendees').fill('KILIMO-2026 · 002 · John Mwakyusa');
   await expect(page.locator('.evd-list li')).toHaveCount(1);
   await expect(page.locator('.evd-list li')).toContainText('John Mwakyusa');
   await page.getByLabel('Search attendees').fill('');
@@ -109,4 +109,13 @@ test('event: the desk is in Management, the PA and Client Service menus, not Cre
   }
   await openAs(page, 'creative', 'dept');
   await expect(page.locator('aside').getByText('Event registration')).toHaveCount(0);
+});
+
+test('event: Nishati stays as history; its page says registration is closed', async ({ page }) => {
+  await openAs(page, 'reception', 'event');
+  await expect(page.locator('.evd-top h1')).toHaveText('iMbeju Kilimo Sasa');
+  await page.locator('.evd-events').getByRole('button', { name: /Nishati wa Taifa/ }).click();
+  await expect(page.locator('.evd-top h1')).toHaveText('Mpango wa Nishati wa Taifa');
+  await page.goto('/register?e=nishati-2026');
+  await expect(page.getByRole('heading', { name: 'Mpango wa Nishati wa Taifa' })).toBeVisible();
 });

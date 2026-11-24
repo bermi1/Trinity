@@ -1,19 +1,19 @@
 /* Event registration · Mpango wa Nishati wa Taifa. Deep green, warm gold, cream; modern and animated. */
-html:has(.ev-page), body:has(.ev-page) { background: #FFF8EA; margin: 0; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; }
+html:has(.ev-page), body:has(.ev-page) { background: #FAFAF6; margin: 0; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%; }
 .ev-page { --g: #0B5A2A; --g2: #14833D; --g3: #063A1B; --o: #F2A33A; --gold: #F5C04A; --cream: #FFF8EA; --ink: #13261A; --mut: #56685B; --line: #E8E1CE; --ease: cubic-bezier(.22,1,.36,1);
-  min-height: 100vh; background: radial-gradient(1200px 600px at 85% -10%, #FFE7B0 0%, transparent 60%), radial-gradient(900px 500px at -10% 20%, #E3F3E8 0%, transparent 60%), linear-gradient(180deg, #FFFDF8 0%, var(--cream) 60%, #FDE6BE 100%);
+  min-height: 100vh; background: radial-gradient(1200px 600px at 85% -10%, color-mix(in srgb, var(--gold) 45%, transparent) 0%, transparent 60%), radial-gradient(900px 500px at -10% 20%, #E3F3E8 0%, transparent 60%), linear-gradient(180deg, #FFFFFF 0%, var(--cream) 60%, color-mix(in srgb, var(--gold) 30%, var(--cream)) 100%);
   color: var(--ink); font-family: Manrope, 'Segoe UI', Arial, sans-serif; position: relative; overflow-x: hidden; }
 .ev-orbs i { position: fixed; border-radius: 50%; filter: blur(60px); opacity: .45; pointer-events: none; animation: evfloat 18s ease-in-out infinite; }
-.ev-orbs i:nth-child(1) { width: 340px; height: 340px; background: #F5C04A; top: -120px; right: -80px; }
+.ev-orbs i:nth-child(1) { width: 340px; height: 340px; background: var(--gold); top: -120px; right: -80px; }
 .ev-orbs i:nth-child(2) { width: 280px; height: 280px; background: #9ED8B0; top: 40%; left: -120px; animation-delay: -6s; }
-.ev-orbs i:nth-child(3) { width: 220px; height: 220px; background: #F2A33A; bottom: 10%; right: 10%; opacity: .25; animation-delay: -12s; }
+.ev-orbs i:nth-child(3) { width: 220px; height: 220px; background: #F2A33A; bottom: 10%; right: 10%; opacity: .25; animation-delay: -12s; } .ev-orbs i:nth-child(3) { background: var(--o); }
 .ev-sky { position: fixed; left: 0; right: 0; bottom: 0; height: 38vh; background: url('/event/pylons.jpg') bottom center / auto 100% repeat-x; opacity: .32; pointer-events: none; mask-image: linear-gradient(to top, #000 35%, transparent); -webkit-mask-image: linear-gradient(to top, #000 35%, transparent); }
 .ev-page main.ev-wrap { background: transparent; }
-.ev-wrap { position: relative; max-width: 760px; margin: 0 auto; padding: 16px 16px 40px; display: grid; gap: 18px; }
+.ev-wrap { grid-template-columns: minmax(0, 1fr); position: relative; max-width: 760px; margin: 0 auto; padding: 16px 16px 40px; display: grid; gap: 18px; }
 .ev-brand { background: rgba(255,255,255,.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.9); border-radius: 20px; padding: 10px 16px; box-shadow: 0 10px 30px rgba(11,90,42,.08); animation: evup .7s var(--ease) both; }
 .ev-brand img { display: block; width: 100%; height: auto; }
-.ev-hero { text-align: center; padding: 4px 4px 0; animation: evup .8s .08s var(--ease) both; }
-.ev-kicker { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #9A6A00; background: rgba(245,192,74,.18); padding: 6px 12px; border-radius: 999px; }
+.ev-hero { min-width: 0; text-align: center; padding: 4px 4px 0; animation: evup .8s .08s var(--ease) both; }
+.ev-kicker { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--g); background: color-mix(in srgb, var(--gold) 28%, transparent); padding: 6px 12px; border-radius: 999px; }
 .ev-kicker::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--o); box-shadow: 0 0 0 0 rgba(242,163,58,.6); animation: evping 2s infinite; }
 .ev-hero h1 { margin: 12px 0 10px; font-size: clamp(30px, 8vw, 46px); font-weight: 800; letter-spacing: -.02em; line-height: 1.02; text-transform: uppercase;
   background: linear-gradient(100deg, var(--g3) 0%, var(--g) 40%, var(--g2) 60%, var(--g3) 100%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: evshine 8s linear infinite; }
@@ -88,7 +88,7 @@ html:has(.ev-page), body:has(.ev-page) { background: #FFF8EA; margin: 0; -webkit
 .ev-pass img { width: 100%; max-width: 360px; border-radius: 20px; box-shadow: 0 30px 50px -20px rgba(6,58,27,.6); transition: transform .4s var(--ease); }
 .ev-pass img:hover { transform: translateY(-4px) rotate(-.6deg); }
 .ev-pass figcaption { font-size: 12.5px; font-weight: 700; color: var(--mut); }
-.ev-pass-wait { width: 300px; height: 416px; border-radius: 20px; display: grid; place-items: center; color: #fff; font-weight: 700; background: linear-gradient(90deg, #0B5A2A 25%, #14833D 50%, #0B5A2A 75%); background-size: 200% 100%; animation: evshine 1.4s linear infinite; }
+.ev-pass-wait { width: 300px; height: 416px; border-radius: 20px; display: grid; place-items: center; color: #fff; font-weight: 700; background: linear-gradient(90deg, var(--g) 25%, #14833D 50%, #0B5A2A 75%); background-size: 200% 100%; animation: evshine 1.4s linear infinite; }
 .ev-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .ev-ghost { display: inline-flex; align-items: center; min-height: 46px; padding: 0 16px; border-radius: 13px; border: 1.5px solid var(--line); background: #fff; color: var(--g); font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; transition: transform .2s, border-color .2s; }
 .ev-ghost:hover { border-color: var(--g2); transform: translateY(-1px); }
@@ -130,8 +130,8 @@ html:has(.ev-page), body:has(.ev-page) { background: #FFF8EA; margin: 0; -webkit
 
 /* Desk (inside the office system) */
 .evd { --g: #0B5A2A; --g2: #14833D; --g3: #063A1B; --gold: #F5C04A; --line: #E8E1CE; --ease: cubic-bezier(.22,1,.36,1); --o: #F2A33A; --ink: #13261A; --mut: #4B5E51; display: grid; gap: 14px; }
-.evd-top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; background: linear-gradient(180deg, #FFFDF7, #FFF3DA); border: 1px solid #F0E7D2; border-radius: 20px; padding: 16px 18px; }
-.evd-top img { width: 100%; max-width: 620px; height: auto; } .evd-top small { font-size: 11.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #B26B00; }
+.evd-top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; background: linear-gradient(180deg, #FFFFFF, var(--cream, #FFF3DA)); border: 1px solid color-mix(in srgb, var(--g) 15%, #fff); border-radius: 20px; padding: 16px 18px; }
+.evd-top img { width: 100%; max-width: 620px; height: auto; } .evd-top small { font-size: 11.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--g2); }
 .evd-top h1 { margin: 4px 0; font-size: 24px; color: var(--g); text-transform: uppercase; } .evd-top p { margin: 0; color: #1F4A2E; font-size: 14px; }
 .evd-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .evd-kpis div { background: #fff; border: 1px solid #ECE8DC; border-radius: 16px; padding: 14px 16px; display: grid; gap: 2px; } .evd-kpis b { font-size: 30px; font-weight: 800; color: var(--g); font-variant-numeric: tabular-nums; } .evd-kpis span { font-size: 12.5px; color: var(--mut); font-weight: 600; }
@@ -192,3 +192,11 @@ html:has(.ev-page), body:has(.ev-page) { background: #FFF8EA; margin: 0; -webkit
 .ev-pane-h > span .ev-ic { color: var(--g); }
 .evd-in { display: inline-flex; align-items: center; gap: 6px; }
 @media (max-width: 560px) { .ev-when span { border-radius: 14px; text-align: left; padding: 8px 12px; } }
+.evd-events { display: flex; gap: 8px; flex-wrap: wrap; }
+.evd-events button { display: grid; text-align: left; gap: 1px; padding: 8px 14px; border-radius: 12px; border: 1.5px solid #E3DCC8; background: #fff; font: inherit; font-weight: 800; font-size: 14px; color: var(--ink); cursor: pointer; }
+.evd-events button small { font-size: 11px; font-weight: 600; color: var(--mut); }
+.evd-events button.is-on { background: var(--g); border-color: var(--g); color: #fff; } .evd-events button.is-on small { color: rgba(255,255,255,.8); }
+
+/* Hero banner (events that have one, e.g. Kilimo Sasa) */
+.ev-heroimg { margin: 0 0 18px; min-width: 0; border-radius: 22px; overflow: hidden; box-shadow: 0 20px 40px -20px rgba(0,0,0,.35); }
+.ev-heroimg img { display: block; width: 100%; max-width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }

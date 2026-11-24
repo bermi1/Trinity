@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CATEGORIES, GENDERS, register, badge, checkStep } from './api';
+import { categories, GENDERS, register, badge, checkStep } from './api';
 import Icon from './icons';
 
 const BLANK = { full_name: '', phone: '', email: '', organization: '', position: '', region: '', district: '', gender: '', category: '' };
@@ -48,7 +48,7 @@ export default function RegisterForm({ mode, onDone, compact }) {
     <Field key="d" sw="Wilaya" en="District"><input value={f.district} onChange={e => set('district', e.target.value)} placeholder="mf. Chamwino" aria-label="District" /></Field>
   ];
   const cat = (
-    <div className="ev-field"><span>Kundi<em> *</em><small>You are attending as</small></span><div className="ev-chips is-cats" role="radiogroup" aria-label="Category">{CATEGORIES.map((c, i) => <button key={c} type="button" role="radio" aria-checked={f.category === c} className={f.category === c ? 'is-on' : ''} style={{ '--i': i }} onClick={() => set('category', c)}>{c}</button>)}</div></div>
+    <div className="ev-field"><span>Kundi<em> *</em><small>You are attending as</small></span><div className="ev-chips is-cats" role="radiogroup" aria-label="Category">{categories().map((c, i) => <button key={c} type="button" role="radio" aria-checked={f.category === c} className={f.category === c ? 'is-on' : ''} style={{ '--i': i }} onClick={() => set('category', c)}>{c}</button>)}</div></div>
   );
 
   if (!stepped) {

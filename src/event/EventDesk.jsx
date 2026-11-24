@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import RegisterForm from './RegisterForm';
-import { getEvent, saveEvent, listRegs, checkIn, badge, registerUrl, CATEGORIES } from './api';
+import { getEvent, saveEvent, listRegs, checkIn, badge, registerUrl, categories } from './api';
+import { conf, themeVars, pickEvent, eventId, EVENTS, EVENT_ORDER, ACTIVE_EVENT } from './events';
 import { printList, printPoster } from './print';
 import Icon from './icons';
 import './event.css';
@@ -13,18 +14,19 @@ export default function EventDesk() {
   const [q, setQ] = useState(''), [cat, setCat] = useState(''), [mode, setMode] = useState(''), [last, setLast] = useState(null), [err, setErr] = useState(''), [qr, setQr] = useState('');
   const load = async () => { try { const [e, r] = await Promise.all([getEvent(), listRegs()]); setEv(e); setRegs(r); setErr(''); } catch (x) { setErr(x.message); } };
   useEffect(() => { load(); const t = setInterval(load, 8000); return () => clearInterval(t); }, []);
-  useEffect(() => { QRCode.toDataURL(registerUrl(), { width: 1000, margin: 1, color: { dark: '#0B3D1F', light: '#FFFFFF' } }).then(setQr); }, []);
-  // A scanned pass reads "NISHATI-2026 · 001 · Name": search by its number.
-  const pq = (q.match(/NISHATI-2026\s*·\s*(\d{3})/i) || [])[1];
+  useEffect(() => { QRCode.toDataURL(registerUrl(), { width: 1000, margin: 1, color: { dark: conf().theme.g3, light: '#FFFFFF' } }).then(setQr); }, []);
+  // A scanned pass reads "KILIMO-2026 · 001 · Name": search by its number.
+  const pq = (q.match(/[A-Z]+-\d{4}\s*·\s*(\d{3})/i) || [])[1];
   const list = useMemo(() => regs.filter(r => (!cat || r.category === cat) && (!mode || (mode === 'in' ? r.checked_in : r.mode === mode)) && (!q || (pq ? badge(r.badge_no) === pq : (r.full_name + ' ' + r.phone + ' ' + r.organization + ' ' + badge(r.badge_no)).toLowerCase().includes(q.toLowerCase())))), [regs, q, pq, cat, mode]);
-  if (!ev) return <div className="evd"><p className="k-sub">{err || 'Inapakia…'}</p></div>;
+  if (!ev) return <div className="evd" style={themeVars()}><p className="k-sub">{err || 'Inapakia…'}</p></div>;
   const n = { all: regs.length, qr: regs.filter(r => r.mode === 'qr').length, walk: regs.filter(r => r.mode === 'walkin').length, inn: regs.filter(r => r.checked_in).length };
   const invite = 'Habari! Unakaribishwa kuhudhuria ' + ev.title + ' · ' + ev.subtitle + (ev.event_date ? '\nTarehe: ' + ev.event_date + (ev.event_time ? ' · ' + ev.event_time : '') : '') + (ev.venue ? '\nMahali: ' + ev.venue : '') + '\nJisajili hapa: ' + registerUrl();
   const toggle = async r => { const m = await checkIn(r.id, !r.checked_in); if (m) setErr(m); else load(); };
   return (
-    <div className="evd">
+    <div className="evd" style={themeVars()}>
+      <div className="evd-events" role="group" aria-label="Events">{EVENT_ORDER.map(id => <button key={id} type="button" className={id === eventId() ? 'is-on' : ''} onClick={() => { pickEvent(id === ACTIVE_EVENT ? null : id); setEv(null); setRegs([]); setTab(id === ACTIVE_EVENT ? 'walkin' : 'list'); setQr(''); setTimeout(() => { load(); QRCode.toDataURL(registerUrl(), { width: 1000, margin: 1, color: { dark: conf().theme.g3, light: '#FFFFFF' } }).then(setQr); }, 0); }}>{EVENTS[id].short}<small>{id === ACTIVE_EVENT ? 'Sasa · Current' : 'Historia · History'}</small></button>)}</div>
       <header className="evd-top">
-        <img src="/event/logos.png" alt="" />
+        <img src={conf().logos} alt="" />
         <div><small>Usajili wa tukio · Event registration</small><h1>{ev.title}</h1><p>{ev.subtitle}</p></div>
       </header>
       <section className="evd-kpis" aria-label="Takwimu">
@@ -49,7 +51,7 @@ export default function EventDesk() {
             <input className="ff-search" value={q} onChange={e => setQ(e.target.value)} placeholder="Tafuta jina, simu, namba, au scan pasi" aria-label="Search attendees" />
             <button type="button" className="me-save" onClick={() => setErr(printList(ev, list, [cat, mode === 'qr' ? 'QR' : mode === 'walkin' ? 'Walk-in' : mode === 'in' ? 'Wamefika' : ''].filter(Boolean).join(' · ')))}>Chapisha PDF · Print list</button>
           </div>
-          <div className="ev-chips" role="group" aria-label="Filter">{[['', 'Wote'], ['qr', 'QR'], ['walkin', 'Walk-in'], ['in', 'Wamefika']].map(([k, l]) => <button key={k || 'all'} type="button" className={mode === k ? 'is-on' : ''} onClick={() => setMode(k)}>{l}</button>)}<span className="evd-sep" />{CATEGORIES.map(c => <button key={c} type="button" className={cat === c ? 'is-on' : ''} onClick={() => setCat(cat === c ? '' : c)}>{c}</button>)}</div>
+          <div className="ev-chips" role="group" aria-label="Filter">{[['', 'Wote'], ['qr', 'QR'], ['walkin', 'Walk-in'], ['in', 'Wamefika']].map(([k, l]) => <button key={k || 'all'} type="button" className={mode === k ? 'is-on' : ''} onClick={() => setMode(k)}>{l}</button>)}<span className="evd-sep" />{categories().map(c => <button key={c} type="button" className={cat === c ? 'is-on' : ''} onClick={() => setCat(cat === c ? '' : c)}>{c}</button>)}</div>
           {list.length ? (
             <ul className="evd-list">
               {list.map(r => (

@@ -2,8 +2,9 @@
 // drawn in the browser so it can be saved to the phone or shared on WhatsApp.
 import QRCode from 'qrcode';
 import { badge, passCode } from './api';
+import { conf } from './events';
 
-const G = '#0B5A2A', G2 = '#063A1B', GOLD = '#F5C04A', ORANGE = '#F2A33A', INK = '#13261A';
+let G = '#0B5A2A', G2 = '#063A1B', GOLD = '#F5C04A', ORANGE = '#F2A33A', INK = '#13261A', T = {};
 const load = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
 const font = (w, px) => `${w} ${px}px Manrope, 'Segoe UI', Arial, sans-serif`;
 
@@ -23,12 +24,13 @@ function lines(c, text, max) {
 function fit(c, text, weight, px, max) { let s = px; c.font = font(weight, s); while (c.measureText(text).width > max && s > 18) { s -= 2; c.font = font(weight, s); } return s; }
 
 export async function drawPass(ev, reg) {
+  T = conf().theme; G = T.g; G2 = T.g3; GOLD = T.gold; ORANGE = T.o; INK = T.ink;
   try { await document.fonts.ready; } catch (e) { /* fonts optional */ }
   const W = 1080, H = 1500, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const c = cv.getContext('2d');
   const [logos, pylons, qr] = await Promise.all([
-    load('/event/logos.png'), load('/event/pylons.jpg'),
-    QRCode.toDataURL(passCode(reg), { width: 520, margin: 1, errorCorrectionLevel: 'M', color: { dark: G2, light: '#FFFFFF' } }).then(load)
+    load(conf().logos), load(conf().sky),
+    QRCode.toDataURL(passCode(reg), { width: 520, margin: 1, errorCorrectionLevel: 'M', color: { dark: T.g3, light: '#FFFFFF' } }).then(load)
   ]);
 
   // Background: deep green with a warm sunrise glow and the pylons along the bottom.
@@ -84,10 +86,10 @@ export async function drawPass(ev, reg) {
 
 // Saves the pass to the phone, or opens the share sheet (WhatsApp, etc.) where the phone allows it.
 export async function sharePass(url, reg) {
-  const name = 'Pasi-Nishati-' + badge(reg.badge_no) + '.png';
+  const name = 'Pasi-' + conf().short.replace(/\s+/g, '-') + '-' + badge(reg.badge_no) + '.png';
   try {
     const blob = await (await fetch(url)).blob(), file = new File([blob], name, { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Pasi yangu · Mpango wa Nishati wa Taifa' }); return; }
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'Pasi yangu · ' + conf().title }); return; }
   } catch (e) { /* fall back to download */ }
   const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
 }
