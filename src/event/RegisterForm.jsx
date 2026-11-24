@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { categories, GENDERS, register, badge, checkStep } from './api';
+import { GENDERS, register, badge, checkStep } from './api';
 import Icon from './icons';
 
 const BLANK = { full_name: '', phone: '', email: '', organization: '', position: '', region: '', district: '', gender: '', category: '' };
@@ -47,8 +47,9 @@ export default function RegisterForm({ mode, onDone, compact }) {
     <Field key="r" sw="Mkoa" en="Region"><input value={f.region} onChange={e => set('region', e.target.value)} placeholder="mf. Dodoma" aria-label="Region" /></Field>,
     <Field key="d" sw="Wilaya" en="District"><input value={f.district} onChange={e => set('district', e.target.value)} placeholder="mf. Chamwino" aria-label="District" /></Field>
   ];
+  // Attending as: people write it in their own words (organisation, role, farmer, guest…).
   const cat = (
-    <div className="ev-field"><span>Kundi<em> *</em><small>You are attending as</small></span><div className="ev-chips is-cats" role="radiogroup" aria-label="Category">{categories().map((c, i) => <button key={c} type="button" role="radio" aria-checked={f.category === c} className={f.category === c ? 'is-on' : ''} style={{ '--i': i }} onClick={() => set('category', c)}>{c}</button>)}</div></div>
+    <Field sw="Unahudhuria kama" en="Attending as" req><input value={f.category} onChange={e => set('category', e.target.value)} placeholder="mf. Mkulima, Mgeni, Afisa wa CRDB, Mwanahabari" aria-label="Attending as" /></Field>
   );
 
   if (!stepped) {

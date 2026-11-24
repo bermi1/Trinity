@@ -41,14 +41,14 @@ export function checkForm(f) {
   if ((f.full_name || '').trim().length < 2) return 'Andika jina lako kamili · Enter your full name';
   if (digits(f.phone).length < 9) return 'Andika namba sahihi ya simu · Enter a valid phone number';
   if (f.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email.trim())) return 'Barua pepe si sahihi · Check the email address';
-  if (!f.category) return 'Chagua kundi lako · Choose your category';
+  if (!(f.category || '').trim()) return 'Andika unahudhuria kama nani · Tell us how you are attending';
   return '';
 }
 
 // Checks one section of the stepped form: 0 about you, 1 work and location, 2 category.
 export function checkStep(f, step) {
   if (step === 0) return checkForm(Object.assign({}, f, { category: 'x' }));
-  if (step === 2) return f.category ? '' : 'Chagua kundi lako · Choose your category';
+  if (step === 2) return (f.category || '').trim() ? '' : 'Andika unahudhuria kama nani · Tell us how you are attending';
   return '';
 }
 
@@ -62,12 +62,12 @@ export async function register(f, mode) {
     const d = local();
     if (!d.event.open && mode === 'qr') return { error: 'Usajili umefungwa · Registration is closed' };
     const old = d.regs.find(r => phoneKey(r.phone) === phoneKey(f.phone));
-    if (old) return { id: old.id, badge_no: old.badge_no, full_name: old.full_name, existing: true };
-    const r = { id: 'R' + Date.now().toString(36), event_id: eventId(), badge_no: d.regs.reduce((m, x) => Math.max(m, x.badge_no), 0) + 1, full_name: f.full_name.trim(), phone: f.phone.trim(), email: (f.email || '').trim(), organization: (f.organization || '').trim(), position: (f.position || '').trim(), region: (f.region || '').trim(), district: (f.district || '').trim(), gender: f.gender || '', category: f.category || '', mode, checked_in: mode === 'walkin', checked_in_at: mode === 'walkin' ? new Date().toISOString() : null, created_at: new Date().toISOString() };
+    if (old) { if (!old.checked_in) { old.checked_in = true; old.checked_in_at = new Date().toISOString(); saveLocal(d); } return { id: old.id, badge_no: old.badge_no, full_name: old.full_name, existing: true }; }
+    const r = { id: 'R' + Date.now().toString(36), event_id: eventId(), badge_no: d.regs.reduce((m, x) => Math.max(m, x.badge_no), 0) + 1, full_name: f.full_name.trim(), phone: f.phone.trim(), email: (f.email || '').trim(), organization: (f.organization || '').trim(), position: (f.position || '').trim(), region: (f.region || '').trim(), district: (f.district || '').trim(), gender: f.gender || '', category: (f.category || '').trim(), mode, checked_in: true, checked_in_at: new Date().toISOString(), created_at: new Date().toISOString() };
     d.regs.push(r); saveLocal(d);
     return { id: r.id, badge_no: r.badge_no, full_name: r.full_name, existing: false };
   }
-  const { data, error } = await supabase.rpc('register_attendee', { p_event: eventId(), p_full_name: f.full_name, p_phone: f.phone, p_email: f.email || '', p_organization: f.organization || '', p_position: f.position || '', p_region: f.region || '', p_district: f.district || '', p_gender: f.gender || '', p_category: f.category || '', p_mode: mode });
+  const { data, error } = await supabase.rpc('register_attendee', { p_event: eventId(), p_full_name: f.full_name, p_phone: f.phone, p_email: f.email || '', p_organization: f.organization || '', p_position: f.position || '', p_region: f.region || '', p_district: f.district || '', p_gender: f.gender || '', p_category: (f.category || '').trim(), p_mode: mode });
   if (error) return { error: /fetch|network/i.test(error.message || '') ? 'Mtandao haupatikani, jaribu tena · No connection, please try again' : clean(error) };
   return data;
 }

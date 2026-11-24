@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import RegisterForm from './RegisterForm';
-import { getEvent, saveEvent, listRegs, checkIn, badge, registerUrl, categories } from './api';
+import { getEvent, saveEvent, listRegs, checkIn, badge, registerUrl } from './api';
 import { conf, themeVars, pickEvent, eventId, EVENTS, EVENT_ORDER, ACTIVE_EVENT } from './events';
 import { printList, printPoster } from './print';
 import Icon from './icons';
@@ -51,7 +51,7 @@ export default function EventDesk() {
             <input className="ff-search" value={q} onChange={e => setQ(e.target.value)} placeholder="Tafuta jina, simu, namba, au scan pasi" aria-label="Search attendees" />
             <button type="button" className="me-save" onClick={() => setErr(printList(ev, list, [cat, mode === 'qr' ? 'QR' : mode === 'walkin' ? 'Walk-in' : mode === 'in' ? 'Wamefika' : ''].filter(Boolean).join(' · ')))}>Chapisha PDF · Print list</button>
           </div>
-          <div className="ev-chips" role="group" aria-label="Filter">{[['', 'Wote'], ['qr', 'QR'], ['walkin', 'Walk-in'], ['in', 'Wamefika']].map(([k, l]) => <button key={k || 'all'} type="button" className={mode === k ? 'is-on' : ''} onClick={() => setMode(k)}>{l}</button>)}<span className="evd-sep" />{categories().map(c => <button key={c} type="button" className={cat === c ? 'is-on' : ''} onClick={() => setCat(cat === c ? '' : c)}>{c}</button>)}</div>
+          <div className="ev-chips" role="group" aria-label="Filter">{[['', 'Wote'], ['qr', 'QR'], ['walkin', 'Walk-in'], ['in', 'Wamefika']].map(([k, l]) => <button key={k || 'all'} type="button" className={mode === k ? 'is-on' : ''} onClick={() => setMode(k)}>{l}</button>)}<span className="evd-sep" />{[...new Set(regs.map(r => (r.category || '').trim()).filter(Boolean))].sort().slice(0, 12).map(c => <button key={c} type="button" className={cat === c ? 'is-on' : ''} onClick={() => setCat(cat === c ? '' : c)}>{c}</button>)}</div>
           {list.length ? (
             <ul className="evd-list">
               {list.map(r => (

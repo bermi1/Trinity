@@ -38,7 +38,7 @@ export default function RegisterPublic() {
             <div className="ev-confetti" aria-hidden="true">{Array.from({ length: 14 }).map((_, i) => <i key={i} style={{ '--i': i }} />)}</div>
             <div className="ev-tick" aria-hidden="true"><svg viewBox="0 0 52 52"><path d="M14 27l8 8 16-17" /></svg></div>
             <h2>Karibu, {done.full_name.split(' ')[0]}!</h2>
-            <p className="ev-sub">{done.existing ? 'Tayari umesajiliwa · You are already registered' : 'Usajili umekamilika · You are registered'}</p>
+            <p className="ev-sub">{done.existing ? 'Tayari umesajiliwa · Umeingia · You are checked in' : 'Umesajiliwa na umeingia · Registered and checked in'}</p>
             <div className="ev-ticket"><small>Namba yako ya usajili · Your number</small><b>{done.badgeT}</b></div>
             <p className="ev-msg">{ev.message}</p>
             <figure className="ev-pass">

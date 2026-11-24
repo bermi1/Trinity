@@ -6,7 +6,7 @@ async function fill(scope, d) {
   await scope.getByLabel('Phone number').fill(d.phone);
   await scope.getByLabel('Organisation').fill(d.org);
   await scope.getByLabel('Region').fill('Dodoma');
-  await scope.getByRole('radio', { name: d.cat, exact: true }).click();
+  await scope.getByRole('textbox', { name: 'Attending as', exact: true }).fill(d.cat);
 }
 // The public form has three sections: about you, work and location, category.
 async function fillSteps(page, d) {
@@ -17,7 +17,7 @@ async function fillSteps(page, d) {
   await page.getByLabel('Organisation').fill(d.org);
   await page.getByLabel('Region').fill('Dodoma');
   await next.click();
-  await page.getByRole('radio', { name: d.cat, exact: true }).click();
+  await page.getByRole('textbox', { name: 'Attending as', exact: true }).fill(d.cat);
 }
 
 test('event: QR self-registration, walk-in at the desk, check-in and the printable list', async ({ page, context }) => {
@@ -64,9 +64,14 @@ test('event: QR self-registration, walk-in at the desk, check-in and the printab
   // The list: both people, check Asha in.
   await page.getByRole('tab', { name: /Washiriki/ }).click();
   await expect(page.locator('.evd-list li')).toHaveCount(2);
-  await page.getByRole('button', { name: 'Check in · Asha Juma Mollel' }).click();
-  await expect(page.getByRole('button', { name: 'Undo check-in · Asha Juma Mollel' })).toBeVisible();
+  // Everyone is checked in as soon as they register (QR and walk-in); the desk can still undo it.
   await expect(page.locator('.evd-kpis .is-in b')).toHaveText('2');
+  await page.getByRole('button', { name: 'Undo check-in · Asha Juma Mollel' }).click();
+  await expect(page.locator('.evd-kpis .is-in b')).toHaveText('1');
+  await page.getByRole('button', { name: 'Check in · Asha Juma Mollel' }).click();
+  await expect(page.locator('.evd-kpis .is-in b')).toHaveText('2');
+  // The categories people typed become filters.
+  await expect(page.locator('.ev-chips').getByRole('button', { name: 'Serikali', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'QR', exact: true }).click();
   await expect(page.locator('.evd-list li')).toHaveCount(1);
   // Scanning a pass into the search finds that person by number.
