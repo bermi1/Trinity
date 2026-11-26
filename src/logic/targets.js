@@ -79,6 +79,21 @@ export const targetMethods = {
     return '';
   },
   // What one person brought in this year, counted from their work in the system.
+  // Won projects count towards the company goal as soon as their agreed value is in: the value lands in
+  // the week the project was won (its start date), on top of what the GM records for that week.
+  projectValue(p) { return (p.budget && +p.budget.value) || (+p.val || 0) * 1e6; },
+  wonByWeek(year) {
+    const out = { weeks: {}, list: [] };
+    (this.state.projects || []).forEach(p => {
+      const v = this.projectValue(p), d = p.at ? new Date(p.at) : null;
+      if (!v || !d || isNaN(d) || p.st === 'lost' || p.st === 'cancelled') return;
+      const w = isoWeek(d); if (w.year !== year) return;
+      out.weeks[w.week] = (out.weeks[w.week] || 0) + v;
+      out.list.push({ id: p.id, name: p.name || p.id, client: p.client || '', v, at: p.at, week: w.week });
+    });
+    out.list.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    return out;
+  },
   personResults(k, year) {
     const s = this.state, inYear = d => !d || String(d).slice(0, 4) === String(year);
     const projects = (s.projects || []).filter(p => p.cs === k && inYear(p.at));
@@ -141,7 +156,9 @@ export function targetVals(s) {
   const start = new Date(year, 0, 1), end = new Date(year + 1, 0, 1);
   const dayFrac = Math.min(1, Math.max(0, (today - start) / (end - start)));
   const dayNo = Math.floor((today - start) / 864e5) + 1, daysLeft = Math.max(0, Math.ceil((end - today) / 864e5));
-  const wk = i => (t.weeks || {})[weekKey(year, i)];
+  const won = this.wonByWeek(year), typed = i => (t.weeks || {})[weekKey(year, i)];
+  // A week's result = what the GM recorded + the agreed value of projects won that week.
+  const wk = i => { const e = typed(i), w = won.weeks[i] || 0; if (!e && !w) return undefined; return Object.assign({ amt: 0, projects: 0, depts: {} }, e || {}, { amt: ((e && e.amt) || 0) + w, won: w, typed: (e && e.amt) || 0 }); };
   const co = plan(t.revenue, i => (wk(i) || {}).amt, year, W, cur, dayFrac);
   const thisWeek = wk(cur), weekTarget = co.weekTarget(cur), weekGot = thisWeek ? thisWeek.amt : 0;
   const carry = weekTarget - co.base;
@@ -175,6 +192,7 @@ export function targetVals(s) {
     need: { perWeek: tzs(left / weeksLeft), weeksLeft, left: tzs(left) },
     bars: bars.map(b => Object.assign(b, { gotH: Math.round(b.got / peak * 100), needH: Math.round(b.need / peak * 100), gotT: tzs(b.got), needT: tzs(b.need) })),
     depts,
+    won: { total: tzs(won.list.reduce((a, x) => a + x.v, 0)), n: won.list.length, list: won.list.slice(0, 6).map(x => ({ id: x.id, name: x.name, client: x.client, v: tzs(x.v), week: x.week })) },
     projects: { done: projDone, target: projTarget, pace: projPace, closed: closedInSystem },
     recent,
     record: (w, f) => this.recordWeek(year, w, f),

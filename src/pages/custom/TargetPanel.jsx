@@ -136,6 +136,12 @@ export default function TargetPanel({ T }) {
         </div>
         <div className="tg-track" aria-hidden="true"><i style={{ width: Math.min(100, T.pctEarned) + '%' }} /><em style={{ left: T.pctTime + '%' }} /></div>
         <div className="tg-legend"><span><i className="is-got" />Earned {T.pctEarned}%</span><span><i className="is-time" />Year gone {T.pctTime}%</span><span>{T.ahead ? T.gap + ' ahead of where we should be' : T.gap + ' behind where we should be'}</span></div>
+        {T.won && T.won.n ? (
+          <div className="tg-won" aria-label="Won projects">
+            <b>{T.won.total}</b><span>from {T.won.n} won project{T.won.n === 1 ? '' : 's'}, taken off the goal automatically</span>
+            <ul>{T.won.list.map(x => <li key={x.id}><span>{x.name}{x.client ? ' · ' + x.client : ''}</span><em>{x.v}</em></li>)}</ul>
+          </div>
+        ) : null}
         <div className="tg-clock">
           <div><b>{W.n}</b><span>week of {T.weeks}</span></div>
           <div><b>{T.dayNo}</b><span>day of the year</span></div>
