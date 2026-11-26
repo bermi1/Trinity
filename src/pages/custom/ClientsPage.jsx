@@ -48,6 +48,7 @@ function LeadPanel({ L, reasons }) {
             <h2>{L.c}</h2>
             <p>{L.t}{L.v ? ' · ' + L.v : ''}</p>
           </div>
+          {L.canEdit ? <button type="button" className="td-start cr-edit" onClick={L.edit}>Edit details</button> : null}
           <button type="button" className="fm-x" onClick={L.close} aria-label="Close">×</button>
         </header>
 
@@ -201,7 +202,7 @@ function Customers({ C }) {
       <div className="cr-cust">
         {list.map(c => (
           <article key={c.id} className="cr-cust-card" data-customer={c.n}>
-            <header><b>{c.n}</b>{c.active ? <span className="cr-active">{c.active} active</span> : null}</header>
+            <header><b>{c.n}</b>{c.active ? <span className="cr-active">{c.active} active</span> : null}{c.canEdit ? <button type="button" className="td-start cr-edit" onClick={c.edit} aria-label={'Edit ' + c.n}>Edit</button> : null}</header>
             <p>{c.contact || '—'}</p>
             <p className="k-sub">{[c.phone, c.email].filter(Boolean).join(' · ') || 'No contact details yet'}</p>
             {c.tin || c.vrn ? <p className="k-sub">{[c.tin ? 'TIN ' + c.tin : '', c.vrn ? 'VRN ' + c.vrn : ''].filter(Boolean).join(' · ')}</p> : null}

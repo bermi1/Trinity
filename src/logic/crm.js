@@ -55,6 +55,52 @@ export const crmMethods = {
     this.log('users', 'blue', 'New work · ' + lead.c, lead.t + ' · ' + this.av(owner).first);
     return id;
   },
+  // Editing a client's details: Management, the GM, the PA, Finance (it invoices them), the Client Service
+  // Manager and the client's own account owner.
+  canEditClient(c) { return !!c && (this.isTop() || ['pa', 'finance'].includes(this.state.role || 'ceo') || this.isManagerOf('clientservice') || c.owner === this.me().k); },
+  editClient(id) {
+    const c = (this.state.customers || []).find(x => x.id === id); if (!c) return;
+    const [contact, title] = String(c.contact || '').split(' · ');
+    this.openModal('customer', { id: c.id, n: c.n, contact: contact || '', title: title || '', phone: c.phone || '', email: c.email || '', tin: c.tin || '', vrn: c.vrn || '', address: c.address || '', box: c.box || '', city: c.city || '', owner: c.owner || '',
+      _meta: { title: 'Edit client · ' + c.n, sub: 'Changes show everywhere this client appears. Invoices already sent keep what was printed on them.', submit: 'Save changes' } });
+  },
+  updateCustomer(f) {
+    const c = (this.state.customers || []).find(x => x.id === f.id); if (!c) return 'Client not found';
+    if (!this.canEditClient(c)) return 'Only Management, Finance, the PA, the Client Service Manager or the account owner can change this client';
+    const n = (f.n || '').trim(); if (!n) return 'Enter the company name';
+    if ((this.state.customers || []).some(x => x.id !== c.id && x.n.toLowerCase() === n.toLowerCase())) return n + ' is already a client';
+    const old = c.n, same = v => (v || '').toLowerCase() === old.toLowerCase(), renamed = n !== old;
+    const next = Object.assign({}, c, { n, contact: [(f.contact || '').trim(), (f.title || '').trim()].filter(Boolean).join(' · '), phone: (f.phone || '').trim(), email: (f.email || '').trim(), tin: (f.tin || '').trim(), vrn: (f.vrn || '').trim(), box: (f.box || '').trim(), address: (f.address || '').trim(), city: (f.city || '').trim(), owner: f.owner || c.owner });
+    // Invoices not yet sent (drafts, or waiting for signature) take the new details; sent ones stay as issued.
+    const open = i => same(i.c) && (i.st === 'draft' || !i.sentAt) && i.st !== 'paid';
+    this.setState(x => ({
+      customers: x.customers.map(y => (y.id === c.id ? next : y)),
+      projects: renamed ? (x.projects || []).map(p => (same(p.client) ? Object.assign({}, p, { client: n }) : p)) : x.projects,
+      leads: renamed ? (x.leads || []).map(l => (same(l.c) ? Object.assign({}, l, { c: n }) : l)) : x.leads,
+      invoices: (x.invoices || []).map(i => (open(i) ? Object.assign({}, i, { c: n, tin: next.tin, vrn: next.vrn, addr: [next.box, next.address, next.city].filter(Boolean).join(', ') }) : i))
+    }));
+    this.toast('Client updated · ' + n);
+    this.log('users', 'blue', 'Client details updated · ' + n, renamed ? 'Renamed from ' + old : 'By ' + this.me().n);
+    return '';
+  },
+  // Editing a lead's details (client, the work, value, contact, how it came in): whoever can move the lead.
+  editLead(id) {
+    const l = (this.state.leads || []).find(x => x.id === id); if (!l) return;
+    this.openModal('leadEdit', { id: l.id, c: l.c || '', t: l.t || '', v: l.v ? String(l.v) : '', contact: l.contact || '', src: l.src || '' });
+  },
+  updateLead(f) {
+    const l = (this.state.leads || []).find(x => x.id === f.id); if (!l) return 'This lead no longer exists.';
+    if (!this.canMoveLead(l)) return 'Only ' + this.av(l.owner).n + ' or the Client Service Manager can change this lead.';
+    const c = (f.c || '').trim(), t = (f.t || '').trim();
+    if (!c) return 'Enter the client'; if (!t) return 'Enter what they need';
+    const v = f.v === '' || f.v == null ? 0 : +f.v; if (!(v >= 0)) return 'The value must be a number';
+    const changes = [c !== l.c ? 'client' : '', t !== l.t ? 'work' : '', v !== (l.v || 0) ? 'value' : '', (f.contact || '').trim() !== (l.contact || '') ? 'contact' : '', (f.src || '') !== (l.src || '') ? 'source' : ''].filter(Boolean);
+    if (!changes.length) return '';
+    const at = dayKey(0);
+    this.setState(x => ({ leads: x.leads.map(y => (y.id === l.id ? Object.assign({}, y, { c, t, v, contact: (f.contact || '').trim(), src: f.src || y.src || '', hist: [...(y.hist || []), { s: this.leadStage(y), by: this.me().k, at, note: 'Details updated: ' + changes.join(', ') }] }) : y)) }));
+    this.toast('Lead updated · ' + c);
+    return '';
+  },
   addCustomer(f) {
     const n = f.n.trim();
     if ((this.state.customers || []).some(c => c.n.toLowerCase() === n.toLowerCase())) { this.toast(n + ' is already a client'); return; }
@@ -185,7 +231,7 @@ export function crmVals(s) {
         open: () => this.go('project', { projectId: p.id }) };
     };
     const hist = jobs.map(job);
-    return Object.assign({}, c, { jobs: jobs.length, active, value: fmtM(jobs.reduce((a, b) => a + (b.val || 0), 0)), ownerN: this.av(c.owner).n, leads: open.filter(l => l.c === c.n).length,
+    return Object.assign({}, c, { canEdit: this.canEditClient(c), edit: () => this.editClient(c.id), jobs: jobs.length, active, value: fmtM(jobs.reduce((a, b) => a + (b.val || 0), 0)), ownerN: this.av(c.owner).n, leads: open.filter(l => l.c === c.n).length,
       ongoing: hist.filter(h => !h.done), past: hist.filter(h => h.done),
       dealt: leads.filter(l => same(l.c) && (l.st === WON || l.st === LOST)).map(l => ({ id: l.id, t: l.t, won: l.st === WON, why: l.lost || '', open: () => this.setState({ crmTab: l.st === WON ? 'won' : 'lost', leadSel: l.id }) })),
       openLeads: open.filter(l => same(l.c)).map(row) });
@@ -204,6 +250,7 @@ export function crmVals(s) {
       attach: (info, kind) => this.attachLeadFile(sel.id, info, kind),
       hist: (sel.hist || []).slice().reverse().map(h => ({ stage: LEAD_STAGES[h.s], by: this.av(h.by).n, at: h.at, note: h.note || '' })),
       job: sel.job || '', goJob: () => this.go('project', { projectId: sel.job }),
+      canEdit: can, edit: () => this.editLead(sel.id),
       close: () => this.setState({ leadSel: null }), setOwner: k => this.setLeadOwner(sel.id, k), setNext: t => this.setLeadNext(sel.id, t),
       move: (to, extra) => this.moveLead(sel.id, to, extra), store: f => this.storeFile(f),
       memo: f => this.sendMemo(Object.assign({ lead: sel.id }, f)),

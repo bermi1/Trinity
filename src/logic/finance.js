@@ -71,21 +71,26 @@ export const financeMethods = {
   // ---- Invoices
   saveInvoice(d) {
     if (!d.c) return 'Choose the client';
+    const no = String(d.no || '').trim();
+    if (no.length > 40) return 'The invoice number is too long';
+    if (no && (this.state.invoices || []).some(x => x.id !== d.id && invNo(x).toLowerCase() === no.toLowerCase())) return 'Invoice number ' + no + ' is already used';
     if (!d.lines || !d.lines.some(l => l.item && +l.rate > 0)) return 'Add at least one item with a rate';
     const lines = d.lines.filter(l => l.item && +l.rate > 0).map(l => ({ item: l.item.trim(), n: +l.n || 1, rate: Math.round(+l.rate), days: +l.days || 1, events: +l.events || 1 }));
     const cust = (this.state.customers || []).find(c => c.n === d.c) || {};
     const base = { c: d.c, tin: d.tin || cust.tin || '', vrn: d.vrn || cust.vrn || '', addr: [cust.box, cust.address, cust.city].filter(Boolean).join(', '), p: d.p || '', title: (d.title || '').trim(), lines, admin: d.admin == null ? 15 : +d.admin, vat: 18, signer: d.signer || 'ED', due: d.due || '30 days', by: this.me().k };
     base.v = invTotals(base).total / 1e6;
     if (d.id) {
+      if (no) base.no = no;
       this.setState(x => ({ invoices: x.invoices.map(i => (i.id === d.id ? Object.assign({}, i, base, { signed: null, st: (i.payments || []).some(p => p.ok) ? 'partial' : i.st === 'draft' ? 'draft' : 'sent' }) : i)) }));
       { const sk = this.ROLES[SIGNERS[base.signer].role].k; if (sk !== this.me().k) this.remind(sk, 'Edited invoice to sign again · ' + d.id, 'finance', 'fileText', d.c); }
-      this.toast(d.id + ' saved'); return '';
+      this.toast((no || d.id) + ' saved'); return '';
     }
     const id = this.nextId('INV', this.state.invoices);
+    base.no = no || id;
     this.setState(x => ({ invoices: [Object.assign({ id, st: 'draft', at: dayKey(0), payments: [] }, base), ...x.invoices], invSel: id }));
     const sk = this.ROLES[SIGNERS[base.signer].role].k;
     if (sk !== this.me().k) this.remind(sk, 'Invoice to sign · ' + id, 'finance', 'fileText', d.c + ' · ' + this.fmtT(invTotals(base).total));
-    this.toast('Invoice ' + id + ' created · waiting for ' + SIGNERS[base.signer].t + ' to sign');
+    this.toast('Invoice ' + base.no + ' created · waiting for ' + SIGNERS[base.signer].t + ' to sign');
     this.log('fileText', 'blue', 'Invoice created · ' + d.c, id);
     return '';
   },
@@ -93,14 +98,14 @@ export const financeMethods = {
   signInvoice(id) {
     const i = this.state.invoices.find(x => x.id === id); if (!i || !this.canSign(i)) return;
     this.setState(x => ({ invoices: x.invoices.map(y => (y.id === id ? Object.assign({}, y, { signed: { by: this.me().k, name: this.me().n, at: dayKey(0) } }) : y)) }));
-    this.toast(id + ' signed and stamped');
+    this.toast(invNo(i) + ' signed and stamped');
     if (i.by && i.by !== this.me().k) this.remind(i.by, 'Invoice signed · ' + id, 'finance', 'fileText', 'Ready to send to ' + i.c);
   },
   sendInvoice(id) {
     const i = this.state.invoices.find(x => x.id === id); if (!i) return;
     if (i.lines && !i.signed) { this.toast('The invoice must be signed first'); return; }
     this.setState(x => ({ invoices: x.invoices.map(y => (y.id === id ? Object.assign({}, y, { st: 'sent', sentAt: dayKey(0) }) : y)) }));
-    this.toast(id + ' marked as sent to ' + i.c);
+    this.toast(invNo(i) + ' marked as sent to ' + i.c);
   },
   // Finance records a payment; Management confirms it. Only confirmed payments count.
   recordPayment(id, amt, ref) {
@@ -139,11 +144,13 @@ export const financeMethods = {
     const rows = (i.lines && i.lines.length ? i.lines : [{ item: P.name || 'Services as agreed', n: 1, rate: T.net, days: 1, events: 1 }])
       .map((l, k) => `<tr><td>${k + 1}</td><td>${esc(l.item)}</td><td class=r>${l.n}</td><td class=r>${n(l.rate)}</td><td class=r>${l.days}</td><td class=r>${l.events}</td><td class=r>${n(l.n * l.rate * l.days * l.events)}</td></tr>`).join('');
     const paid = paidOf(i);
-    const html = `<!doctype html><html><head><meta charset=utf-8><title>${esc(i.id)} · ${esc(i.c)}</title>
+    const NO = invNo(i);
+    const html = `<!doctype html><html><head><meta charset=utf-8><title>${esc(NO)} · ${esc(i.c)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@600&display=swap" rel=stylesheet>
 <style>
 *{box-sizing:border-box}body{margin:0;font:13px/1.5 Inter,Arial,sans-serif;color:#17152A;background:#EEEAF4}
-.page{width:210mm;min-height:297mm;margin:16px auto;background:#fff;padding:18mm 16mm 14mm;position:relative;display:flex;flex-direction:column}
+.page{width:210mm;height:297mm;margin:16px auto;background:#fff;padding:12mm 13mm 18mm;position:relative;overflow:hidden}
+.fit{transform-origin:top left}
 .top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}.top img{height:54px}
 .inv{text-align:right}.inv h1{margin:0;font-size:30px;letter-spacing:.18em;color:#2B1459}.inv b{color:#8A7239}
 .band{height:5px;background:linear-gradient(90deg,#2B1459,#6D3CC2 60%,#B49A5A);border-radius:3px;margin:14px 0 20px}
@@ -157,12 +164,13 @@ th:first-child{border-radius:8px 0 0 8px}th:last-child{border-radius:0 8px 8px 0
 .sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:28px;align-items:end}.sig{border-top:1px solid #CFC8DD;padding-top:6px;font-size:11.5px;color:#6E6A7C;min-height:96px;position:relative;display:flex;flex-direction:column;justify-content:flex-end}
 .sigimg{max-height:56px;max-width:190px;object-fit:contain;margin-bottom:4px}.sigline{display:block;height:46px}.po{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px;padding:10px 14px;border:1px solid #E4DFEE;border-radius:10px}.po span{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8A7239;font-weight:700}.stamp{position:absolute;right:-6px;bottom:18px;width:118px;opacity:.88;transform:rotate(-8deg)}
 .draft{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:88px;font-weight:800;color:rgba(178,58,70,.09);transform:rotate(-24deg);letter-spacing:.1em}
-.foot{margin-top:auto;padding-top:18px;display:flex;justify-content:space-between;gap:14px;border-top:1px solid #EEEAF4;font-size:11px;color:#6E6A7C}
+.foot{position:absolute;left:13mm;right:13mm;bottom:7mm;padding-top:8px;display:flex;justify-content:space-between;gap:14px;border-top:1px solid #EEEAF4;font-size:10.5px;color:#6E6A7C}
 .bar{position:fixed;top:12px;right:12px}.bar button{font:600 13px Inter;padding:9px 16px;border:none;border-radius:9px;background:#2B1459;color:#fff;cursor:pointer}
-@media print{body{background:#fff}.page{margin:0;width:auto;min-height:auto}.bar{display:none}}
+@page{size:A4;margin:0}
+@media print{html,body{background:#fff;width:210mm;height:297mm}.page{margin:0;box-shadow:none;page-break-after:avoid;break-after:avoid}.bar{display:none}}
 </style></head><body><div class=bar><button onclick="print()">Print / Save PDF</button></div><div class=page>
-${i.signed ? '' : '<div class=draft>DRAFT</div>'}
-<div class=top><img src="${origin}/brand/trinity-logo-full.png" alt="Trinity Mark"><div class=inv><h1>INVOICE</h1><div><b>${esc(i.id)}</b></div><div>Date: ${esc(i.at || dayKey(0))}</div></div></div>
+${i.signed ? '' : '<div class=draft>DRAFT</div>'}<div class=fit>
+<div class=top><img src="${origin}/brand/trinity-logo-full.png" alt="Trinity Mark"><div class=inv><h1>INVOICE</h1><div><b>${esc(NO)}</b></div><div>Date: ${esc(i.at || dayKey(0))}</div></div></div>
 <div class=band></div>
 <div class=grid><div class=box><div class=lbl>Bill to</div><b style="font-size:15px">${esc(i.c)}</b>${i.addr ? `<div style="color:#6E6A7C;margin-top:2px">${esc(i.addr)}</div>` : ''}<div class=kv style="margin-top:4px">${i.tin ? `<span>TIN</span><b>${esc(i.tin)}</b>` : ''}${i.vrn ? `<span>VRN</span><b>${esc(i.vrn)}</b>` : ''}</div></div>
 <div class=box><div class=lbl>From</div><b>${COMPANY.name}</b><div class=kv style="margin-top:4px"><span>TIN</span><b>${COMPANY.tin}</b><span>VRN</span><b>${COMPANY.vrn}</b></div></div></div>
@@ -177,8 +185,16 @@ ${paid ? `<div><span>Paid</span><b>${n(paid)}</b></div><div><span>Balance due</s
 <div class=sig>${i.signed ? (SIG ? `<img class=sigimg src="${SIG}" alt="Signature">` : '<span class=sigline></span>') + `<img class=stamp src="${origin}/brand/company-stamp.png" alt="">` : '<i style="color:#B23A46">Awaiting approval</i>'}<span>Approved by</span><b style="color:#17152A">${S.t}</b><span>${i.signed ? esc(i.signed.at) : ''}</span></div>
 <div></div>
 <div class=sig><span>Client approval</span><span style="margin-top:28px">Name, sign &amp; date</span></div></div>
+</div>
 <div class=foot><span>${COMPANY.box}</span><span>${COMPANY.line}</span></div>
-</div></body></html>`;
+</div>
+<script>
+// One A4 page, always: when the content is taller than the page (many items), it is scaled down to fit.
+function fit(){var p=document.querySelector('.page'),f=document.querySelector('.fit');if(!p||!f)return;f.style.transform='';f.style.width='';
+var cs=getComputedStyle(p),avail=p.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom),h=f.scrollHeight;
+if(h>avail){var z=Math.max(.4,avail/h);f.style.width=(100/z).toFixed(2)+'%';h=f.scrollHeight;z=Math.max(.4,avail/h);f.style.width=(100/z).toFixed(2)+'%';f.style.transform='scale('+z.toFixed(4)+')';f.dataset.scale=z.toFixed(3);}}
+fit();addEventListener('load',fit);addEventListener('beforeprint',fit);if(document.fonts)document.fonts.ready.then(fit);
+</script></body></html>`;
     const w = window.open('', '_blank'); if (!w) { this.toast('Allow pop-ups to open the invoice'); return; }
     w.document.open(); w.document.write(html); w.document.close();
   }
@@ -189,7 +205,7 @@ export function financeVals(s) {
   const role = s.role || 'ceo', moneyTop = ['ceo', 'finance'].includes(role);
   const inv = (s.invoices || []).map(i => {
     const T = invTotals(i), paid = paidOf(i), wait = (i.payments || []).filter(p => !p.ok);
-    return { id: i.id, c: i.c, proj: this.proj(i.p).name || '', st: i.st, total: T.total, totalT: this.fmtT(T.total), paid, paidT: this.fmtT(paid), due: T.total - paid, dueT: this.fmtT(T.total - paid), dueOn: i.due, at: i.at || '',
+    return { id: i.id, no: invNo(i), c: i.c, proj: this.proj(i.p).name || '', st: i.st, total: T.total, totalT: this.fmtT(T.total), paid, paidT: this.fmtT(paid), due: T.total - paid, dueT: this.fmtT(T.total - paid), dueOn: i.due, at: i.at || '',
       pct: T.total ? Math.round(paid / T.total * 100) : 0, signer: SIGNERS[i.signer || 'ED'].t, signed: !!i.signed || !i.lines, needsSign: !!i.lines && !i.signed,
       canSign: !!i.lines && this.canSign(i), sign: () => this.signInvoice(i.id), send: () => this.sendInvoice(i.id), print: () => this.printInvoice(i.id),
       canPay: moneyTop && i.st !== 'paid' && i.st !== 'draft', pay: (a, r) => this.recordPayment(i.id, a, r),
@@ -214,11 +230,11 @@ export function financeVals(s) {
       ...(role === 'ceo' ? this.fl().asks.filter(a => a.st === 'open').map(a => ({ t: 'Finance asks for float · ' + this.fmtT(a.amt), s: a.note || '', act: 'Give', on: () => this.finGo('float') })) : [])
     ].slice(0, 8),
     invoices: inv, filter: s.invFilter || 'open', setFilter: k => this.setState({ invFilter: k }),
-    canInvoice: this.canInvoice(), newInvoice: () => this.setState({ invEdit: 'new' }),
+    canInvoice: this.canInvoice(), newInvoice: () => this.setState({ invEdit: 'new' }), nextNo: this.nextId('INV', s.invoices || []),
     editing: s.invEdit || null, closeEdit: () => this.setState({ invEdit: null }),
     draft: (() => { const i = s.invEdit && s.invEdit !== 'new' ? s.invoices.find(x => x.id === s.invEdit) : null; if (!i) return null;
-      if (i.lines && i.lines.length) return i;
-      const T = invTotals(i); return Object.assign({}, i, { admin: 0, lines: [{ item: this.proj(i.p).name || 'Services as agreed', n: 1, rate: T.net, days: 1, events: 1 }] }); })(),
+      if (i.lines && i.lines.length) return Object.assign({}, i, { no: invNo(i) });
+      const T = invTotals(i); return Object.assign({}, i, { no: invNo(i), admin: 0, lines: [{ item: this.proj(i.p).name || 'Services as agreed', n: 1, rate: T.net, days: 1, events: 1 }] }); })(),
     save: d => { const e = this.saveInvoice(d); if (!e) { this.setState({ invEdit: null }); if (s.page !== 'invoices') this.finGo('invoices'); } return e; },
     customers: (s.customers || []).map(c => ({ v: c.n, l: c.n, tin: c.tin || '', vrn: c.vrn || '' })),
     poFor: pid => { const P = s.projects.find(p => p.id === pid); return P && P.po ? P.po.no + ' · ' + P.po.date + (P.po.vendor ? ' · vendor ' + P.po.vendor : '') : ''; },
@@ -303,6 +319,9 @@ export const reportMethods = {
   }
 };
 
+// The number printed on an invoice: Finance can set its own (e.g. to follow the company's invoice book);
+// otherwise the system's id. The id stays the record's key.
+export const invNo = i => (i && i.no) || (i && i.id) || '';
 export const IN_CATS = ['Client payment', 'Other income', 'Loan / capital'];
 // Bank and mobile money fees on payments.
 export const CHARGES = 'Transaction charges';
