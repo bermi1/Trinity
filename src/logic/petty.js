@@ -46,9 +46,9 @@ export const pettyMethods = {
     const m = dayKey(0).slice(0, 7);
     return (this.state.ledger || []).find(l => l.dir === 'out' && (l.at || '').slice(0, 7) === m && l.cat === o.cat && (!o.match || o.match.test((l.party || '') + ' ' + (l.ref || '')))) || null;
   },
-  payObligation(k, amt, ref) {
+  payObligation(k, amt, ref, fee) {
     const o = OBLIGATIONS.find(x => x.k === k); if (!o) return 'Unknown';
-    return this.addEntry({ dir: 'out', amt, cat: o.cat, party: o.l, ref: ref || o.l, method: 'Bank' });
+    return this.addEntry({ dir: 'out', amt, cat: o.cat, party: o.l, ref: ref || o.l, method: 'Bank', fee });
   }
 };
 
@@ -66,7 +66,7 @@ export function pettyVals(s) {
       book: book.map(e => ({ id: e.id, at: e.at, dir: e.dir, amt: this.fmtT(e.amt), cat: e.cat, what: e.what, who: e.who, voucher: e.voucher, bal: this.fmtT(e.bal), by: this.av(e.by).first })),
       add: f => this.addPetty(f), count: (c, n) => this.countPetty(c, n),
       obligations: OBLIGATIONS.map(o => { const paid = this.obligationPaid(o), last = ((this.state.payroll || {}).runs || []).find(r => r.st === 'paid'), due = last && last.due ? ({ sal: null, paye: last.due.paye, nssf: last.due.nssf, wcf: last.due.wcf })[o.k] : null;
-        return { k: o.k, l: o.l, expect: due ? this.fmtT(due) + ' from the ' + last.month + ' payroll' : '', expectN: due || 0, day: o.day, due: o.day >= today ? 'Due by the ' + o.day + 'th' : 'Was due on the ' + o.day + 'th', late: !paid && o.day < today, paid: paid ? this.fmtT(paid.amt) + ' · ' + paid.at : '', pay: (a, r) => this.payObligation(o.k, a, r) }; })
+        return { k: o.k, l: o.l, expect: due ? this.fmtT(due) + ' from the ' + last.month + ' payroll' : '', expectN: due || 0, day: o.day, due: o.day >= today ? 'Due by the ' + o.day + 'th' : 'Was due on the ' + o.day + 'th', late: !paid && o.day < today, paid: paid ? this.fmtT(paid.amt) + ' · ' + paid.at : '', pay: (a, r, fee) => this.payObligation(o.k, a, r, fee) }; })
     }
   };
 }

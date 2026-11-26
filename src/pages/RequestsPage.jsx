@@ -197,6 +197,7 @@ export default function RequestsPage({ v }) {
                 {v.R.canPay ? (
                   <>
                     <label className="rq-payamt"><span>Amount paid (TZS)</span><input value={v.R.payAmt} onChange={v.R.setPayAmt} inputMode="numeric" aria-label="Amount paid" /></label>
+                    <label className="rq-payamt"><span>Transaction charges (TZS) · bank or mobile money fee</span><input value={v.R.payFee} onChange={v.R.setPayFee} inputMode="numeric" placeholder="0" aria-label="Transaction charges" /></label>
                     <button className="tm-h2" onClick={v.R.pay} style={{ alignSelf: "flex-start", height: "44px", padding: "0 20px", border: "none", borderRadius: "10px", background: "#2B1459", color: "#fff", fontSize: "14px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <path d={v.ic.wallet} />

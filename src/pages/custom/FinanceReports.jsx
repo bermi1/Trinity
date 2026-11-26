@@ -113,7 +113,7 @@ export function Reports({ R }) {
 // Record money in or out: amount, what for, who. Everything else is optional and folded away.
 const TOP_OUT = ['Suppliers & production', 'Salaries', 'Fuel & transport', 'Rent', 'Utilities', 'Office supplies'];
 function AddEntry({ R, onDone }) {
-  const [f, setF] = useState({ dir: 'out', amt: '', cat: '', party: '', p: '', method: 'Bank', ref: '', at: '' });
+  const [f, setF] = useState({ dir: 'out', amt: '', cat: '', party: '', p: '', method: 'Bank', ref: '', at: '', fee: '' });
   const [more, setMore] = useState(false);
   const [allCats, setAllCats] = useState(false);
   const [err, setErr] = useState('');
@@ -127,6 +127,7 @@ function AddEntry({ R, onDone }) {
         {[['out', 'Money out'], ['in', 'Money in']].map(([k, l]) => <button key={k} type="button" role="radio" aria-checked={f.dir === k} className={f.dir === k ? 'is-on' : ''} onClick={() => { setF(x => Object.assign({}, x, { dir: k, cat: '' })); setAllCats(false); }}>{l}</button>)}
       </div>
       <label className="me-amt"><span>TZS</span><input inputMode="numeric" autoFocus value={f.amt ? n(f.amt) : ''} onChange={e => set('amt', digits(e.target.value))} placeholder="0" aria-label="Amount" /></label>
+      <label className="me-fee"><span>Transaction charges (TZS)</span><input inputMode="numeric" value={f.fee ? n(f.fee) : ''} onChange={e => set('fee', digits(e.target.value))} placeholder="0 · bank or mobile money fee" aria-label="Transaction charges" /></label>
       <div className="me-cats" role="radiogroup" aria-label="What for">
         {cats.map(c => <button key={c} type="button" role="radio" aria-checked={f.cat === c} className={f.cat === c ? 'is-on' : ''} onClick={() => set('cat', c)}>{c}</button>)}
         {f.dir === 'out' && !allCats ? <button type="button" className="me-more" onClick={() => setAllCats(true)}>More…</button> : null}

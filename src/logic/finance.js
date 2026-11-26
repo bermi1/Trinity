@@ -268,18 +268,29 @@ export const reportMethods = {
   cashEntries() {
     const s = this.state, out = [];
     (s.invoices || []).forEach(i => (i.payments || []).filter(p => p.ok && /^\d{4}-/.test(p.at || '')).forEach(p => out.push({ id: p.id, at: p.at, dir: 'in', amt: p.amt, cat: 'Client payment', party: i.c, p: i.p || '', ref: i.id + (p.ref ? ' · ' + p.ref : ''), src: 'invoice' })));
-    (s.reqs || []).filter(r => r.st === 'paid' && r.paidOn).forEach(r => out.push({ id: r.id, at: r.paidOn, dir: 'out', amt: r.amt, cat: 'Staff requests · ' + (r.cat || 'Other'), party: this.av(r.who).n, p: r.p || '', ref: r.id, src: 'request' }));
-    (s.ledger || []).forEach(l => out.push(Object.assign({ src: 'ledger' }, l)));
+    // A paid request is what was actually paid (it can be less than asked), plus the transaction charges of
+    // sending it (bank or mobile money fee), which are company costs, not part of the person's float.
+    (s.reqs || []).filter(r => r.st === 'paid' && r.paidOn).forEach(r => {
+      out.push({ id: r.id, at: r.paidOn, dir: 'out', amt: r.paidAmt || r.amt, cat: 'Staff requests · ' + (r.cat || 'Other'), party: this.av(r.who).n, p: r.p || '', ref: r.id, src: 'request' });
+      if (r.payFee > 0) out.push({ id: r.id + '-fee', at: r.paidOn, dir: 'out', amt: r.payFee, cat: CHARGES, party: (r.pay && r.pay.by) || 'Bank / mobile money', p: r.p || '', ref: 'Charges · ' + r.id, src: 'request' });
+    });
+    (s.ledger || []).forEach(l => {
+      out.push(Object.assign({ src: 'ledger' }, l));
+      if (l.fee > 0) out.push({ id: l.id + '-fee', at: l.at, dir: 'out', amt: l.fee, cat: CHARGES, party: l.method || 'Bank', p: l.p || '', ref: 'Charges · ' + (l.ref || l.party || l.cat), src: 'ledger' });
+    });
     // Petty cash payments are company spending too (top-ups are only cash moving from the bank to the box).
     ((s.petty || {}).entries || []).filter(e => e.dir === 'out').forEach(e => out.push({ id: e.id, at: e.at, dir: 'out', amt: e.amt, cat: 'Petty cash · ' + e.cat, party: e.who, p: '', ref: e.voucher, src: 'petty' }));
     return out.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
   },
+  // Money in or out recorded by Finance. Transaction charges (bank or mobile money fee) are optional and
+  // show in the cash book as their own "Transaction charges" line.
   addEntry(f) {
     const amt = Math.round(+f.amt || 0); if (amt <= 0) return 'Enter the amount';
     if (!f.cat) return 'Choose what it is for';
-    const e = { id: 'LG' + Date.now().toString(36), at: f.at || dayKey(0), dir: f.dir === 'in' ? 'in' : 'out', amt, cat: f.cat, party: (f.party || '').trim(), p: f.p || '', method: f.method || 'Bank', ref: (f.ref || '').trim(), by: this.me().k };
+    const fee = parseFee(f.fee); if (fee < 0) return 'Transaction charges must be a number';
+    const e = Object.assign({ id: 'LG' + Date.now().toString(36), at: f.at || dayKey(0), dir: f.dir === 'in' ? 'in' : 'out', amt, cat: f.cat, party: (f.party || '').trim(), p: f.p || '', method: f.method || 'Bank', ref: (f.ref || '').trim(), by: this.me().k }, fee ? { fee } : {});
     this.setState(x => ({ ledger: [e, ...(x.ledger || [])] }));
-    this.toast((e.dir === 'in' ? 'Money in' : 'Money out') + ' recorded · ' + this.fmtT(amt));
+    this.toast((e.dir === 'in' ? 'Money in' : 'Money out') + ' recorded · ' + this.fmtT(amt) + (fee ? ' + ' + this.fmtT(fee) + ' charges' : ''));
     this.log(e.dir === 'in' ? 'trendUp' : 'wallet', e.dir === 'in' ? 'green' : 'amber', (e.dir === 'in' ? 'Money in · ' : 'Money out · ') + e.cat, this.fmtT(amt));
     return '';
   },
@@ -293,7 +304,11 @@ export const reportMethods = {
 };
 
 export const IN_CATS = ['Client payment', 'Other income', 'Loan / capital'];
-export const OUT_CATS = ['Suppliers & production', 'Salaries', 'Statutory (NSSF, PAYE)', 'Rent', 'Utilities', 'Internet & phone', 'Fuel & transport', 'Office supplies', 'Tax (VAT, WHT)', 'Bank charges', 'Other'];
+// Bank and mobile money fees on payments.
+export const CHARGES = 'Transaction charges';
+// Transaction charges typed by Finance: '' = none, a negative number = not a number.
+export function parseFee(v) { const t = String(v == null ? '' : v).replace(/[,\s]/g, ''); if (!t) return 0; const n = Math.round(+t); return isFinite(n) && n >= 0 ? n : -1; }
+export const OUT_CATS = ['Suppliers & production', 'Salaries', 'Statutory (NSSF, PAYE)', 'Rent', 'Utilities', 'Internet & phone', 'Fuel & transport', 'Office supplies', 'Tax (VAT, WHT)', 'Bank charges', 'Transaction charges', 'Other'];
 
 export function reportVals(s) {
   if (!this.canInvoice()) return { REP: null };
