@@ -145,6 +145,7 @@ export default function RequestsPage({ v }) {
                     </b>
                   </div>
                 </div>
+                {(v.R.details || []).length ? <dl className="rq-det">{v.R.details.map(([k, val]) => <div key={k}><dt>{k}</dt><dd>{val}</dd></div>)}</dl> : null}
                 {v.R.payTo ? (
                   <div className="rq-pay" style={{ border: "1px solid #CFE3D5", background: "#F2FBF5", borderRadius: "10px", padding: "12px 14px", display: "flex", flexDirection: "column", gap: "3px" }}>
                     <span style={{ fontSize: "11.5px", color: "#1F7549", fontWeight: "700", letterSpacing: ".04em", textTransform: "uppercase" }}>Pay to</span>
@@ -192,13 +193,15 @@ export default function RequestsPage({ v }) {
                     </div>
                   </>
                 ) : null}
+                {v.R.paidLine ? <div className="rq-paid" role="status">{v.R.paidLine}</div> : null}
                 {v.R.canPay ? (
                   <>
+                    <label className="rq-payamt"><span>Amount paid (TZS)</span><input value={v.R.payAmt} onChange={v.R.setPayAmt} inputMode="numeric" aria-label="Amount paid" /></label>
                     <button className="tm-h2" onClick={v.R.pay} style={{ alignSelf: "flex-start", height: "44px", padding: "0 20px", border: "none", borderRadius: "10px", background: "#2B1459", color: "#fff", fontSize: "14px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <path d={v.ic.wallet} />
                       </svg>
-                      Mark paid · open float
+                      {'Mark paid · TZS ' + (Number(String(v.R.payAmt || '').replace(/[^0-9]/g, '')) || 0).toLocaleString('en-US')}
                     </button>
                   </>
                 ) : null}

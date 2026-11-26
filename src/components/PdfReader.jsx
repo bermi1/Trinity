@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
+// Older phones and browsers lack two things this PDF library uses; add them before it loads.
+if (typeof Promise.withResolvers !== 'function') Promise.withResolvers = function () { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
+if (typeof URL !== 'undefined' && typeof URL.parse !== 'function') URL.parse = (u, b) => { try { return new URL(u, b); } catch (e) { return null; } };
+
 // Draws a PDF one page at a time, fitted to the space, and turns pages with a flip.
 // Arrows, the keyboard (← → space) and a swipe move between pages.
 export default function PdfReader({ url, name }) {
-  const box = useRef(null), canvas = useRef(null), docRef = useRef(null), task = useRef(null), touch = useRef(null);
-  const [n, setN] = useState(0), [page, setPage] = useState(1), [err, setErr] = useState(''), [dir, setDir] = useState(0), [flip, setFlip] = useState(0);
+  const box = useRef(null), docRef = useRef(null), task = useRef(null), touch = useRef(null);
+  const [n, setN] = useState(0), [page, setPage] = useState(1), [err, setErr] = useState(''), [dir, setDir] = useState(0), [flip, setFlip] = useState(0), [img, setImg] = useState(null), [pct, setPct] = useState(0);
 
   useEffect(() => {
     let off = false;
@@ -13,17 +17,20 @@ export default function PdfReader({ url, name }) {
       try {
         const pdfjs = await import('pdfjs-dist');
         pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
-        const doc = await pdfjs.getDocument({ url }).promise;
+        // Range requests: the first page shows while the rest of a big file is still downloading.
+        const loading = pdfjs.getDocument({ url, disableAutoFetch: true, rangeChunkSize: 262144 });
+        loading.onProgress = p => { if (!off && p.total) setPct(Math.min(99, Math.round(p.loaded / p.total * 100))); };
+        const doc = await loading.promise;
         if (off) return;
         docRef.current = doc; setN(doc.numPages); setPage(1);
-      } catch (e) { console.error(e); if (!off) setErr('This PDF could not be opened.'); }
+      } catch (e) { console.error(e); if (!off) setErr('This PDF could not be shown here.'); }
     })();
     return () => { off = true; if (docRef.current) docRef.current.destroy(); docRef.current = null; };
   }, [url]);
 
   const draw = async () => {
-    const doc = docRef.current, el = box.current, cv = canvas.current;
-    if (!doc || !el || !cv) return;
+    const doc = docRef.current, el = box.current;
+    if (!doc || !el) return;
     const p = await doc.getPage(page);
     const base = p.getViewport({ scale: 1 });
     const scale = Math.min((el.clientWidth - 24) / base.width, (el.clientHeight - 24) / base.height);
@@ -33,9 +40,8 @@ export default function PdfReader({ url, name }) {
     const off = document.createElement('canvas'); off.width = vp.width; off.height = vp.height;
     task.current = p.render({ canvasContext: off.getContext('2d'), viewport: vp });
     try { await task.current.promise; } catch (e) { return; }
-    cv.width = vp.width; cv.height = vp.height;
-    cv.style.width = Math.floor(vp.width / dpr) + 'px'; cv.style.height = Math.floor(vp.height / dpr) + 'px';
-    cv.getContext('2d').drawImage(off, 0, 0);
+    // The page is kept as a picture, so the flip animation (a new element) still shows it.
+    setImg({ src: off.toDataURL('image/jpeg', 0.92), w: Math.floor(vp.width / dpr), h: Math.floor(vp.height / dpr) });
     setFlip(f => f + 1);
   };
   useEffect(() => { draw(); }, [page, n]);
@@ -51,9 +57,9 @@ export default function PdfReader({ url, name }) {
     <div className="pdf" ref={box}
       onTouchStart={e => { touch.current = e.touches[0].clientX; }}
       onTouchEnd={e => { const s = touch.current; touch.current = null; if (s == null) return; const dx = e.changedTouches[0].clientX - s; if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1); }}>
-      {err ? <p className="pdf-msg">{err}</p> : !n ? <p className="pdf-msg">Opening {name || 'document'}…</p> : null}
+      {err ? <div className="pdf-msg"><p>{err}</p><a className="pdf-open" href={url} target="_blank" rel="noreferrer">Open the PDF</a></div> : !n || !img ? <p className="pdf-msg">Opening {name || 'document'}…{pct ? ' ' + pct + '%' : ''}</p> : null}
       <div className="pdf-stage">
-        <canvas key={flip} ref={canvas} className={'pdf-page' + (dir > 0 ? ' is-next' : dir < 0 ? ' is-prev' : '')} aria-label={n ? (name || 'Document') + ', page ' + page + ' of ' + n : ''} role="img" />
+        {img ? <img key={flip} src={img.src} width={img.w} height={img.h} className={'pdf-page' + (dir > 0 ? ' is-next' : dir < 0 ? ' is-prev' : '')} alt={(name || 'Document') + ', page ' + page + ' of ' + n} draggable={false} /> : null}
       </div>
       {n ? (
         <div className="pdf-nav">

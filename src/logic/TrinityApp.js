@@ -688,12 +688,17 @@ export default class TrinityApp extends Logic {
     this.toast(ok ? r.id + (last ? ' approved · sent to Finance for payment' : (r.step === 3 ? ' verified' : ' approved') + ' · sent to ' + this.CHAIN[n]) : r.id + ' rejected · ' + this.av(r.who).first + ' notified');
     this.log(ok ? 'check' : 'x', ok ? 'green' : 'red', this.me().n + (ok ? ' approved ' : ' rejected ') + this.fmtT(r.amt), this.reqWhat(r) + ' · ' + r.id);
   }
-  payReq(r) {
-    const t = this.now();
-    this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, {step:6,st:'paid',paidOn:dayKey(0),log:[...q.log,t]}) : q), staff:x.staff.map(p => p.k === r.who ? Object.assign({}, p, {fl:p.fl + r.amt}) : p)}));
-    this.toast('Paid · float opened for ' + this.av(r.who).n);
-    this.smsTo(r.who, 'Your request ' + r.id + ' for ' + this.fmtT(r.amt) + ' has been paid. Please bring the receipts within 3 days.');
-    this.log('wallet','green','Float opened · ' + this.fmtT(r.amt), this.av(r.who).n + ' · receipts due in 3 days');
+  // Finance records what was actually paid (the full amount unless they enter less).
+  payReq(r, paid) {
+    const t = this.now(), amt = paid == null || String(paid).trim() === '' ? r.amt : Math.round(+String(paid).replace(/[^0-9.]/g, '') || 0);
+    if (!(amt > 0)) { this.toast('Enter the amount paid'); return 'Enter the amount paid'; }
+    if (amt > r.amt) { this.toast('More than was requested (' + this.fmtT(r.amt) + ')'); return 'More than was requested'; }
+    this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, {step:6,st:'paid',paidOn:dayKey(0),paidAmt:amt,paidBy:this.me().k,log:[...q.log,t]}) : q), staff:x.staff.map(p => p.k === r.who ? Object.assign({}, p, {fl:p.fl + amt}) : p)}));
+    this.toast('Paid ' + this.fmtT(amt) + ' · float opened for ' + this.av(r.who).n);
+    this.remind(r.who, r.id + ' paid · ' + this.fmtT(amt), 'requests', 'wallet', (amt < r.amt ? 'Part of ' + this.fmtT(r.amt) + ' · ' : '') + 'bring the receipts within 3 days');
+    this.smsTo(r.who, 'Your request ' + r.id + ' has been paid: ' + this.fmtT(amt) + (amt < r.amt ? ' of ' + this.fmtT(r.amt) : '') + (r.pay && r.pay.by ? ' by ' + r.pay.by : '') + '. Please bring the receipts within 3 days.');
+    this.log('wallet','green','Float opened · ' + this.fmtT(amt), this.av(r.who).n + ' · receipts due in 3 days');
+    return '';
   }
   answer(q) {
     const s = this.state; q = q.toLowerCase();

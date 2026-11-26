@@ -80,3 +80,27 @@ test('a request can be edited until someone approves it; WhatsApp reminders and 
   expect(r.amt).toBe(95000); expect(r.purpose).toBe('Printing samples and lamination'); expect(r.st).toBe('pending');
   await expect(page.getByRole('button', { name: 'Remind approver on WhatsApp' })).toBeVisible();
 });
+
+test('Finance enters the amount paid; the request shows it; the approver sees every detail', async ({ page }) => {
+  await openAs(page, 'staff', 'staffportal');
+  await btn(page, 'Request money').click();
+  await chooseRequest(page, 'Project request');
+  await fillModal(page, { 'Amount (TZS)': 150000, 'Purpose': 'Hire of two vans', 'Needed by': 'Friday' });
+  await modal(page).getByRole('button', { name: 'Submit request' }).click();
+  let data = await saved(page); const id = data.reqs[0].id;
+  // The approver sees what was filled in.
+  await openAs(page, 'gm', 'requests', {}, false);
+  await page.getByText(id).first().click();
+  await expect(page.locator('.rq-det')).toContainText('Friday');
+  await expect(page.locator('.rq-pay')).toContainText('M-Pesa · Test Payee · 0754 123 456');
+  // Approved; Finance pays part of it.
+  await page.evaluate(id => { const d = JSON.parse(localStorage.getItem('tm360data')); d.reqs = d.reqs.map(r => (r.id === id ? Object.assign({}, r, { st: 'approved', step: 5 }) : r)); localStorage.setItem('tm360data', JSON.stringify(d)); }, id);
+  await openAs(page, 'finance', 'requests', {}, false);
+  await page.getByText(/^All ·/).click();
+  await page.getByText(id).first().click();
+  await page.getByLabel('Amount paid').fill('120000');
+  await page.getByRole('button', { name: 'Mark paid · TZS 120,000' }).click();
+  await expect(page.locator('.rq-paid')).toContainText('Paid TZS 120,000 of TZS 150,000');
+  data = await saved(page);
+  expect(data.reqs.find(r => r.id === id)).toMatchObject({ st: 'paid', paidAmt: 120000 });
+});

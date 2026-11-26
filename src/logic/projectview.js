@@ -151,7 +151,7 @@ export const projectMethods = {
   // A request's status in plain words.
   moneyStatus(r) {
     if (r.st === 'rejected') return 'Rejected';
-    if (r.st === 'paid') return 'Paid';
+    if (r.st === 'paid') return 'Paid ' + this.fmtT(r.paidAmt || r.amt);
     if (r.st === 'approved' || r.step >= 5) return 'Approved · Finance to pay';
     return 'Waiting for ' + (WAIT[r.step] || 'approval');
   },
