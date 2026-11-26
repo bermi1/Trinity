@@ -9,10 +9,10 @@ export function renderVals() {
   const s = this.state, IC = this.IC, ST = this.ST;
   const narrow = s.w < 960, wide = s.w >= 1240;
   const unread = this.myNotes(s).filter(n => !n.read).length;
-  const myReq = s.reqs.filter(r => r.st === 'pending' && r.step === 4);
+  const vreqs = this.visibleReqs(s), myReq = vreqs.filter(r => r.st === 'pending' && r.step === 4);
   const navPage = s.page === 'project' ? 'projects' : s.page === 'job' ? 'production' : s.page;
   const role = s.role || 'ceo', R = this.ROLES[role];
-  const lowN = s.stock.filter(i => i.q < i.min).length, finQ = s.reqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === R.k && t.st !== 'done').length;
+  const lowN = s.stock.filter(i => i.q < i.min).length, finQ = vreqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === R.k && t.st !== 'done').length;
   const G = this.navGroups(role);
   // "More" opens by itself when the page you are on is inside it; its count adds up what waits inside.
   const inMore = G.some(([, items, more]) => more && items.some(i => i[0] === navPage));
@@ -39,7 +39,7 @@ export function renderVals() {
   const cnt = k => s.projects.filter(p => p.st === k).length;
   const unpaid = s.invoices.filter(i => i.st !== 'paid' && i.st !== 'draft'), overdue = s.invoices.filter(i => i.st === 'overdue');
   const mk = (l,v,u,dd,dc,n,ic,go,sp,spc) => { const k = this.spark(sp); return {l,v,u,d:dd,dc,n,ic:IC[ic],go:() => this.go(go),sp:k.l,spf:k.f,spc}; };
-  const pend = s.reqs.filter(r => r.st === 'pending').length;
+  const pend = vreqs.filter(r => r.st === 'pending').length;
   const kpis = [
     mk('Active projects', active.length, '', '▲ 3', '#1F7549', 'vs last week · ' + (cnt('risk') + cnt('late')) + ' at risk', 'folder', 'projects', [11,12,12,13,14,14,15,active.length], '#6D3CC2'),
     mk('Today\u2019s revenue', '14.2M', 'TZS', '▲ 8%', '#1F7549', 'vs Tue average', 'trendUp', 'finance', [9,12,10,13,11,12,13,14.2], '#2E9B63'),
@@ -67,8 +67,8 @@ export function renderVals() {
     ...s.projects.filter(p => p.st === 'late').map(p => ({t:p.client + ' · ' + p.name, s:'Production behind · due ' + p.due, ic:IC.clock, bg:'#FBF1DD', fg:'#8A6414', on:() => this.go('project',{projectId:p.id})})),
     ...(overdue[0] ? [{t:overdue[0].c + ' · ' + overdue[0].id, s:'Invoice ' + overdue[0].due + ' · ' + this.fmtM(overdue[0].v), ic:IC.fileText, bg:'#FBEDEE', fg:'#B23A46', on:() => this.go('finance')}] : [])
   ].slice(0,3);
-  const activity = s.activity.map(e => { const t = this.tone(e.tone); return Object.assign({}, e, {ic:IC[e.ic], bg:t[0], fg:t[1]}); });
-  const pipe = [['GM',2],['Finance',3],['Management',4],['Payment',5],['Paid',6]].map(([l,k]) => { const nn = s.reqs.filter(r => r.step === k && r.st !== 'rejected').length; const you = k === 4, paid = k === 6; return {l, n:nn, bg:you ? '#FBF6EA' : paid ? '#E6F4EC' : '#F4F1FA', bd:you ? '#E4CD95' : 'transparent', fg:you ? '#8A6414' : paid ? '#1F7549' : '#2B1459'}; });
+  const activity = this.visibleActivity(s).map(e => { const t = this.tone(e.tone); return Object.assign({}, e, {ic:IC[e.ic], bg:t[0], fg:t[1]}); });
+  const pipe = [['GM',2],['Finance',3],['Management',4],['Payment',5],['Paid',6]].map(([l,k]) => { const nn = vreqs.filter(r => r.step === k && r.st !== 'rejected').length; const you = k === 4, paid = k === 6; return {l, n:nn, bg:you ? '#FBF6EA' : paid ? '#E6F4EC' : '#F4F1FA', bd:you ? '#E4CD95' : 'transparent', fg:you ? '#8A6414' : paid ? '#1F7549' : '#2B1459'}; });
   const PS = ['Request','Approved','Delivered'], pcol = p => (p.s >= 4 ? 2 : p.s >= 2 ? 1 : 0);
   const procPipe = PS.map((l,i) => ({l, n:s.proc.filter(p => pcol(p) === i).length}));
   const missing = s.staff.filter(p => !p.rep);

@@ -103,8 +103,9 @@ export function projectVals(s) {
   V.tasksTitle = can.allTasks ? 'Tasks' : 'Your tasks on this project';
   V.addTask = can.canTask ? () => this.openModal('task', { p: P.id }) : null;
 
-  // Money requests: your own, or all of them for the PM, Operations, Finance and the top.
-  const reqs = (s.reqs || []).filter(r => r.p === P.id && (can.allReqs || r.who === me));
+  // Money requests on this project, as far as this person may see them (see canSeeReq): all of them for
+  // Management, the GM and the PA; otherwise your own and the ones waiting for you (Finance: what it handles).
+  const reqs = this.visibleReqs(s).filter(r => r.p === P.id);
   V.reqs = reqs.map(r => ({ id: r.id, what: this.reqWhat(r), who: this.av(r.who).n, amt: this.fmtT(r.amt), status: this.moneyStatus(r), tone: this.reqTone(r),
     open: () => this.go('requests', { reqSel: r.id, reqFilter: 'all' }) }));
   V.reqsTitle = can.allReqs ? 'Money requests' : 'Your requests on this project';

@@ -143,7 +143,7 @@ export const deptMethods = {
       profit: top,
       money: top || fin,
       allTasks: top || ops,
-      allReqs: top || fin || ops,
+      allReqs: this.seesAllReqs() || fin,
       canPM: ['ceo', 'gm'].includes(role) || this.isManagerOf('operations'),
       canAdvance: ['ceo', 'gm'].includes(role) || ops,
       canTask: ['ceo', 'gm'].includes(role) || ops || this.assignable().length > 1,

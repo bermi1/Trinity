@@ -382,10 +382,10 @@ export default class TrinityApp extends Logic {
   dataKeys() { return this._dk || (this._dk = Object.keys(this.seed())); }
   navGroups(role) {
     const s = this.state, R = this.ROLES[role];
-    const unread = this.myNotes(s).filter(n => !n.read).length, myReq = s.reqs.filter(q => q.st === 'pending' && q.step === 4).length, openTasks = s.tasks.filter(t => t.st !== 'done').length;
+    const unread = this.myNotes(s).filter(n => !n.read).length, vreqs = this.visibleReqs(s), myReq = vreqs.filter(q => q.st === 'pending' && q.step === 4).length, openTasks = s.tasks.filter(t => t.st !== 'done').length;
     const srqN = s.requisitions.filter(q => q.st === 'pending' || q.st === 'partial').length;
     const rptN = (s.reports || []).filter(r => r.by !== this.me().k && this.reportVisibleTo(r, this.me().k) && !(r.readBy || {})[this.me().k]).length;
-    const lowN = s.stock.filter(i => i.q < i.min).length, finQ = s.reqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === this.me().k && t.st !== 'done' && t.kind !== 'brief').length;
+    const lowN = s.stock.filter(i => i.q < i.min).length, finQ = vreqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === this.me().k && t.st !== 'done' && t.kind !== 'brief').length;
     // Each portal shows only what that person uses every day; everything else waits under "More".
     const mob = ['ceomobile','Mobile app','phone',0,{mobileRole:role}];
     const company = [['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']];
@@ -412,7 +412,7 @@ export default class TrinityApp extends Logic {
     // Printing is an ordinary department for now: its home, My work, Projects and requests.
     N.production = [['Printing',[['dept','Printing','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
     // The General Manager sees what Management sees, without company setup and accounts.
-    N.gm = N.ceo.map(([t, items, more]) => [t, items.filter(i => !['company','field','ceomobile'].includes(i[0])).map(i => (i[0] === 'requests' ? ['requests','Approvals','banknote',s.reqs.filter(q => q.st === 'pending' && q.step === 2).length] : i[0] === 'finance' ? ['finance','Invoices','fileText'] : i)), more]);
+    N.gm = N.ceo.map(([t, items, more]) => [t, items.filter(i => !['company','field','ceomobile'].includes(i[0])).map(i => (i[0] === 'requests' ? ['requests','Approvals','banknote',vreqs.filter(q => q.st === 'pending' && q.step === 2).length] : i[0] === 'finance' ? ['finance','Invoices','fileText'] : i)), more]);
     let G = N[role] || N.ceo;
     // Client Service team members on the staff portal also get their own clients & leads (targets show on My work).
     if (role === 'staff' && this.isCsStaff && this.isCsStaff()) G = G.map(([t, items, more], gi) => [t, gi === 0 ? [...items.slice(0, 1), ['clients', 'My clients & leads', 'users'], ...items.slice(1)] : items, more]);
@@ -537,7 +537,9 @@ export default class TrinityApp extends Logic {
     const msg = { id: 'OB' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), to: n.to, phone, ch: N.wa ? 'whatsapp' : 'sms', kind, text: 'Trinity Mark 360 · ' + n.t + (n.s ? '\n' + n.s : ''), st: 'queued', at: dayKey(0) + ' ' + this.now() };
     this.setState(s => ({ outbox: [msg, ...(s.outbox || [])].slice(0, 200) }));
   }
-  log(ic, tone, t, sub) { this.setState(s => ({activity:[{time:this.now(),ic,tone,t,s:sub}, ...s.activity].slice(0,7)})); }
+  // `req` ties an entry to a money request, so it only shows to people who may see that request.
+  log(ic, tone, t, sub, req) { this.setState(s => ({activity:[Object.assign({time:this.now(),ic,tone,t,s:sub}, req ? {req} : {}), ...s.activity].slice(0,7)})); }
+  visibleActivity(s) { const S = s || this.state, reqs = S.reqs || []; return (S.activity || []).filter(e => !e.req || this.canSeeReq(reqs.find(r => r.id === e.req))); }
   smooth(pts) { let d = 'M' + pts[0][0] + ' ' + pts[0][1]; for (let i = 0; i < pts.length - 1; i++) { const p0 = pts[i-1] || pts[i], p1 = pts[i], p2 = pts[i+1], p3 = pts[i+2] || p2; d += ' C' + (p1[0]+(p2[0]-p0[0])/6).toFixed(1) + ' ' + (p1[1]+(p2[1]-p0[1])/6).toFixed(1) + ' ' + (p2[0]-(p3[0]-p1[0])/6).toFixed(1) + ' ' + (p2[1]-(p3[1]-p1[1])/6).toFixed(1) + ' ' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1); } return d; }
   spark(vals) { const mn = Math.min(...vals), mx = Math.max(...vals), r = mx - mn || 1; const pts = vals.map((v,i) => [3 + i*(84/(vals.length-1)), 27 - (v-mn)/r*22]); const l = this.smooth(pts); return {l, f:l + ' L87 30 L3 30 Z'}; }
 
@@ -636,6 +638,20 @@ export default class TrinityApp extends Logic {
   }
 
   canPay() { const role = this.state.role || 'ceo'; return role === 'ceo' || role === 'finance'; }
+  // Privacy of money requests. Management, the GM and the PA (who follows Management's approvals) see every
+  // request. Everyone else sees only their own requests (asked by them or for them) and the ones waiting for
+  // their approval right now. Finance also sees what it must verify, pay and reconcile: requests at the
+  // Finance step, approved ones waiting for payment and paid ones.
+  seesAllReqs() { return ['ceo', 'gm', 'pa'].includes(this.state.role || 'ceo'); }
+  reqWaitingOnMe(r) { return !!r && r.st === 'pending' && (this.canAct(r) || this.approverAt(r, r.step) === this.me().k); }
+  canSeeReq(r) {
+    if (!r) return false;
+    if (this.seesAllReqs()) return true;
+    const me = this.me().k;
+    if (r.who === me || r.by === me || this.reqWaitingOnMe(r)) return true;
+    return (this.state.role || 'ceo') === 'finance' && (r.st === 'approved' || r.st === 'paid' || (r.st === 'pending' && r.step === 3));
+  }
+  visibleReqs(s) { return ((s || this.state).reqs || []).filter(r => this.canSeeReq(r)); }
   // Requests up to this amount need only the Project Manager and Finance (0 = every request takes all steps).
   // Project stage 1–5 (older projects stored 1–15).
   stageOf(p) { return FLOW.indexOf(this.flowOf(p)) + 1; }
@@ -665,13 +681,13 @@ export default class TrinityApp extends Logic {
     const id = this.nextId('REQ', s.reqs), draft = {type, amt};
     const step = this.nextStep(draft, 0), log = [this.now()];
     for (let i = 1; i < step; i++) log.push('Not needed');
-    const r = {id, type, who, amt, pay:(this.payInfo(f).pay || null), cat:type === 'project' ? (f.cat || 'Operations') : type === 'internal' && f.cat ? f.cat : REQ_TYPES[type].l.replace(' request', ''), title:(f.title || '').trim(), purpose:(f.purpose || '').trim(), p:f.p || '', alloc:f.alloc || '', need:f.need || (type === 'emergency' ? 'Today' : 'This week'), step, st:step >= 5 ? 'approved' : 'pending', log};
+    const r = {id, type, who, ...(who !== this.me().k ? {by:this.me().k} : {}), amt, pay:(this.payInfo(f).pay || null), cat:type === 'project' ? (f.cat || 'Operations') : type === 'internal' && f.cat ? f.cat : REQ_TYPES[type].l.replace(' request', ''), title:(f.title || '').trim(), purpose:(f.purpose || '').trim(), p:f.p || '', alloc:f.alloc || '', need:f.need || (type === 'emergency' ? 'Today' : 'This week'), step, st:step >= 5 ? 'approved' : 'pending', log};
     this.setState(x => ({reqs:[r, ...x.reqs], reqSel:id}));
     const to = step >= 5 ? this.roleKey('finance', 'RT') : this.approverAt(r, step);
     this.remind(to, step >= 5 ? id + ' is ready to pay' : id + ' needs your approval', 'requests', 'banknote', this.av(who).n + ' · ' + this.fmtT(amt));
     this.smsTo(to, (step >= 5 ? id + ' is ready to pay. ' : id + ' needs your approval. ') + this.av(who).n + ' requests ' + this.fmtT(amt) + ' - ' + this.reqWhat(r) + '. Open the system to act.');
     this.toast(id + ' submitted · waiting for ' + (step >= 5 ? 'payment' : this.CHAIN[step]));
-    this.log('banknote','amber',this.av(who).first + ' requested ' + this.fmtT(amt), this.reqWhat(r) + ' · ' + id);
+    this.log('banknote','amber',this.av(who).first + ' requested ' + this.fmtT(amt), this.reqWhat(r) + ' · ' + id, id);
     return id;
   }
   // What a request is for, in a few words.
@@ -690,7 +706,7 @@ export default class TrinityApp extends Logic {
     if (ok && last) this.smsTo(r.who, 'Your request ' + r.id + ' for ' + this.fmtT(r.amt) + ' is approved and sent to Finance for payment.');
     if (!ok) this.smsTo(r.who, 'Your request ' + r.id + ' for ' + this.fmtT(r.amt) + ' was not approved (' + this.me().n + '). Open the system for details.');
     this.toast(ok ? r.id + (last ? ' approved · sent to Finance for payment' : (r.step === 3 ? ' verified' : ' approved') + ' · sent to ' + this.CHAIN[n]) : r.id + ' rejected · ' + this.av(r.who).first + ' notified');
-    this.log(ok ? 'check' : 'x', ok ? 'green' : 'red', this.me().n + (ok ? ' approved ' : ' rejected ') + this.fmtT(r.amt), this.reqWhat(r) + ' · ' + r.id);
+    this.log(ok ? 'check' : 'x', ok ? 'green' : 'red', this.me().n + (ok ? ' approved ' : ' rejected ') + this.fmtT(r.amt), this.reqWhat(r) + ' · ' + r.id, r.id);
   }
   // Finance records what was actually paid (the full amount unless they enter less).
   payReq(r, paid) {
@@ -701,20 +717,23 @@ export default class TrinityApp extends Logic {
     this.toast('Paid ' + this.fmtT(amt) + ' · float opened for ' + this.av(r.who).n);
     this.remind(r.who, r.id + ' paid · ' + this.fmtT(amt), 'requests', 'wallet', (amt < r.amt ? 'Part of ' + this.fmtT(r.amt) + ' · ' : '') + 'bring the receipts within 3 days');
     this.smsTo(r.who, 'Your request ' + r.id + ' has been paid: ' + this.fmtT(amt) + (amt < r.amt ? ' of ' + this.fmtT(r.amt) : '') + (r.pay && r.pay.by ? ' by ' + r.pay.by : '') + '. Please bring the receipts within 3 days.');
-    this.log('wallet','green','Float opened · ' + this.fmtT(amt), this.av(r.who).n + ' · receipts due in 3 days');
+    this.log('wallet','green','Float opened · ' + this.fmtT(amt), this.av(r.who).n + ' · receipts due in 3 days', r.id);
     return '';
   }
   answer(q) {
     const s = this.state; q = q.toLowerCase();
     const list = a => a.join('\n• ');
     if (/budget|\bover\b|margin|profit/.test(q)) { const o = s.projects.filter(p => p.st !== 'done' && p.spent > p.bud * 0.6).sort((a,b) => b.spent/b.bud - a.spent/a.bud).slice(0,4); return 'Budget usage, highest first:\n• ' + list(o.map(p => p.client + ' · ' + p.name + ' — ' + Math.round(p.spent/p.bud*100) + '% of ' + this.fmtM(p.bud))) + '\n\nPwani Beverages is over budget; I recommend a cost review before the Wednesday deadline.'; }
-    if (/approv|pending|request|money/.test(q)) { const r = s.reqs.filter(x => x.st === 'pending' && x.step === 4); const tot = r.reduce((a,b) => a + b.amt, 0); return r.length ? r.length + ' requests are waiting for you (' + this.fmtT(tot) + '):\n• ' + list(r.map(x => this.av(x.who).first + ' — ' + this.fmtT(x.amt) + ' · ' + x.cat + ' · needed ' + x.need)) : 'Nothing is waiting for your approval.'; }
+    // Only requests this person may see and that are waiting for them (see canSeeReq).
+    const role = s.role || 'ceo', waiting = this.visibleReqs(s).filter(x => x.st === 'pending' && this.canAct(x) && (role !== 'ceo' || x.step === 4));
+    if (/approv|pending|request|money/.test(q)) { const r = waiting; const tot = r.reduce((a,b) => a + b.amt, 0); return r.length ? r.length + ' requests are waiting for you (' + this.fmtT(tot) + '):\n• ' + list(r.map(x => this.av(x.who).first + ' — ' + this.fmtT(x.amt) + ' · ' + x.cat + ' · needed ' + x.need)) : 'Nothing is waiting for your approval.'; }
     if (/stock|inventory|material|low|vinyl|ink/.test(q)) { const l = s.stock.filter(i => i.q < i.min); return l.length + ' items are below minimum:\n• ' + list(l.map(i => i.n + ' — ' + i.q + ' ' + i.u + ' (min ' + i.min + ')')); }
-    if (/float/.test(q)) { const f = s.staff.filter(p => p.fl > 0); return 'Open staff floats total ' + this.fmtT(f.reduce((a,b) => a + b.fl, 0)) + ':\n• ' + list(f.map(p => this.av(p.k).n + ' — ' + this.fmtT(p.fl))) + '\n\nPeter Laizer\u2019s float is 12 days old with no receipts.'; }
+    // Floats of other people are for Management, the GM, the PA and Finance; everyone else hears about their own.
+    if (/float/.test(q)) { const allF = ['ceo', 'gm', 'pa', 'finance'].includes(role), f = s.staff.filter(p => p.fl > 0 && (allF || p.k === this.me().k)); if (!f.length) return 'No open floats.'; return 'Open staff floats total ' + this.fmtT(f.reduce((a,b) => a + b.fl, 0)) + ':\n• ' + list(f.map(p => this.av(p.k).n + ' — ' + this.fmtT(p.fl))) + (allF ? '\n\nPeter Laizer\u2019s float is 12 days old with no receipts.' : ''); }
     if (/report|staff|missing|who/.test(q)) { const m = s.staff.filter(p => !p.rep); return m.length ? m.length + ' staff have not submitted yesterday\u2019s report:\n• ' + list(m.map(p => this.av(p.k).n + ' · ' + p.role)) : 'Everyone has submitted their report.'; }
     if (/risk|late|delay/.test(q)) { const r = s.projects.filter(p => p.st === 'risk' || p.st === 'late'); return r.length + ' projects need attention:\n• ' + list(r.map(p => p.client + ' · ' + p.name + ' — ' + this.ST[p.st].l + ', due ' + p.due)); }
     if (/invoice|receiv|owe|overdue|cash/.test(q)) { const o = s.invoices.filter(i => i.st === 'overdue'); return 'Overdue invoices total ' + this.fmtM(o.reduce((a,b) => a + b.v, 0)) + ':\n• ' + list(o.map(i => i.c + ' — ' + this.fmtM(i.v) + ' · ' + i.due)); }
-    const act = s.projects.filter(p => p.st !== 'done').length, pend = s.reqs.filter(x => x.st === 'pending' && x.step === 4).length;
+    const act = s.projects.filter(p => p.st !== 'done').length, pend = waiting.length;
     return 'Today at a glance: ' + act + ' active projects, ' + pend + ' approvals waiting for you, ' + s.stock.filter(i => i.q < i.min).length + ' stock items below minimum, and ' + s.staff.filter(p => !p.rep).length + ' missing staff reports. Try asking about budgets, floats, stock or overdue invoices.';
   }
   askAI(q) {

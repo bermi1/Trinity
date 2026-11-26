@@ -1,4 +1,3 @@
-import { DEPTS } from '../constants';
 // Ported from the Claude Design file (design/project/Trinity Mark 360 App.dc.html).
 // Values for the briefing, projects, tasks and money requests pages.
 export function pageVals(s, IC, ST, narrow) {
@@ -57,7 +56,7 @@ export function pageVals(s, IC, ST, narrow) {
       profit:this.fmtM(P.val - Math.max(P.bud, P.spent)), invoiced:this.fmtM(s.invoices.filter(i => i.p === P.id).reduce((a,b) => a + b.v, 0)),
       tasks:ptasks.map(t => { const a = this.av(t.who), m = this.tst(t.st); return {t:t.t, who:a.n, due:t.due, stl:m[0], stbg:m[1], stfg:m[2], done:t.st === 'done', chkBg:t.st === 'done' ? '#2E9B63' : '#fff', chkBd:t.st === 'done' ? '#2E9B63' : '#D5CFE0', td:t.st === 'done' ? 'line-through' : 'none', toggle:() => this.setState(x => ({tasks:x.tasks.map(y => y.id === t.id ? Object.assign({}, y, {st:y.st === 'done' ? 'prog' : 'done'}) : y)}))}; }),
       tasksEmpty:ptasks.length === 0, openCount:ptasks.filter(t => t.st !== 'done').length + ' open',
-      reqs:s.reqs.filter(r => r.p === P.id).map(r => Object.assign({id:r.id, who:this.av(r.who).n, amt:this.fmtT(r.amt), cat:r.cat, on:() => this.go('requests',{reqSel:r.id, reqFilter:'all'})}, pill(this.rst(r)))),
+      reqs:this.visibleReqs(s).filter(r => r.p === P.id).map(r => Object.assign({id:r.id, who:this.av(r.who).n, amt:this.fmtT(r.amt), cat:r.cat, on:() => this.go('requests',{reqSel:r.id, reqFilter:'all'})}, pill(this.rst(r)))),
       team:P.team.map(k => this.av(k)), isDone:P.st === 'done', canAdvance:P.st !== 'done',
       advance:() => { const last = this.STAGES.length, ns = Math.min(last, this.stageOf(P) + 1); this.setState(x => ({projects:x.projects.map(p => p.id === P.id ? Object.assign({}, p, {stage:ns, sv:2, prog:Math.max(p.prog, Math.round(ns/last*100)), st:ns === last ? 'done' : p.st}) : p)})); this.toast(ns === last ? P.name + ' closed' : 'Moved to ' + this.STAGES[ns - 1]); this.log('folder','purple',P.client + ' · moved to ' + this.STAGES[ns - 1], P.name); },
       addTask:() => this.openModal('task',{p:P.id, who:P.pm}), reqMoney:() => this.openModal('req',{p:P.id}), invoice:() => this.openModal('invoice',{p:P.id}),
@@ -67,7 +66,7 @@ export function pageVals(s, IC, ST, narrow) {
   // Staff, Reception and Printing see projects without money figures.
   if (!seeMoney) {
     const hide = {val:'—', margin:'—', spent:'—', bud:'—', remaining:'—', over:false, overBy:'—', spentW:'0%', usedPct:'—', profit:'—', invoiced:'—', budLine:'—'};
-    V.P = Object.assign({}, V.P, hide, {reqs:(V.P.reqs || []).filter(r => r.who === this.av(this.me().k).n)});
+    V.P = Object.assign({}, V.P, hide);
     V.projRows = V.projRows.map(r => Object.assign({}, r, {val:'—', used:'—'}));
   }
 
@@ -85,11 +84,16 @@ export function pageVals(s, IC, ST, narrow) {
   // Requests
   const rf = s.reqFilter;
   const role = s.role || 'ceo';
-  // Staff, Reception and Printing see only their own requests; they never approve.
-  const ownOnly = ['staff','reception','production','clientservice','creative','operations'].includes(role), mine = r => !ownOnly || r.who === this.me().k;
-  const RF = {mine:r => r.who === this.me().k, me:r => mine(r) && (ownOnly ? r.st === 'pending' : this.canAct(r) && (role !== 'ceo' || r.step === 4)), all:r => mine(r), approved:r => mine(r) && (r.st === 'approved' || r.st === 'paid'), rejected:r => mine(r) && r.st === 'rejected'};
-  V.reqTabs = [['me','Awaiting me'], ...(ownOnly ? [] : [['mine','My requests']]), ['all','All'],['approved','Approved'],['rejected','Rejected']].map(([k,l]) => ({l:l + ' · ' + s.reqs.filter(RF[k]).length, on:() => this.setState({reqFilter:k}), bg:rf === k ? '#2B1459' : 'transparent', c:rf === k ? '#fff' : '#6E6A7C'}));
-  const rl = s.reqs.filter(RF[rf]);
+  // Who sees which request: see canSeeReq (Management, the GM and the PA all; everyone else their own and
+  // the ones waiting for their approval; Finance also what it verifies, pays and reconciles).
+  const me0 = this.me().k, vreqs = this.visibleReqs(s), own = r => r.who === me0 || r.by === me0;
+  // Staff, Reception, Printing and the departments get "My requests" (their own) — unless a request is
+  // waiting for their approval (e.g. as a project's PM): then they get the approvals page to act on it.
+  const ownRoles = ['staff','reception','production','clientservice','creative','operations','store'].includes(role);
+  const ownOnly = ownRoles && !vreqs.some(r => !own(r) && this.reqWaitingOnMe(r));
+  const RF = {mine:own, me:r => (ownOnly ? own(r) && r.st === 'pending' : this.canAct(r) && (role !== 'ceo' || r.step === 4)), all:() => true, approved:r => r.st === 'approved' || r.st === 'paid', rejected:r => r.st === 'rejected'};
+  V.reqTabs = [['me','Awaiting me'], ...(ownOnly ? [] : [['mine','My requests']]), ['all','All'],['approved','Approved'],['rejected','Rejected']].map(([k,l]) => ({l:l + ' · ' + vreqs.filter(RF[k]).length, on:() => this.setState({reqFilter:k}), bg:rf === k ? '#2B1459' : 'transparent', c:rf === k ? '#fff' : '#6E6A7C'}));
+  const rl = vreqs.filter(RF[rf] || RF.all);
   const sel = rl.find(r => r.id === s.reqSel) || rl[0];
   V.reqList = rl.map(r => Object.assign({id:r.id, name:this.av(r.who).n, amt:this.fmtT(r.amt), cat:this.reqWhat(r), need:'needed ' + r.need, bg:sel && r.id === sel.id ? '#F4F1FA' : '#fff', bd:sel && r.id === sel.id ? '#6D3CC2' : 'transparent', on:() => this.setState({reqSel:r.id})}, pill(this.rst(r))));
   V.reqEmpty = rl.length === 0; V.hasSel = !!sel;
@@ -117,12 +121,12 @@ export function pageVals(s, IC, ST, narrow) {
   // Float exposure = money paid out to staff on requests that is not yet backed by accepted receipts.
   // It is built from the paid requests themselves, so every shilling shows what it was for.
   const today0 = this.today(), daysSince = k => { if (!k) return 0; const [y, m, d] = k.split('-').map(Number); return Math.max(0, Math.round((new Date(today0.slice(0,4), +today0.slice(5,7) - 1, +today0.slice(8,10)) - new Date(y, m - 1, d)) / 864e5)); };
-  const open = s.reqs.filter(r => r.st === 'paid' && !(r.rec && r.rec.st === 'ok'));
+  const open = vreqs.filter(r => r.st === 'paid' && !(r.rec && r.rec.st === 'ok'));
   const byWho = {};
   open.forEach(r => { (byWho[r.who] = byWho[r.who] || []).push(r); });
   const total = open.reduce((a, r) => a + r.amt, 0), toCheck = open.filter(r => r.rec && r.rec.st === 'submitted'), late = open.filter(r => !r.rec && daysSince(r.paidOn) > 3);
   const weekAgo = (() => { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0, 10); })();
-  const paidWeek = s.reqs.filter(r => r.st === 'paid' && (r.paidOn || '') >= weekAgo);
+  const paidWeek = vreqs.filter(r => r.st === 'paid' && (r.paidOn || '') >= weekAgo);
   V.floatDef = 'Float exposure is money Finance has paid out to staff for requests that is not yet backed by receipts. It closes when the person reconciles (what they spent, plus receipt) and Finance accepts.';
   V.floatKpis = [{l:'Float exposure', v:this.fmtT(total), n:open.length + ' paid requests · ' + Object.keys(byWho).length + ' people', dark:true}, {l:'Receipts to check', v:String(toCheck.length), n:this.fmtT(toCheck.reduce((a,b) => a + b.amt, 0)) + ' submitted'}, {l:'No receipts after 3 days', v:String(late.length), n:late.length ? this.fmtT(late.reduce((a,b) => a + b.amt, 0)) : 'All on time', red:late.length > 0}, {l:'Paid this week', v:this.fmtT(paidWeek.reduce((a,b) => a + b.amt, 0)), n:paidWeek.length + ' requests'}].map(k => Object.assign(k, {bg:k.dark ? '#2B1459' : '#fff', lc:k.dark ? '#E2CE98' : '#6E6A7C', vc:k.dark ? '#fff' : k.red ? '#B23A46' : '#17152A', nc:k.dark ? 'rgba(255,255,255,.7)' : '#6E6A7C', bd:k.dark ? '#2B1459' : '#E8E4EF'}));
   V.floats = Object.keys(byWho).map(k => {
@@ -140,11 +144,10 @@ export function pageVals(s, IC, ST, narrow) {
   V.showFloats = ['ceo','finance'].includes(role);
   if (!V.showFloats) { V.floatKpis = []; V.floats = []; V.floatsEmpty = false; }
   // Everyone else gets "My requests": what they asked for, where it is, and what happened.
-  // A department manager also sees the requests of their own team.
+  // Only their own: a head of department does not see their team's money requests (privacy).
   if (ownOnly) {
-    const me = this.me().k, dept = this.myDept(), mgr = dept && this.isManagerOf(dept), team = mgr ? this.teamOf(dept) : [me];
-    const scope = mgr && s.myReqScope === 'team' ? 'team' : 'mine';
-    const list = s.reqs.filter(r => (scope === 'team' ? team.includes(r.who) : r.who === me));
+    const me = me0, mgr = false, scope = 'mine';
+    const list = vreqs.filter(own);
     const row = r => {
       const steps = this.CHAIN.map((l, i) => ({ l: i === 0 ? 'Sent' : i === 5 ? 'Paid' : l, skip:r.log[i] === 'Not needed', done:r.st === 'paid' || i < r.step || (r.st === 'approved' && i < 5), cur:r.st === 'pending' && i === r.step, rej:r.st === 'rejected' && i === r.step, at:r.log[i] && r.log[i] !== 'Not needed' ? r.log[i] : '' })).filter((x, i) => !x.skip && (i !== 1 || !!r.log[1]));
       const P = this.proj(r.p);
@@ -155,7 +158,7 @@ export function pageVals(s, IC, ST, narrow) {
         wa:r.st === 'pending' && r.who === me ? () => { const to = this.approverAt(r, r.step); this.waOpen(to, 'Habari ' + this.av(to).first + ', ' + r.id + ' (' + this.fmtT(r.amt) + ', ' + this.reqWhat(r) + ') is waiting for your approval in Trinity Mark 360.'); } : null};
     };
     V.MR = {open:list.filter(r => r.st === 'pending' || r.st === 'approved').map(row), done:list.filter(r => r.st === 'paid' || r.st === 'rejected').map(row),
-      mgr, scope, deptL:mgr ? (DEPTS[dept] || {}).l || 'My team' : '', setScope:k => this.setState({myReqScope:k, reqSel:null}), newReq:() => this.openModal('req')};
+      mgr, scope, deptL:'', setScope:k => this.setState({myReqScope:k, reqSel:null}), newReq:() => this.openModal('req')};
   }
   return Object.assign(V, this.pageVals2(s, IC, ST, narrow));
 }

@@ -49,8 +49,8 @@ test('a large project request travels the whole chain: GM → Finance → Manage
   await side(page, 'Requests & Floats');
   await btn(page, /^Approved ·/).click();
   await page.getByText('REQ-0427').first().click();
-  await btn(page, 'Mark paid · open float').click();
-  await toast(page, 'Paid · float opened for Grace Mrema');
+  await page.getByRole('button', { name: /^Mark paid · TZS/ }).click();
+  await expect(page.getByText(/^Paid TZS [0-9,]+ · float opened for Grace Mrema/).last()).toBeVisible();
   r = (await saved(page)).reqs.find(x => x.id === 'REQ-0427');
   expect(r.st).toBe('paid');
   expect((await saved(page)).staff.find(p => p.k === 'GM').fl).toBe(530000);

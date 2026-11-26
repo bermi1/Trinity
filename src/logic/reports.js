@@ -30,16 +30,21 @@ export const reportChannel = {
     this.toast('Report sent to ' + to.map(k => this.av(k).first).join(' and '));
     return '';
   },
-  // Who reads reports: Management, the GM and the PA see every report; a head of department sees the reports
-  // of their own department's staff (and anything sent to them); everyone else only sends and sees what they sent.
+  // Who reads reports: Management, the GM and the PA see every report. Everyone else sees the reports they
+  // sent and the reports addressed to them (a head of department receives what their staff send them) — never
+  // a colleague's report that was sent to someone else.
   seesAllReports() { return ['ceo', 'gm', 'pa'].includes(this.state.role || 'ceo'); },
   headOfDept() { const d = this.myDept(); return d && this.isManagerOf(d) ? d : null; },
-  canReceiveReports() { return this.seesAllReports() || !!this.headOfDept(); },
+  canReceiveReports() {
+    if (this.seesAllReports() || this.headOfDept()) return true;
+    const me = this.me().k;
+    return (this.state.reports || []).some(r => r.by !== me && (r.to || []).includes(me));
+  },
+  // Whether report r shows in k's inbox (k is the signed-in person; their own reports are under Sent).
   reportVisibleTo(r, k) {
-    if (r.by === k) return false;
+    if (!r || r.by === k) return false;
     if (this.seesAllReports()) return true;
-    const d = this.headOfDept();
-    return !!d && (r.to.includes(k) || this.deptOf(r.by) === d || r.dept === d);
+    return (r.to || []).includes(k);
   },
   readReport(id) {
     const me = this.me().k, r = (this.state.reports || []).find(x => x.id === id);
@@ -67,7 +72,7 @@ export function reportingVals(s) {
   const row = r => {
     const a = this.av(r.by), read = Object.keys(r.readBy || {});
     return { id: r.id, by: a.n, bi: a.i, bc: a.c, dept: (DEPTS[r.dept] || {}).l || '', kind: (REPORT_KINDS.find(k => k[0] === r.kind) || [0, 'Report'])[1], title: r.title, at: r.at, time: r.time || '',
-      summary: r.summary, issues: r.issues, next: r.next, to: r.to.map(k => this.av(k).n).join(', '), unread: r.by !== me && !(r.readBy || {})[me],
+      summary: r.summary, issues: r.issues, next: r.next, to: (r.to || []).map(k => this.av(k).n).join(', '), unread: r.by !== me && !(r.readBy || {})[me],
       readBy: read.map(k => this.av(k).first + ' · ' + r.readBy[k]).join(', '),
       file: r.file ? { name: r.file.name, open: () => this.openDoc({ n: r.file.name, url: r.file.url, path: r.file.path }) } : null,
       replies: (r.replies || []).map(x => ({ who: this.av(x.by).n, t: x.t, at: x.at, mine: x.by === me })),
@@ -85,14 +90,13 @@ export function reportingVals(s) {
 }
 
 // Daily reports calendar: a month grid. Staff see the days they sent their daily report; Management,
-// the GM, the PA and heads of department see how many came in each day, can pick one person, and see
-// who has not sent theirs.
+// the GM and the PA see how many came in each day from everyone, can pick one person, and see who has not
+// sent theirs. A head of department sees the same for their own team, counting only the reports sent to them.
 const pad = n => String(n).padStart(2, '0');
 function dailyCalendar(s, row) {
   const me = this.me().k, today = dayKey(0), all = (s.reports || []).filter(r => r.kind === 'daily');
-  const receive = this.canReceiveReports();
-  // People whose daily reports this person follows.
-  const head = this.headOfDept();
+  // People whose daily reports this person follows: everyone for Management, the GM and the PA; a head's own team.
+  const head = this.headOfDept(), receive = this.seesAllReports() || !!head;
   const people = !receive ? [me] : this.seesAllReports()
     ? [...new Set([...(s.staff || []).map(p => p.k), ...(this.ROLES.gm ? [this.ROLES.gm.k] : [])].filter(k => k && k !== me))]
     : this.teamOf(head).filter(k => k !== me);

@@ -5,7 +5,7 @@ export function homeVals(s) {
   // The PA sees Management's overview, to run Management's day.
   if (!['ceo', 'gm', 'finance', 'pa'].includes(role)) return { HD: null };
   const me = this.me(), open = (s.leads || []).filter(l => this.leadStage(l) < 5), live = s.projects.filter(p => p.st !== 'done');
-  const myAppr = s.reqs.filter(r => r.st === 'pending' && this.canAct(r) && (role !== 'ceo' || r.step === 4));
+  const myAppr = this.visibleReqs(s).filter(r => r.st === 'pending' && this.canAct(r) && (role !== 'ceo' || r.step === 4));
   const unpaid = (s.invoices || []).filter(i => i.st !== 'paid' && i.st !== 'draft');
   const owed = unpaid.reduce((a, i) => a + i.v * 1e6 - (i.payments || []).filter(p => p.ok).reduce((x, p) => x + p.amt, 0), 0);
   const att = [
@@ -35,7 +35,7 @@ export function homeVals(s) {
       po: (() => { const ps = live.filter(p => ['approval', 'execution'].includes(this.flowOf(p))); const miss = ps.filter(p => !p.po); return { got: ps.length - miss.length, miss: miss.length, list: miss.slice(0, 5).map(p => ({ t: p.client + ' · ' + p.name, s: this.flowOf(p) === 'execution' ? 'Work started without a PO' : 'Waiting for approval', on: () => this.go('project', { projectId: p.id }) })) }; })(),
       pstages, customers: (s.customers || []).length, won: (s.leads || []).filter(l => this.leadStage(l) === 5).length,
       team: { sent: Object.keys(s.reportsToday || {}).length, total: (s.staff || []).length },
-      activity: (s.activity || []).slice(0, 6),
+      activity: this.visibleActivity(s).slice(0, 6),
       actions: [
         ['New work', 'plus', () => this.openModal('work')], ['Assign task', 'checkSquare', () => this.openModal('task')], ['Invoice', 'fileText', () => this.openModal('invoice')], ['Request', 'banknote', () => this.openModal('req')]
       ].map(([l, , on]) => ({ l, on })),
