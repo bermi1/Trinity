@@ -16,7 +16,7 @@ export default function UsersPage({ v }) {
   const [resetErr, setResetErr] = useState('');
 
   const loaded = A.users !== null;
-  useEffect(() => { if (A.db && v.isAdmin && !loaded && !A.busy) A.load(); }, [A, v.isAdmin, loaded]);
+  useEffect(() => { if (A.db && v.canStaff && !loaded && !A.busy) A.load(); }, [A, v.canStaff, loaded]);
 
   if (!A.db) return (
     <>
@@ -24,7 +24,10 @@ export default function UsersPage({ v }) {
       <Card><Empty>Accounts are managed on the live database. This is the demo, where anyone can sign in to any portal.</Empty></Card>
     </>
   );
-  if (!v.isAdmin) return <Card><Empty>Only an administrator can manage accounts.</Empty></Card>;
+  if (!v.canStaff) return <Card><Empty>Only Management, the General Manager or an administrator can manage accounts.</Empty></Card>;
+  // Management and the GM add and remove staff; administrators' accounts (and, for the GM, Management's) are left to an administrator.
+  const canTouch = u => A.admin || (!u.is_admin && !(A.role === 'gm' && u.role === 'ceo'));
+  const roles = A.admin || A.role === 'ceo' ? A.roles : A.roles.filter(r => r.v !== 'ceo');
 
   const users = A.users || [];
   const demo = users.filter(u => u.is_demo);
@@ -49,7 +52,7 @@ export default function UsersPage({ v }) {
     <>
       <PageHead kicker="System" title="Users & access" sub="Create accounts for staff, choose their portal, reset passwords and remove people who leave." />
 
-      {demo.length || !A.live ? (
+      {A.admin && (demo.length || !A.live) ? (
         <Card title="Demo accounts and data" className="k-danger">
           <p className="k-sub" style={{ margin: '0 0 12px', fontSize: 13.5 }}>
             {demo.length} demo account{demo.length === 1 ? '' : 's'} and the demo projects, stock, money requests and other records are still in the system.
@@ -65,7 +68,7 @@ export default function UsersPage({ v }) {
             <label>Full name<input value={f.name} onChange={set('name')} placeholder="e.g. Neema Lyimo" autoComplete="off" /></label>
             <label>Email<input type="email" value={f.email} onChange={set('email')} placeholder="name@trinitymark.co.tz" autoComplete="off" /></label>
             <div className="ff us-wide" data-field="Portal"><span className="ff-l">Portal</span>
-              <div className="ff-chips" role="radiogroup" aria-label="Portal">{A.roles.map(r => <button key={r.v} type="button" role="radio" aria-checked={f.role === r.v} className={f.role === r.v ? 'is-on' : ''} onClick={() => setF({ ...f, role: r.v })}>{r.l}</button>)}</div>
+              <div className="ff-chips" role="radiogroup" aria-label="Portal">{roles.map(r => <button key={r.v} type="button" role="radio" aria-checked={f.role === r.v} className={f.role === r.v ? 'is-on' : ''} onClick={() => setF({ ...f, role: r.v })}>{r.l}</button>)}</div>
               <small className="k-sub">Department heads get their department’s portal (they then see and task their team). Everyone else gets the Staff portal.</small>
             </div>
             {!DEPT_PORTALS.includes(f.role) && !['ceo', 'gm', 'pa'].includes(f.role) ? (
@@ -76,7 +79,7 @@ export default function UsersPage({ v }) {
             <label>Job title<input value={f.title} onChange={set('title')} placeholder="e.g. Account Manager" /></label>
             <label style={{ flex: '0 1 110px' }}>Initials<input value={f.k} onChange={set('k')} placeholder={initials || 'NL'} maxLength={3} /></label>
             <label>Starting password<input type="text" value={f.password} onChange={set('password')} placeholder="at least 8 characters" autoComplete="new-password" /></label>
-            <label className="k-check"><input type="checkbox" checked={f.admin} onChange={set('admin')} />Administrator (can manage accounts)</label>
+            {A.admin ? <label className="k-check"><input type="checkbox" checked={f.admin} onChange={set('admin')} />Administrator (can manage accounts)</label> : null}
             {err ? <div className="k-alert is-bad" role="alert" style={{ flexBasis: '100%' }}>{err}</div> : null}
             <Btn kind="dark" type="submit" disabled={busy}>{busy ? 'Creating…' : 'Create account'}</Btn>
           </form>
@@ -104,16 +107,16 @@ export default function UsersPage({ v }) {
                       </div>
                     </td>
                     <td>
-                      <select className="k-select" value={u.role} onChange={e => A.update(u, { role: e.target.value })} aria-label={'Portal for ' + u.email}>
-                        {A.roles.map(r => <option key={r.v} value={r.v}>{r.l}</option>)}
+                      <select className="k-select" value={u.role} disabled={!canTouch(u)} onChange={e => A.update(u, { role: e.target.value })} aria-label={'Portal for ' + u.email}>
+                        {(canTouch(u) && u.role !== 'ceo' ? roles : A.roles).map(r => <option key={r.v} value={r.v}>{r.l}</option>)}
                       </select>
                     </td>
                     <td className="k-sub">{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Never'}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                        <Btn kind="ghost" onClick={() => { setResetFor(u); setNewPw(''); setResetErr(''); }}>Reset password</Btn>
-                        {u.email !== A.me ? <Btn kind="ghost" onClick={() => A.update(u, { is_admin: !u.is_admin })}>{u.is_admin ? 'Remove admin' : 'Make admin'}</Btn> : null}
-                        {u.email !== A.me ? <Btn kind="danger" onClick={() => A.del(u)}>Delete</Btn> : null}
+                        {canTouch(u) ? <Btn kind="ghost" onClick={() => { setResetFor(u); setNewPw(''); setResetErr(''); }}>Reset password</Btn> : null}
+                        {A.admin && u.email !== A.me ? <Btn kind="ghost" onClick={() => A.update(u, { is_admin: !u.is_admin })}>{u.is_admin ? 'Remove admin' : 'Make admin'}</Btn> : null}
+                        {u.email !== A.me && canTouch(u) ? <Btn kind="danger" onClick={() => A.del(u)}>Delete</Btn> : null}
                       </div>
                     </td>
                   </tr>

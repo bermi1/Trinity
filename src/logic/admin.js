@@ -13,6 +13,9 @@ const rpcError = err => (err && (err.message || err.details)) || 'Something went
 
 export const adminMethods = {
   isAdmin() { return !!(this.account && this.account.isAdmin); },
+  // Administrators, Management and the General Manager add and remove staff accounts.
+  // Only administrators grant administrator access or remove the demo (checked again in the database).
+  canManageStaff() { return this.isAdmin() || ['ceo', 'gm'].includes(this.state.role || 'ceo'); },
 
   // Names and colours for everyone with an account, so new staff show properly across the app.
   setPeople(rows) {
@@ -24,7 +27,7 @@ export const adminMethods = {
   },
 
   async loadUsers() {
-    if (!this.state.db || !this.isAdmin()) return;
+    if (!this.state.db || !this.canManageStaff()) return;
     this.setState({ usersBusy: true });
     const { data, error } = await supabase.rpc('admin_list_users');
     if (error) { this.setState({ usersBusy: false }); this.toast(rpcError(error)); return; }
@@ -34,7 +37,7 @@ export const adminMethods = {
 
   async createUser(f) {
     const { error } = await supabase.rpc('admin_create_user', {
-      p_email: f.email, p_password: f.password, p_full_name: f.name, p_role: f.role, p_title: f.title || '', p_person_key: f.k || '', p_is_admin: !!f.admin
+      p_email: f.email, p_password: f.password, p_full_name: f.name, p_role: f.role, p_title: f.title || '', p_person_key: f.k || '', p_is_admin: !!f.admin && this.isAdmin()
     });
     if (error) return rpcError(error);
     const k = (f.k || '').trim().toUpperCase();
@@ -68,6 +71,10 @@ export const adminMethods = {
     if (!this.confirm('Delete the account ' + u.email + '? They will no longer be able to sign in.')) return;
     const { error } = await supabase.rpc('admin_delete_user', { p_user: u.user_id });
     if (error) { this.toast(rpcError(error)); return; }
+    // They leave the staff list too (departments, reports, attendance), and their face is removed.
+    const k = (u.person_key || '').toUpperCase();
+    if (k) this.setState(x => ({ staff: (x.staff || []).filter(p => p.k !== k), faces: (x.faces || []).filter(f => f.k !== k) }));
+    this.log('user', 'red', 'Account deleted · ' + (u.full_name || u.email), 'By ' + this.me().n);
     this.toast('Account deleted · ' + u.email);
     await this.loadUsers();
   },
