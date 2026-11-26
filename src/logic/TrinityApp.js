@@ -23,7 +23,7 @@ import { financeMethods, financeVals, reportMethods, reportVals } from './financ
 import { homeVals } from './home';
 import { targetVals, targetMethods } from './targets';
 import { teamVals, teamMethods } from './team';
-import { attendanceVals, attendanceMethods } from './attendance';
+import { attendanceVals, attendanceMethods, myCheckinVals } from './attendance';
 import { memoVals, memoMethods } from './memos';
 import { officeMethods, officeVals } from './office';
 import { flowMethods, FLOW } from './flow';
@@ -405,7 +405,7 @@ export default class TrinityApp extends Logic {
     // The Personal Assistant runs Management's diary and records purchase orders; no money.
     N.pa = [['Office',[['dashboard','Management overview','grid'],['attendance','Staff attendance','clock'],['meetings','Calendar','calendar'],['requests','Approvals','banknote'],['briefing','Monday Briefing','presentation'],['reception','Front desk','message'],['event','Event registration','clipboard'],['projects','Projects','folder'],['clients','Clients & leads','users'],['today','My work','checkSquare',myOpen],['reporting','Reports','fileText',rptN],slips]]];
     // Department portals: their dashboard first, then what that department works with.
-    const myReqs = ['requests','My requests','banknote'], deptMore = [['payslips','My payslips','wallet'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['briefing','Monday Briefing','presentation'],['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['rooms','Meeting rooms','calendar'],['settings','Settings','settings']];
+    const myReqs = ['requests','My requests','banknote'], deptMore = [['payslips','My payslips','wallet'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['rooms','Meeting rooms','calendar'],['settings','Settings','settings']];
     N.clientservice = [['Client Service',[['dept','Client Service','home'],['event','Event registration','clipboard'],['today','My work','checkSquare',myOpen],['clients','Clients & leads','users'],['proposals','Proposals','clipboard'],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
     N.creative = [['Creative',[['dept','Creative','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
     N.operations = [['Operations',[['dept','Operations','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',[['field','Field capture app','camera'], ...deptMore],true]];
@@ -419,6 +419,8 @@ export default class TrinityApp extends Logic {
     // Memos sit with each person's everyday pages, with a count of the ones waiting on them.
     const meK = this.me().k, memoN = (s.memos || []).filter(m => m.st !== 'done' && (m.who === meK || (!m.who && (m.to === meK || this.isManagerOf(m.dept))))).length;
     if (role !== 'store') G = G.map(([t, items, more], gi) => [t, gi === 0 && !items.some(i => i[0] === 'memos') ? [...items.slice(0, 2), ['memos', 'Memos', 'fileText', memoN], ...items.slice(2)] : items, more]);
+    // My check-in: everyone checks themselves in and out with their own face, right after their home page.
+    if (role !== 'store') G = G.map(([t, items, more], gi) => [t, gi === 0 && !items.some(i => i[0] === 'checkin') ? [...items.slice(0, 1), ['checkin', 'My check-in', 'clock'], ...items.slice(1)] : items, more]);
     // Sections the administrator switched off are hidden everywhere.
     // Notifications open from the bell (and the Alerts tab on phones), not from the side menu.
     G = G.map(([t, items, more]) => [t, items.filter(i => !this.isOff(i[0]) && i[0] !== 'notifications' && i[0] !== 'settings' && !(i[0] === 'briefing' && !this.canBriefing()) && !(s.embed && i[0] === 'ceomobile')), more]).filter(g => g[1].length);
@@ -464,6 +466,8 @@ export default class TrinityApp extends Logic {
     if (page === 'payroll' && !['ceo','gm'].includes(role)) return 'payslips';
     if (page === 'team' && !['ceo','gm'].includes(role)) return home;
     if (page === 'attendance' && !['ceo','gm','pa','reception'].includes(role)) return home;
+    // My check-in is open to every role.
+    if (page === 'checkin') return page;
     if (page === 'briefing' && this.state && !this.canBriefing()) return home;
     // Finance tools: Float for Management and Finance; the rest also for the GM.
     if (page === 'finance' && !['ceo','gm','finance'].includes(role)) return home;
@@ -722,4 +726,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, targetVals, teamVals, attendanceVals, memoVals, officeVals, reportingVals, pettyVals, briefingVals, payrollVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods, briefingMethods, payrollMethods, targetMethods, teamMethods, attendanceMethods, memoMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, targetVals, teamVals, attendanceVals, myCheckinVals, memoVals, officeVals, reportingVals, pettyVals, briefingVals, payrollVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods, briefingMethods, payrollMethods, targetMethods, teamMethods, attendanceMethods, memoMethods);

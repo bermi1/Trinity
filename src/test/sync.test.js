@@ -67,3 +67,40 @@ describe('RecordSync', () => {
     expect(again.tasks[0].st).toBe('done');
   });
 });
+
+describe('faces stored per person', () => {
+  const f = (k, n = 1) => ({ k, ds: [[n]] });
+  it('writes one row per person and removes the leftover whole row', () => {
+    const a = f('AA'), b = f('BB');
+    const d = diffCollection('faces', [a], [a, b]);
+    expect(d.upserts).toEqual([{ collection: 'faces', id: 'BB', position: 1, data: b }]);
+    expect(d.deletes).toEqual(['*']);
+    expect(diffCollection('faces', [a, b], [b]).deletes).toEqual(['AA', '*']);
+  });
+
+  it('keeps other collections unchanged', () => {
+    expect(diffCollection('tasks', [{ id: 'A' }], [{ id: 'A' }, { id: 'B' }]).deletes).toEqual([]);
+    const st = rowsToState([{ collection: 'agenda', id: '*', position: 0, data: [1] }, { collection: 'agenda', id: 'X', position: 0, data: 2 }]);
+    expect(st.agenda).toEqual([1]);
+  });
+
+  it('prefers per-person rows over a stale whole row, and still reads an old whole row', () => {
+    const st = rowsToState([{ collection: 'faces', id: '*', position: 0, data: [f('OLD')] }, { collection: 'faces', id: 'BB', position: 1, data: f('BB') }, { collection: 'faces', id: 'AA', position: 0, data: f('AA') }]);
+    expect(st.faces.map(x => x.k)).toEqual(['AA', 'BB']);
+    expect(rowsToState([{ collection: 'faces', id: '*', position: 0, data: [f('OLD')] }]).faces.map(x => x.k)).toEqual(['OLD']);
+  });
+
+  it('migrates an old whole row without losing anyone, and two people registering do not overwrite each other', async () => {
+    const db = createFakeSupabase();
+    await db.from('app_records').upsert([{ collection: 'faces', id: '*', position: 0, data: [f('AA'), f('BB')] }], { onConflict: 'collection,id' });
+    const one = new RecordSync(db, ['faces']), two = new RecordSync(db, ['faces']);
+    const p1 = await one.load({}), p2 = await two.load({});
+    expect(p1.faces.map(x => x.k)).toEqual(['AA', 'BB']);
+    await one.push(p1, { faces: [...p1.faces, f('CC')] }, ['faces'], e => { throw e; });
+    await two.push(p2, { faces: [...p2.faces, f('DD')] }, ['faces'], e => { throw e; });
+    const rows = [...db.tables.app_records.values()].filter(r => r.collection === 'faces');
+    expect(rows.some(r => r.id === '*')).toBe(false);
+    const st = await new RecordSync(db, ['faces']).load({});
+    expect(st.faces.map(x => x.k).sort()).toEqual(['AA', 'BB', 'CC', 'DD']);
+  });
+});

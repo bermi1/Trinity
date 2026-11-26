@@ -94,7 +94,7 @@ function dailyCalendar(s, row) {
   // People whose daily reports this person follows.
   const head = this.headOfDept();
   const people = !receive ? [me] : this.seesAllReports()
-    ? [...new Set((s.staff || []).map(p => p.k).filter(k => k && k !== me))]
+    ? [...new Set([...(s.staff || []).map(p => p.k), ...(this.ROLES.gm ? [this.ROLES.gm.k] : [])].filter(k => k && k !== me))]
     : this.teamOf(head).filter(k => k !== me);
   const who = receive && s.rptWho && people.includes(s.rptWho) ? s.rptWho : receive ? 'all' : me;
   const scope = who === 'all' ? people : [who];

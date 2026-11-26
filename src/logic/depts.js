@@ -231,5 +231,15 @@ export function deptVals(s) {
     V.delivering = live.map(p => ({ id: p.id, t: p.name, client: p.client, pm: this.av(p.pm).n, due: p.due, stage: p.pm ? 'PM ' + this.av(p.pm).first : 'No PM', late: p.st === 'late', risk: p.st === 'risk', go: () => this.go('project', { projectId: p.id }) }));
     V.request = () => this.openModal('req');
   }
+  // Any other department (Printing, …): the team's day at a glance.
+  if (!V.kpis) {
+    const team = this.teamOf(dept);
+    V.kpis = [
+      { l: 'My open tasks', v: String(openTasks(me)) },
+      { l: 'Team open tasks', v: String(team.reduce((a, k) => a + openTasks(k), 0)) },
+      { l: 'Done today', v: String(todos.filter(i => team.includes(i.k) && i.st === 'done' && i.doneOn === today).length) },
+      { l: 'Day reports sent', v: team.filter(k => (s.reportsToday || {})[k]).length + ' of ' + team.length }
+    ];
+  }
   return { DP: V };
 }

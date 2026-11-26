@@ -1401,3 +1401,16 @@
 .pdf-open { display: inline-flex; align-items: center; height: 42px; padding: 0 18px; border-radius: 10px; background: #E3C27A; color: #1B1036; font-weight: 800; text-decoration: none; }
 .pdf-page { max-width: 100%; height: auto; user-select: none; }
 .rq-det { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px 16px; padding: 12px 14px; border: 1px solid #E8E4EF; border-radius: 10px; } .rq-det div { display: grid; gap: 2px; min-width: 0; } .rq-det dt { font-size: 11.5px; color: #6E6A7C; } .rq-det dd { margin: 0; font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
+/* My check-in (each person checks themselves in with their own face) */
+.ck { max-width: 640px; }
+.ck-status { display: flex; align-items: center; gap: 10px; min-width: 0; } .ck-status > span:last-child { display: grid; gap: 2px; min-width: 0; } .ck-status b { font-size: 15px; } .ck-status small { color: #fff; opacity: .85; letter-spacing: 0; text-transform: none; font-family: inherit; font-size: 12.5px; font-weight: 600; }
+.ck-cam { display: grid; justify-items: center; gap: 10px; } .ck-cam video { width: min(360px, 100%); aspect-ratio: 4 / 3; object-fit: cover; border-radius: 18px; background: #000; transform: scaleX(-1); }
+.ck-camon { width: 100%; min-height: 120px; font-size: 15px; }
+.ck-card { display: grid; gap: 12px; background: #fff; border: 1px solid #E8E4EF; border-radius: 16px; padding: 18px; } .ck-card h2 { margin: 0; font-size: 17px; } .ck-card .att-regnote { margin: 0; }
+.ck-card .att-consent { align-items: flex-start; line-height: 1.4; } .ck-card .att-consent input { width: 20px; height: 20px; flex: none; margin: 0; }
+.ck-acts { display: flex; gap: 8px; flex-wrap: wrap; } .ck-acts .att-go { flex: 1 1 220px; padding: 0 18px; } .ck-acts .att-cancel { padding: 0 16px; }
+.ck-big { width: 100%; height: 76px; font-size: 21px; }
+.ck-small .att-cancel { flex: 1 1 160px; height: 42px; font-size: 13px; }
+.ck-done { margin: 0; font-size: 15px; font-weight: 700; color: #1F7549; }
+.ck button:disabled { opacity: .55; cursor: default; }
+@media (max-width: 700px) { .ck-big { height: 68px; font-size: 19px; } .ck .att-head { padding: 16px; } .ck-cam video { width: 100%; } }

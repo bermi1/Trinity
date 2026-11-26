@@ -7,7 +7,11 @@ export const TABLE = 'app_records';
 const WHOLE = '*';
 
 // Field that identifies an item, where it isn't `id`.
-const ID_FIELD = { stock: 'sku', staff: 'k', vehicles: 'reg', actions: 'task' };
+const ID_FIELD = { stock: 'sku', staff: 'k', vehicles: 'reg', actions: 'task', faces: 'k' };
+
+// Collections that used to be stored as one whole row and are now stored per item. Once stored per item,
+// any leftover whole row is deleted, and per-item rows win over a stale whole row when both exist.
+const MIGRATED = new Set(['faces']);
 
 // Drafts and form text stay in the browser; everything else is shared.
 export const LOCAL_ONLY = new Set(['reportText', 'fieldReq', 'newUpdate', 'newVisitor', 'roomTitle']);
@@ -26,17 +30,21 @@ function perItem(collection, value) {
 
 // Rows to upsert and ids to delete for one collection that changed from prev to next.
 export function diffCollection(collection, prev, next) {
-  if (!perItem(collection, next) || !perItem(collection, prev || [])) {
+  const migrated = MIGRATED.has(collection) && perItem(collection, next);
+  if (!migrated && (!perItem(collection, next) || !perItem(collection, prev || []))) {
     return { upserts: [{ collection, id: WHOLE, position: 0, data: next }], deletes: [] };
   }
-  const before = new Map((prev || []).map((it, i) => [idOf(collection, it), { it, i }]));
+  // A migrated collection whose previous value was still the old whole value: every item is written.
+  const base = perItem(collection, prev || []) ? (prev || []) : [];
+  const before = new Map(base.map((it, i) => [idOf(collection, it), { it, i }]));
   const upserts = [];
   next.forEach((it, i) => {
     const id = idOf(collection, it), old = before.get(id);
     if (!old || old.it !== it || old.i !== i) upserts.push({ collection, id, position: i, data: it });
     before.delete(id);
   });
-  return { upserts, deletes: [...before.keys()] };
+  // Deletes run after the upserts, so a leftover whole row goes only once every item has its own row.
+  return { upserts, deletes: [...before.keys(), ...(migrated ? [WHOLE] : [])] };
 }
 
 // Turns rows from the table back into state values.
@@ -45,8 +53,10 @@ export function rowsToState(rows) {
   for (const r of rows) (groups[r.collection] ||= []).push(r);
   const out = {};
   for (const [c, list] of Object.entries(groups)) {
-    const whole = list.find(r => r.id === WHOLE);
-    out[c] = whole ? whole.data : list.sort((a, b) => a.position - b.position).map(r => r.data);
+    const whole = list.find(r => r.id === WHOLE), items = list.filter(r => r.id !== WHOLE);
+    // A migrated collection with per-item rows ignores a stale whole row left from before.
+    const useWhole = whole && !(MIGRATED.has(c) && items.length);
+    out[c] = useWhole ? whole.data : items.sort((a, b) => a.position - b.position).map(r => r.data);
   }
   return out;
 }
@@ -74,13 +84,18 @@ export default class RecordSync {
     this.keys = keys.filter(k => !LOCAL_ONLY.has(k));
     this.channel = null;
     this.queue = Promise.resolve();
+    // Migrated collections that were last loaded from their old whole row: their first save writes every item.
+    this.legacy = new Set();
   }
 
   // Loads every collection. Seeds the table with `seed` when it is empty.
   async load(seed) {
     const { data, error } = await this.db.from(TABLE).select('collection,id,position,data').limit(10000);
     if (error) throw error;
-    if (data.length) return rowsToState(data);
+    if (data.length) {
+      this.legacy = new Set([...MIGRATED].filter(c => data.some(r => r.collection === c && r.id === WHOLE) && !data.some(r => r.collection === c && r.id !== WHOLE)));
+      return rowsToState(data);
+    }
     const rows = this.keys.flatMap(k => diffCollection(k, [], seed[k]).upserts);
     const { error: e2 } = await this.db.from(TABLE).upsert(rows, { onConflict: 'collection,id', ignoreDuplicates: true });
     if (e2) throw e2;
@@ -92,7 +107,8 @@ export default class RecordSync {
     const rows = [], deletes = [];
     for (const k of changedKeys) {
       if (!this.keys.includes(k)) continue;
-      const d = diffCollection(k, prevState[k], nextState[k]);
+      const d = diffCollection(k, this.legacy.has(k) ? [] : prevState[k], nextState[k]);
+      if (this.legacy.has(k) && perItem(k, nextState[k])) this.legacy.delete(k);
       rows.push(...d.upserts);
       d.deletes.forEach(id => deletes.push([k, id]));
     }

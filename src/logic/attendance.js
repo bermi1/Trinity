@@ -10,36 +10,41 @@ export const attendanceMethods = {
   canRunKiosk() { return ['reception', 'ceo', 'gm', 'pa'].includes(this.state.role || 'ceo'); },
   // Face registration (with the person's consent): up to five descriptors per person, numbers only.
   canRegisterFaces() { return ['ceo', 'gm', 'pa', 'reception'].includes(this.state.role || 'ceo'); },
+  // Everyone may also register (and remove) their own face, on their own phone or computer.
   saveFace(k, descriptors, consent) {
-    if (!this.canRegisterFaces()) return 'Faces are registered at reception or by Management';
-    if (!consent) return 'Confirm the person has agreed to face check-in';
+    const own = !!k && k === this.me().k;
+    if (!own && !this.canRegisterFaces()) return 'Faces are registered at reception or by Management';
+    if (!consent) return own ? 'Tick the box to agree to face check-in first' : 'Confirm the person has agreed to face check-in';
     if (!descriptors || !descriptors.length) return 'No face captured';
     const rec = { k, ds: descriptors.slice(0, 5), at: dayKey(0), by: this.me().k, consent: true };
     this.setState(x => ({ faces: [...(x.faces || []).filter(f => f.k !== k), rec] }));
-    this.log('user', 'purple', 'Face registered · ' + this.av(k).n, 'Consent recorded by ' + this.me().n);
-    this.toast('Face registered · ' + this.av(k).first);
+    this.log('user', 'purple', 'Face registered · ' + this.av(k).n, own ? 'Registered and agreed by ' + this.me().n + ' on their own device' : 'Consent recorded by ' + this.me().n);
+    this.toast(own ? 'Your face is registered' : 'Face registered · ' + this.av(k).first);
     return '';
   },
   removeFace(k) {
-    if (!this.canRegisterFaces()) return 'Not allowed';
+    if (!(k && k === this.me().k) && !this.canRegisterFaces()) return 'Not allowed';
     this.setState(x => ({ faces: (x.faces || []).filter(f => f.k !== k) }));
     this.toast('Face removed · ' + this.av(k).first);
     return '';
   },
   attendanceOf(k, date) { return (this.state.attendance || []).find(a => a.k === k && a.date === (date || dayKey(0))) || null; },
-  clock(k, photo) {
-    if (!this.canRunKiosk()) return { error: 'Check-in runs on the reception screen' };
+  // The reception kiosk clocks anyone; on their own device a person clocks only themselves, and only after
+  // their face matched their own registered face (opts.face). Those records are marked how: 'face-self' (check-in) and howOut: 'face-self' (check-out).
+  clock(k, photo, opts) {
+    const self = !!k && k === this.me().k && !!opts && opts.face === true;
+    if (!this.canRunKiosk() && !self) return { error: k === this.me().k ? 'Check in with your face on My check-in' : 'Check-in runs on the reception screen' };
     if (!(this.state.staff || []).some(p => p.k === k) && !Object.values(this.ROLES).some(r => r.k === k)) return { error: 'Not on the staff list' };
     const date = dayKey(0), time = this.now(), cur = this.attendanceOf(k, date), name = this.av(k).n;
     if (cur && cur.out) return { error: name + ' already checked out today at ' + cur.out };
     if (!cur) {
-      const rec = { id: 'AT' + date.replace(/-/g, '') + k, k, date, in: time, out: '', inPhoto: photo || '', outPhoto: '' };
+      const rec = Object.assign({ id: 'AT' + date.replace(/-/g, '') + k, k, date, in: time, out: '', inPhoto: photo || '', outPhoto: '' }, self ? { how: 'face-self' } : {});
       this.setState(x => ({ attendance: [rec, ...(x.attendance || [])].slice(0, 3000) }));
       const late = time > LATE_AFTER;
       if (late && this.ROLES.gm && this.ROLES.gm.k !== k) this.notify({ to: this.ROLES.gm.k, ic: 'clock', t: 'Late arrival · ' + name, s: 'Checked in at ' + time, go: 'team' });
       return { kind: 'in', time, name, late };
     }
-    this.setState(x => ({ attendance: (x.attendance || []).map(a => (a.id === cur.id ? Object.assign({}, a, { out: time, outPhoto: photo || '' }) : a)) }));
+    this.setState(x => ({ attendance: (x.attendance || []).map(a => (a.id === cur.id ? Object.assign({}, a, { out: time, outPhoto: photo || '' }, self ? { howOut: 'face-self' } : {}) : a)) }));
     return { kind: 'out', time, name, since: cur.in };
   }
 };
@@ -62,4 +67,16 @@ export function attendanceVals(s) {
     faces: (s.faces || []).filter(f => people.some(p => p.k === f.k)), canFaces: this.canRegisterFaces(),
     saveFace: (k, ds, consent) => this.saveFace(k, ds, consent), removeFace: k => this.removeFace(k),
     statusOf: k => { const p = people.find(x => x.k === k); return p ? p.st : 'out'; }, sinceOf: k => { const p = people.find(x => x.k === k); return p ? p.in : ''; } } };
+}
+
+// My check-in: every signed-in person registers their own face and checks themselves in and out with it.
+export function myCheckinVals(s) {
+  const me = this.me(), k = me && me.k;
+  if (!k) return { CHK: null };
+  const a = this.av(k), r = (s.attendance || []).find(x => x.k === k && x.date === dayKey(0)) || null;
+  const myFace = (s.faces || []).find(f => f.k === k) || null;
+  return { CHK: { me: { k, n: a.n, first: a.first, i: a.i, c: a.c }, hasFace: !!myFace, myFace,
+    status: !r ? 'out' : r.out ? 'left' : 'in', in: r ? r.in : '', out: r ? r.out : '', late: !!r && r.in > LATE_AFTER, lateAfter: LATE_AFTER,
+    saveMyFace: (ds, consent) => this.saveFace(k, ds, consent), removeMyFace: () => this.removeFace(k),
+    clockMe: photo => this.clock(k, photo, { face: true }) } };
 }
