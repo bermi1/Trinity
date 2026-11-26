@@ -175,7 +175,8 @@ export function targetVals(s) {
   for (let i = from; i <= cur; i++) bars.push({ w: i, got: (wk(i) || {}).amt || 0, need: co.weekTarget(i), cur: i === cur, entered: !!wk(i) });
   const peak = Math.max(1, ...bars.map(b => Math.max(b.got, b.need)));
   const depts = TARGET_DEPTS.filter(([k]) => (t.depts || {})[k] && (!cs || k === 'clientservice')).map(([k, l]) => {
-    const p = plan(t.depts[k], i => ((wk(i) || {}).depts || {})[k], year, W, cur, dayFrac);
+    // Won projects are Client Service's work: their agreed value also counts toward the Client Service target.
+    const p = plan(t.depts[k], i => (((wk(i) || {}).depts || {})[k] || 0) + (k === 'clientservice' ? (won.weeks[i] || 0) : 0), year, W, cur, dayFrac);
     return { k, l, target: tzs(p.total), earned: tzs(p.earned), pct: Math.round(p.earned / p.total * 100), pace: p.pace, week: tzs(p.weekTarget(cur)), status: p.pace >= 100 ? 'ahead' : p.pace >= 90 ? 'close' : 'behind' };
   });
   let projDone = 0; for (let i = 1; i <= cur; i++) projDone += (wk(i) || {}).projects || 0;

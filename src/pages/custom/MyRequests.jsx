@@ -42,6 +42,7 @@ function Req({ r, showWho }) {
           <div className="mr-acts">
             <span className="k-sub">{r.id}</span>
             {r.nudge ? <Btn kind="ghost" onClick={r.nudge}>Remind approver</Btn> : null}
+            {r.wa ? <button type="button" className="td-start wa-btn" onClick={r.wa} aria-label="Remind approver on WhatsApp"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11 11 0 0 0 3.2 17.4L2 22l4.7-1.2A11 11 0 1 0 20.5 3.5zM12 20a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.7.7-2.7-.2-.3A8 8 0 1 1 12 20z" /></svg>WhatsApp</button> : null}
           </div>
         </div>
       ) : null}

@@ -56,3 +56,27 @@ test('a request that was not approved can be corrected and resubmitted by the re
   await openAs(page, 'gm', 'requests', {}, false);
   await expect(page.getByText(/^My requests ·/)).toBeVisible();
 });
+
+test('a request can be edited until someone approves it; WhatsApp reminders and number', async ({ page }) => {
+  await openAs(page, 'staff', 'staffportal');
+  // Everyone can add their WhatsApp number on their home page.
+  await page.getByRole('textbox', { name: 'My WhatsApp number' }).first().fill('0754 222 333');
+  await page.getByRole('button', { name: 'Save', exact: true }).first().click();
+  await expect(page.getByText('WhatsApp reminders go to').first()).toBeVisible();
+  await btn(page, 'Request money').click();
+  await chooseRequest(page, 'Project request');
+  await fillModal(page, { 'Amount (TZS)': 80000, 'Purpose': 'Printing samples' });
+  await modal(page).getByRole('button', { name: 'Submit request' }).click();
+  let data = await saved(page); const id = data.reqs[0].id;
+  await openAs(page, 'staff', 'requests', {}, false);
+  await page.locator('[data-req="' + id + '"] .mr-row').click();
+  const fx = page.getByRole('region', { name: 'Correct my request' });
+  await expect(fx).toContainText('nobody has approved it yet');
+  await fx.getByRole('textbox', { name: 'Amount', exact: true }).fill('95000');
+  await fx.getByRole('textbox', { name: 'Purpose', exact: true }).fill('Printing samples and lamination');
+  await fx.getByRole('button', { name: 'Save changes' }).click();
+  data = await saved(page);
+  const r = data.reqs.find(x => x.id === id);
+  expect(r.amt).toBe(95000); expect(r.purpose).toBe('Printing samples and lamination'); expect(r.st).toBe('pending');
+  await expect(page.getByRole('button', { name: 'Remind approver on WhatsApp' })).toBeVisible();
+});

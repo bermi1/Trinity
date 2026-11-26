@@ -48,4 +48,7 @@ test('company goal: a won project with an agreed value is taken off the goal', a
   await expect(tg.locator('.tg-won')).toContainText('Won launch event');
   await expect(tg.locator('.tg-won')).toContainText('TZS 50M');
   expect(await tg.locator('h2').textContent()).not.toBe(before);
+  // ...and toward Client Service's part of the goal.
+  const cs = tg.locator('.tg-dl', { hasText: 'Client Service' });
+  if (await cs.count()) await expect(cs).toContainText('TZS');
 });

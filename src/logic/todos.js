@@ -133,7 +133,8 @@ export function todayVals(s) {
     const plan = [...tk.filter(t => t.st !== 'done').map(taskItem), ...list.filter(i => i.k === k && i.st !== 'done').map(item)];
     return { k, n: a.n, i: a.i, c: a.c, ph: a.ph, done, plan, empty: !done.length && !plan.length, sent: !!(s.reportsToday || {})[k],
       working: plan.filter(x => x.started).length, assign: () => this.openModal('task', { who: k }),
-      remind: () => { this.remind(k, 'Please add today’s to-do: what you did and what you plan', 'today', 'checkSquare'); this.toast('Reminder sent to ' + a.n); } };
+      remind: () => { this.remind(k, 'Please add today’s to-do: what you did and what you plan', 'today', 'checkSquare'); this.toast('Reminder sent to ' + a.n); },
+      wa: () => this.waOpen(k, 'Habari ' + a.first + ', please add today’s to-do in Trinity Mark 360: what you did and what you plan.') };
   }).sort((x, y) => (x.empty - y.empty) || x.n.localeCompare(y.n));
   const company = Object.assign({ smallLimit: 200000, off: [] }, s.company || {});
   return {
@@ -144,7 +145,8 @@ export function todayVals(s) {
       plan: mine.filter(i => i.st !== 'done').sort((a, b) => (a.d < b.d ? 1 : -1)).map(item),
       assigned: myTasks.filter(t => t.st !== 'done').sort((a, b) => (a.pri === 'high' ? -1 : 0) - (b.pri === 'high' ? -1 : 0)).map(taskItem),
       given: given.map(t => { const a = this.av(t.who); return { id: t.id, t: t.t, who: a.n, wi: a.i, wc: a.c, due: t.due, done: t.st === 'done', st: this.tst(t.st)[0],
-        nudge: () => { this.remind(t.who, 'Reminder: ' + t.t, 'today', 'checkSquare', 'From ' + this.me().n + ' · due ' + t.due); this.toast('Reminder sent to ' + a.n); } }; }),
+        nudge: () => { this.remind(t.who, 'Reminder: ' + t.t, 'today', 'checkSquare', 'From ' + this.me().n + ' · due ' + t.due); this.toast('Reminder sent to ' + a.n); },
+        wa: () => this.waOpen(t.who, 'Habari ' + a.first + ', reminder about your task: ' + t.t + ' (due ' + t.due + ').') }; }),
       canGive: this.assignable().length > 1, give: () => this.openModal('task'),
       isGiven: s.todoTab === 'given', showGiven: () => this.setState({ todoTab: 'given' }),
       add: (text, done) => this.addTodo(text, done),

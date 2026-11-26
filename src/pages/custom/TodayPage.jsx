@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PageHead, Btn, Avatar, Chips, Empty } from '../../ui/kit';
 import { MyTargets } from './TargetPanel';
+import MyWhatsApp from './MyWhatsApp';
 
 // One line to type, Enter to add.
 function QuickAdd({ placeholder, label, onAdd, done }) {
@@ -111,6 +112,7 @@ function Given({ T }) {
               <span className="pv-face" style={{ background: g.wc, width: 30, height: 30 }}>{g.wi}</span>
               <span className="td-text">{g.t}<span className="td-meta"><span>{g.who}</span><span>{g.done ? 'Done' : g.st + ' · due ' + g.due}</span></span></span>
               {!g.done ? <button type="button" className="td-start" onClick={g.nudge}>Remind</button> : null}
+              {!g.done && g.wa ? <button type="button" className="td-start wa-btn" onClick={g.wa} aria-label={'WhatsApp ' + g.who}><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11 11 0 0 0 3.2 17.4L2 22l4.7-1.2A11 11 0 1 0 20.5 3.5zM12 20a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.7.7-2.7-.2-.3A8 8 0 1 1 12 20z" /></svg>WhatsApp</button> : null}
             </li>
           ))}
         </ul>
@@ -138,7 +140,7 @@ function Team({ T }) {
               <button type="button" className="td-start" onClick={p.assign} aria-label={'Assign a task to ' + p.n}>Assign</button>
             </header>
             {p.empty ? (
-              <div className="td-nothing"><span>Nothing yet</span><Btn kind="ghost" onClick={p.remind}>Remind</Btn></div>
+              <div className="td-nothing"><span>Nothing yet</span><Btn kind="ghost" onClick={p.remind}>Remind</Btn>{p.wa ? <button type="button" className="td-start wa-btn" onClick={p.wa} aria-label={'WhatsApp ' + p.n}><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11 11 0 0 0 3.2 17.4L2 22l4.7-1.2A11 11 0 1 0 20.5 3.5zM12 20a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.7.7-2.7-.2-.3A8 8 0 1 1 12 20z" /></svg>WhatsApp</button> : null}</div>
             ) : (
               <>
                 {p.done.length ? <><h4>Done</h4><ul>{p.done.map(i => <li key={i.id} className="is-done">✓ {i.t}</li>)}</ul></> : null}
@@ -164,6 +166,7 @@ export default function TodayPage({ v }) {
       <PageHead kicker={T.dayLabel} title="My work" sub="Tasks you were given and your own to-dos, in one list. Tick them as you finish.">
         {T.canGive ? <Btn kind="dark" onClick={T.give}>Assign a task</Btn> : null}
       </PageHead>
+      <MyWhatsApp v={v} />
       {tabs.length > 1 ? <Chips items={tabs} /> : null}
       {!T.isTeam && !T.isGiven && v.MYT ? <MyTargets M={v.MYT} /> : null}
       {T.isTeam && T.canTeam ? <Team T={T} /> : T.isGiven && T.canGive ? <Given T={T} /> : <Mine T={T} />}

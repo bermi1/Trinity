@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import BriefItem from '../../components/BriefItem';
 import TargetPanel from './TargetPanel';
+import MyWhatsApp from './MyWhatsApp';
 import { MemoCard } from './MemoPage';
 import { PageHead, Card, Btn, Avatar, Kpis, Pill, Empty } from '../../ui/kit';
 
@@ -95,6 +96,7 @@ export default function DeptPage({ v }) {
         ) : null}
         {D.dept === 'operations' ? <Btn kind="dark" onClick={D.request}>Request money</Btn> : null}
       </PageHead>
+      <MyWhatsApp v={v} />
       <div className="dp-kpis"><Kpis items={D.kpis} /></div>
       {v.MEMO && v.MEMO.inbox.filter(m => m.st !== 'done').length ? (
         <Card title={'Memos · ' + v.MEMO.inbox.filter(m => m.st !== 'done').length + ' open'} aside={<Btn kind="ghost" onClick={v.MEMO.goList}>All memos</Btn>}>

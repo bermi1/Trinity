@@ -1,9 +1,11 @@
 // Generated from the Claude Design file by scripts/dc-to-jsx.mjs.
+import MyWhatsApp from './custom/MyWhatsApp';
 import { Fragment } from 'react';
 
 export default function StaffPortalPage({ v }) {
   return (
     <>
+      <MyWhatsApp v={v} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "16px", flexWrap: "wrap" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
           <span style={{ font: "600 11px 'IBM Plex Mono',monospace", letterSpacing: ".16em", color: "#8A7239" }}>

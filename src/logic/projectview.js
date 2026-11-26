@@ -187,14 +187,29 @@ export const reqFlowMethods = {
     if (r.who !== this.me().k) return 'Only the person who asked for the money can correct it';
     if (!['pending', 'rejected'].includes(r.st)) return 'This request can no longer be changed';
     const pi = this.payInfo(f); if (pi.error) return pi.error;
+    // Before anyone has approved it, the requester may also change the amount, title and purpose.
+    const untouched = r.st === 'pending' && this.reqUntouched(r), edits = {};
+    if (untouched) {
+      if (f.amt != null && String(f.amt).trim() !== '') { const a = Math.round(+f.amt || 0); if (a <= 0) return 'Enter an amount above 0'; if (a !== r.amt) edits.amt = a; }
+      if (f.purpose != null) { const t = String(f.purpose).trim(); if (!t) return 'Write what the money is for'; if (t !== r.purpose) edits.purpose = t; }
+      if (f.title != null && String(f.title).trim() !== (r.title || '')) edits.title = String(f.title).trim();
+    }
     const reply = String(f.reply || '').trim(), at = this.today() + ' ' + this.now();
-    const changed = JSON.stringify(pi.pay) !== JSON.stringify(r.pay || null);
-    if (!reply && !changed && r.st !== 'rejected') return 'Write a reply or change the payment details';
-    const note = [reply, changed ? 'Payment details: ' + [pi.pay.by, pi.pay.bank, pi.pay.name, pi.pay.no].filter(Boolean).join(' · ') : ''].filter(Boolean).join('\n');
+    const changed = JSON.stringify(pi.pay) !== JSON.stringify(r.pay || null), edited = Object.keys(edits).length > 0;
+    if (!reply && !changed && !edited && r.st !== 'rejected') return 'Change something, or write a reply';
+    const note = [reply, edits.amt ? 'Amount: ' + this.fmtT(r.amt) + ' → ' + this.fmtT(edits.amt) : '', edits.purpose ? 'Purpose changed' : '', edits.title ? 'Title: ' + edits.title : '', changed ? 'Payment details: ' + [pi.pay.by, pi.pay.bank, pi.pay.name, pi.pay.no].filter(Boolean).join(' · ') : ''].filter(Boolean).join('\n');
+    // A new amount can change who needs to approve (small amounts skip Management): rebuild the start of the chain.
+    if (untouched && edits.amt) { const st0 = this.nextStep(Object.assign({}, r, edits), 0); Object.assign(edits, { step: st0, log: [r.log[0], ...Array.from({ length: Math.max(0, st0 - 1) }, () => 'Not needed')] }); }
     const resubmit = r.st === 'rejected', step = resubmit ? this.nextStep(r, 0) : r.step;
-    const patch = Object.assign({ pay: pi.pay, thread: [...(r.thread || []), ...(note || resubmit ? [{ by: this.me().k, t: (resubmit ? 'Corrected and resubmitted. ' : '') + note, at }] : [])] },
+    const patch = Object.assign({}, edits, { pay: pi.pay, thread: [...(r.thread || []), ...(note || resubmit ? [{ by: this.me().k, t: (resubmit ? 'Corrected and resubmitted. ' : '') + note, at }] : [])] },
       resubmit ? { st: 'pending', step, info: '', log: [...(r.log || []).slice(0, 1), ...Array.from({ length: Math.max(0, step - 1) }, () => 'Not needed')], resubmitted: at } : (r.info === 'asked' ? { info: 'answered' } : {}));
     this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, patch) : q)) }));
+    if (!resubmit && edited) {
+      const to = this.approverAt(Object.assign({}, r, patch), patch.step != null ? patch.step : r.step);
+      this.remind(to, r.id + ' was changed before approval', 'requests', 'banknote', note.replace(/\n/g, ' · ').slice(0, 120));
+      this.toast(r.id + ' updated');
+      return '';
+    }
     if (resubmit) {
       const to = this.approverAt(Object.assign({}, r, patch), step);
       this.remind(to, r.id + ' was corrected and needs your approval', 'requests', 'banknote', this.av(r.who).n + ' · ' + this.fmtT(r.amt));
@@ -207,6 +222,8 @@ export const reqFlowMethods = {
     }
     return '';
   },
+  // Nobody has approved it yet: only the creation time and skipped steps are in its log.
+  reqUntouched(r) { return (r.log || []).slice(1).every(x => x === 'Not needed'); },
   answerReq(id, text) {
     const t = String(text || '').trim(); if (!t) return 'Write your answer';
     const r = this.state.reqs.find(x => x.id === id); if (!r) return 'Request not found';

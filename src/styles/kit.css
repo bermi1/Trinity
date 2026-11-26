@@ -1387,3 +1387,11 @@
 .fx-msg { font-size: 13px; font-weight: 600; color: #B23A46; } .fx-msg.is-ok { color: #1F7549; }
 .fx-go { justify-self: start; height: 40px; padding: 0 16px; border: none; border-radius: 10px; background: #2B1459; color: #fff; font: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer; }
 .mr-pay { margin: 0; font-size: 13px; color: #1F7549; } .mr-pay b { margin-right: 6px; }
+/* My WhatsApp number */
+.mwa { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-radius: 14px; background: #F0FBF4; border: 1px solid #BFE8CD; }
+.mwa-t { display: grid; gap: 2px; flex: 1 1 220px; min-width: 0; } .mwa-t b { font-size: 14px; color: #14532D; } .mwa-t span { font-size: 12.5px; color: #3F6B4F; }
+.mwa-f { display: flex; gap: 8px; } .mwa-f input { height: 38px; width: 170px; border: 1px solid #BFE8CD; border-radius: 9px; padding: 0 10px; font: inherit; font-size: 14px; background: #fff; }
+.mwa button { height: 38px; padding: 0 14px; border: none; border-radius: 9px; background: #128C7E; color: #fff; font: inherit; font-weight: 700; font-size: 13px; cursor: pointer; } .mwa button:disabled { opacity: .5; }
+.mwa small { width: 100%; color: #B23A46; font-size: 12.5px; font-weight: 600; }
+.mwa.is-set { padding: 8px 12px; font-size: 13px; color: #14532D; } .mwa.is-set button { height: 30px; padding: 0 10px; background: transparent; color: #128C7E; border: 1px solid #BFE8CD; }
+.wa-btn { display: inline-flex; align-items: center; gap: 6px; } .wa-btn svg { flex: none; }
