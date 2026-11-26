@@ -172,12 +172,12 @@ export const storeMethods = {
     return true;
   },
 
-  // Moves a production job to its next stage. Printing can't start until the store has issued the materials.
+  // Moves a production job to its next stage. While the store is in use, printing can't start until it has issued the materials.
   advanceJob(id) {
     const j = this.state.jobs.find(x => x.id === id);
     if (!j || j.s >= 7) return;
     const nx = j.s + 1;
-    if (nx === 3 && !this.materialsReady(j)) { this.toast('Materials not issued yet · ' + (j.req ? j.req + ' is with the store' : 'request them from the store first')); return; }
+    if (nx === 3 && !this.isOff('store') && !this.materialsReady(j)) { this.toast('Materials not issued yet · ' + (j.req ? j.req + ' is with the store' : 'request them from the store first')); return; }
     this.setState(x => ({ jobs: x.jobs.map(y => (y.id === id ? Object.assign({}, y, { s: nx }) : y)) }));
     this.toast(j.id + ' → ' + (nx >= 7 ? 'Delivered' : JOB_STAGES[nx]));
     if (nx === 3) this.log('printer', 'purple', 'Printing started · ' + j.t, this.proj(j.p).client);

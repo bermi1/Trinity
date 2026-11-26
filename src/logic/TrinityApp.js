@@ -383,7 +383,7 @@ export default class TrinityApp extends Logic {
   navGroups(role) {
     const s = this.state, R = this.ROLES[role];
     const unread = this.myNotes(s).filter(n => !n.read).length, myReq = s.reqs.filter(q => q.st === 'pending' && q.step === 4).length, openTasks = s.tasks.filter(t => t.st !== 'done').length;
-    const srqN = s.requisitions.filter(q => q.st === 'pending' || q.st === 'partial').length, waitN = s.jobs.filter(j => j.s < 7 && !this.materialsReady(j)).length;
+    const srqN = s.requisitions.filter(q => q.st === 'pending' || q.st === 'partial').length;
     const rptN = (s.reports || []).filter(r => r.by !== this.me().k && this.reportVisibleTo(r, this.me().k) && !(r.readBy || {})[this.me().k]).length;
     const lowN = s.stock.filter(i => i.q < i.min).length, finQ = s.reqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === this.me().k && t.st !== 'done' && t.kind !== 'brief').length;
     // Each portal shows only what that person uses every day; everything else waits under "More".
@@ -399,9 +399,7 @@ export default class TrinityApp extends Logic {
       reception:[['Front office',[['reception','Front desk','message'],['attendance','Staff check-in','clock'],['event','Event registration','clipboard'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['payslips','My payslips','wallet'],['today','My work','checkSquare',myOpen],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['clients','Client enquiries','users']]],
         ['More',[['staff','Staff directory','user'],['briefing','Monday Briefing','presentation'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
       store:[['Store',[['storekeeper','My store','home',lowN],['today','My work','checkSquare',myOpen],['requisitions','Requisitions','clipboard',srqN],['store','Inventory','package'],['movements','Stock ledger','receipt'],['procurement','Procurement','cart']]],
-        ['More',[['production','Production','printer'],['logistics','Logistics','truck'],...company], true]],
-      production:[['Printing',[['printshop','Print floor','printer',waitN],['today','My work','checkSquare',myOpen],['production','Production jobs','checkSquare'],['requisitions','Store requisitions','clipboard']]],
-        ['More',[['store','Inventory','package'],['procurement','Procurement','cart'],...company], true]]
+        ['More',[['production','Production','printer'],['logistics','Logistics','truck'],...company], true]]
     };
     const slips = ['payslips','My payslips','wallet'];
     // The Personal Assistant runs Management's diary and records purchase orders; no money.
@@ -411,6 +409,8 @@ export default class TrinityApp extends Logic {
     N.clientservice = [['Client Service',[['dept','Client Service','home'],['event','Event registration','clipboard'],['today','My work','checkSquare',myOpen],['clients','Clients & leads','users'],['proposals','Proposals','clipboard'],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
     N.creative = [['Creative',[['dept','Creative','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
     N.operations = [['Operations',[['dept','Operations','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',[['field','Field capture app','camera'], ...deptMore],true]];
+    // Printing is an ordinary department for now: its home, My work, Projects and requests.
+    N.production = [['Printing',[['dept','Printing','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
     // The General Manager sees what Management sees, without company setup and accounts.
     N.gm = N.ceo.map(([t, items, more]) => [t, items.filter(i => !['company','users','field','ceomobile'].includes(i[0])).map(i => (i[0] === 'requests' ? ['requests','Approvals','banknote',s.reqs.filter(q => q.st === 'pending' && q.step === 2).length] : i[0] === 'finance' ? ['finance','Invoices','fileText'] : i)), more]);
     let G = N[role] || N.ceo;

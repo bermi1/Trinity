@@ -57,7 +57,7 @@ export const ROLES = {
   finance:{k:'RT',n:'Rose Temba',t:'Finance Officer',label:'Finance',home:'financeportal',email:'rose.t@trinitymark.co.tz'},
   reception:{k:'AM',n:'Aisha Mbwana',t:'Front Office',label:'Reception',home:'reception',email:'reception@trinitymark.co.tz'},
   store:{k:'FH',n:'Fatma Hassan',t:'Storekeeper',label:'Store',home:'storekeeper',email:'store@trinitymark.co.tz'},
-  production:{k:'JA',n:'Juma Ally',t:'Print Production Lead',label:'Printing',home:'printshop',email:'print@trinitymark.co.tz'},
+  production:{k:'JA',n:'Juma Ally',t:'Print Production Lead',label:'Printing',home:'dept',email:'print@trinitymark.co.tz'},
   pa:{k:'UK',n:'Upendo Kileo',t:'Personal Assistant to the MD',label:'Personal Assistant',home:'meetings',email:'pa@trinitymark.co.tz'}
 };
 export const TABS = {
@@ -66,12 +66,13 @@ export const TABS = {
   clientservice:[['dept','Home','home'],['clients','Clients','users'],['today','My work','checkSquare'],['projects','Projects','folder']],
   creative:[['dept','Home','home'],['today','My work','checkSquare'],['projects','Projects','folder'],['requests','Requests','banknote']],
   operations:[['dept','Home','home'],['projects','Projects','folder'],['today','My work','checkSquare'],['requests','Requests','banknote']],
-  staff:[['staffportal','Home','home'],['today','My work','checkSquare'],['requests','Requests','banknote'],['projects','Projects','folder']],
+  // Staff quick buttons: Requests, Reports and Calendar; everything else is under More.
+  staff:[['requests','Requests','banknote'],['reporting','Reports','fileText'],['meetings','Calendar','calendar']],
   finance:[['financeportal','Queue','wallet'],['finance','Finance','chart'],['requests','Requests','banknote'],['today','My work','checkSquare']],
   reception:[['reception','Desk','message'],['today','My work','checkSquare'],['clients','Clients','users'],['requests','Requests','banknote']],
   store:[['storekeeper','Store','home'],['today','My work','checkSquare'],['requests','Requests','banknote'],['projects','Projects','folder']],
   pa:[['meetings','Calendar','calendar'],['projects','Projects','folder'],['today','My work','checkSquare'],['clients','Clients','users']],
-  production:[['printshop','Print floor','printer'],['today','My work','checkSquare'],['requests','Requests','banknote'],['projects','Projects','folder']]
+  production:[['dept','Home','home'],['today','My work','checkSquare'],['projects','Projects','folder'],['requests','Requests','banknote']]
 };
 export const ST = {on:{l:'On track',c:'#2E9B63',bg:'#E6F4EC',fg:'#1F7549'},risk:{l:'At risk',c:'#D89B2B',bg:'#FBF1DD',fg:'#8A6414'},late:{l:'Delayed',c:'#D9535F',bg:'#FBEDEE',fg:'#B23A46'},done:{l:'Completed',c:'#2B1459',bg:'#EDE8F6',fg:'#2B1459'}};
 // Five project stages. Projects saved before this change used 15 stages (no `sv`); OLD_STAGE maps them.
@@ -90,7 +91,7 @@ export const REQ_TYPES = {
 };
 // Parked for now: hidden from every menu, search and portal list until the company is ready for them.
 // Sections not part of this phase: hidden from every menu until we agree on them.
-export const PARKED = ['logistics','production','store','requisitions','movements','storekeeper','reports','documents','procurement','proposals','rooms','calendar','field','ceomobile','staff'];
+export const PARKED = ['logistics','production','store','requisitions','movements','storekeeper','reports','documents','procurement','proposals','rooms','calendar','field','ceomobile','staff','printshop','job'];
 export const HIDDEN_ROLES = ['store'];
 // Departments: who leads each (Company setup can change it) and the portal of its people.
 export const DEPTS = {

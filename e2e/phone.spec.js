@@ -7,7 +7,7 @@ test.afterEach(() => expect(errors).toEqual([]));
 
 const tab = (page, label) => page.locator('nav').getByText(label, { exact: true }).click();
 const title = page => page.locator('.m-header-title b');
-const PAGES = ['dashboard', 'briefing', 'projects', 'project', 'tasks', 'requests', 'finance', 'store', 'procurement', 'crm', 'staff', 'notifications', 'field', 'staffportal', 'financeportal', 'reception', 'storekeeper', 'rooms', 'proposals', 'production', 'logistics', 'documents', 'reports', 'calendar', 'settings', 'requisitions', 'movements', 'job', 'printshop'];
+const PAGES = ['dashboard', 'briefing', 'projects', 'project', 'tasks', 'requests', 'finance', 'store', 'procurement', 'crm', 'staff', 'notifications', 'field', 'staffportal', 'financeportal', 'reception', 'storekeeper', 'rooms', 'proposals', 'production', 'logistics', 'documents', 'reports', 'calendar', 'settings', 'requisitions', 'movements', 'job', 'printshop', 'reporting', 'meetings', 'dept'];
 
 test('sign-in screen works like an app: show password, remember switch, one-tap demo portals', async ({ page }) => {
   await page.goto('/');
