@@ -16,6 +16,7 @@ import PayrollPage from './PayrollPage';
 import EventDesk from '../../event/EventDesk';
 import TeamPage from './TeamPage';
 import AttendancePage from './AttendancePage';
+import CheckInPage from './CheckInPage';
 
 export default {
   requisitions: RequisitionsPage,
@@ -40,5 +41,6 @@ export default {
   payslips: PayrollPage,
   event: EventDesk,
   team: TeamPage,
-  attendance: AttendancePage
+  attendance: AttendancePage,
+  checkin: CheckInPage
 };

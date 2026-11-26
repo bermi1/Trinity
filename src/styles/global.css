@@ -9,3 +9,45 @@ a:hover { color: #2B1459; }
 ::-webkit-scrollbar-thumb { background: #D9D2E6; border-radius: 8px; }
 @keyframes tmIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes tmPulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+/* Daily reports calendar (Reports → Calendar) */
+.rp-cal { margin-top: 18px; display: flex; flex-direction: column; gap: 12px; }
+.rp-cal-head { display: flex; align-items: center; gap: 8px; }
+.rp-cal-head h3 { margin: 0; font-size: 18px; color: #17152A; min-width: 150px; text-align: center; }
+.rp-cal-nav, .rp-cal-today { border: 1px solid #E8E4EF; background: #fff; border-radius: 10px; height: 36px; min-width: 36px; padding: 0 12px; font: inherit; font-size: 16px; font-weight: 700; color: #2B1459; cursor: pointer; }
+.rp-cal-today { font-size: 13px; margin-left: auto; }
+.rp-cal-nav:disabled { opacity: .35; cursor: default; }
+.rp-cal-who { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #6E6A7C; }
+.rp-cal-who select { flex: 1; max-width: 320px; height: 38px; border: 1px solid #E8E4EF; border-radius: 10px; padding: 0 10px; font: inherit; background: #fff; }
+.rp-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.rp-cal-dow { font-size: 11px; font-weight: 700; color: #8A8698; text-align: center; text-transform: uppercase; }
+.rp-cal-day { aspect-ratio: 1 / 1; max-height: 72px; border: 1px solid #EEEAF4; border-radius: 10px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font: inherit; color: #17152A; cursor: pointer; padding: 0; }
+.rp-cal-day b { font-size: 14px; }
+.rp-cal-day small { font-size: 10.5px; font-weight: 700; }
+.rp-cal-day.is-full { background: #E6F4EC; border-color: #BFE3CD; color: #1F7549; }
+.rp-cal-day.is-part { background: #FBF1DD; border-color: #F0DBAE; color: #8A6414; }
+.rp-cal-day.is-miss { background: #FBEDEE; border-color: #F3CDD1; color: #B23A46; }
+.rp-cal-day.is-future { opacity: .45; }
+.rp-cal-day.is-today { box-shadow: inset 0 0 0 2px #E2CE98; }
+.rp-cal-day.is-on { box-shadow: inset 0 0 0 2px #6D3CC2; }
+.rp-cal-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: #6E6A7C; }
+.rp-cal-legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.rp-cal-legend .is-full::before { background: #BFE3CD; }
+.rp-cal-legend .is-part::before { background: #F0DBAE; }
+.rp-cal-legend .is-miss::before { background: #F3CDD1; }
+.rp-cal-dayh { margin: 6px 0 0; font-size: 15px; color: #17152A; }
+.rp-cal-miss { margin: 0; font-size: 13px; color: #B23A46; }
+@media (max-width: 700px) { .rp-cal-grid { gap: 4px; } .rp-cal-day { border-radius: 8px; } .rp-cal-head h3 { min-width: 0; flex: 1; font-size: 16px; } }
+
+/* WhatsApp reminders on memos */
+.mm-remind { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+.mm-remind .wa-btn { color: #128C4A; border-color: #BFE3CD; }
+.mm-remind .wa-btn:hover { border-color: #25D366; background: #F3FBF6; }
+.mm-wa { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2, #555); margin: 8px 0; cursor: pointer; }
+.mm-remind.is-small { margin: 6px 0 0 14px; }
+.mm-card .mm-remind button.wa-btn { width: auto; height: 30px; padding: 0 12px; border-radius: 16px; border: 1px solid #BFE3CD; background: #fff; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #128C4A; }
+.mm-card .mm-remind button.wa-btn:hover { border-color: #25D366; background: #F3FBF6; }
+
+/* Transaction charges on money out */
+.me-fee { display: flex; align-items: center; gap: 10px; margin: 4px 0 10px; font-size: 13px; font-weight: 600; color: #6E6A7C; }
+.me-fee input { flex: 1; min-width: 0; height: 38px; border: 1px solid #E8E4EF; border-radius: 10px; padding: 0 12px; font: inherit; font-size: 14px; color: #17152A; background: #fff; }

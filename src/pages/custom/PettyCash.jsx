@@ -43,7 +43,7 @@ function Count({ P }) {
 }
 
 function Obligations({ P }) {
-  const [paying, setPaying] = useState(''); const [amt, setAmt] = useState(''); const [ref, setRef] = useState(''); const [err, setErr] = useState('');
+  const [paying, setPaying] = useState(''); const [amt, setAmt] = useState(''); const [ref, setRef] = useState(''); const [fee, setFee] = useState(''); const [err, setErr] = useState('');
   return (
     <section className="fh-card" aria-label="Due this month">
       <h3>Due this month</h3>
@@ -55,7 +55,8 @@ function Obligations({ P }) {
               <span className="ob-pay">
                 <label className="fh-amt"><span>TZS</span><input inputMode="numeric" value={amt ? n(amt) : ''} onChange={e => setAmt(digits(e.target.value))} aria-label={'Amount paid · ' + o.l} /></label>
                 <input className="ff-search" value={ref} onChange={e => setRef(e.target.value)} placeholder="Reference" aria-label={'Reference · ' + o.l} />
-                <button type="button" className="me-save" onClick={() => { const m = o.pay(amt, ref); setErr(m); if (!m) { setPaying(''); setAmt(''); setRef(''); } }}>Save</button>
+                <label className="fh-amt"><span>Charges</span><input inputMode="numeric" value={fee ? n(fee) : ''} onChange={e => setFee(digits(e.target.value))} placeholder="0" aria-label={'Transaction charges · ' + o.l} /></label>
+                <button type="button" className="me-save" onClick={() => { const m = o.pay(amt, ref, fee); setErr(m); if (!m) { setPaying(''); setAmt(''); setRef(''); setFee(''); } }}>Save</button>
               </span>
             ) : <button type="button" className="td-start" onClick={() => { setPaying(o.k); setErr(''); setAmt(o.expectN ? String(o.expectN) : ''); }}>Record payment</button>}
           </li>

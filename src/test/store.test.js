@@ -51,11 +51,22 @@ describe('store requisitions', () => {
   });
 
   it('jobs cannot enter production until materials are issued', () => {
-    const a = app();
+    const a = app(); a.isOff = () => false; // the store in use
     a.advanceJob('JOB-0313');
     expect(a.state.jobs.find(j => j.id === 'JOB-0313').s).toBe(2);
     a.advanceJob('JOB-0311');
     expect(a.state.jobs.find(j => j.id === 'JOB-0311').s).toBe(4);
+  });
+
+  it('while the store is parked, printing does not wait for store materials', () => {
+    const a = app();
+    a.advanceJob('JOB-0313');
+    expect(a.state.jobs.find(j => j.id === 'JOB-0313').s).toBe(3);
+    a.setState({ jobId: 'JOB-0313' });
+    const v = a.renderVals();
+    expect(v.JOB.store).toBe(false);
+    expect(v.JOB.canRequest).toBe(false);
+    expect(v.PS.jobs.every(j => !j.canRequest)).toBe(true);
   });
 
   it('returns are limited to what was issued and credit the project', () => {

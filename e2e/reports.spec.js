@@ -21,6 +21,9 @@ test('the GM sends a daily report to Management, who reads and replies', async (
   expect(data.notes.some(n => n.to === 'DK' && /Daily report from Joseph Ngowi/.test(n.t))).toBe(true);
 
   await openAs(page, 'ceo', 'reporting', {}, false);
+  // Reports opens on the daily reports calendar: today shows the GM's report.
+  await expect(page.getByRole('region', { name: 'Daily reports calendar' }).locator('[data-report="' + r.id + '"]')).toBeVisible();
+  await page.getByRole('tab', { name: /Received/ }).click();
   const item = page.locator('[data-report="' + r.id + '"]');
   await item.locator('.rp-row').click();
   await expect(item).toContainText('Kilimo Bank billboard permits delayed');

@@ -145,7 +145,7 @@ describe('administrator', () => {
   };
   const field = label => screen.getByText(label, { selector: 'label' }).querySelector('input, select');
 
-  it('only administrators see Users & access', async () => {
+  it('Management (not an administrator) manages staff accounts, without admin-only tools', async () => {
     render(<App />);
     await screen.findByText('SIGN IN');
     signInAs('daniel@tm.co.tz', 'secret123');
@@ -153,6 +153,18 @@ describe('administrator', () => {
     await screen.findByRole('heading', { name: /^Good (morning|afternoon|evening),/ });
     const more = screen.queryByRole('button', { name: /More/ });
     if (more) fireEvent.click(more);
+    fireEvent.click(await screen.findByText('Users & access'));
+    expect(await screen.findByText('New account')).toBeTruthy();
+    expect(screen.queryByText('Administrator (can manage accounts)')).toBeNull();
+    expect(screen.queryByText('Remove demo accounts and data')).toBeNull();
+  });
+
+  it('other portals do not see Users & access', async () => {
+    render(<App />);
+    await screen.findByText('SIGN IN');
+    signInAs('fatma@tm.co.tz', 'secret123');
+    await skipPin();
+    await screen.findByText('STOREKEEPER PORTAL');
     expect(screen.queryByText('Users & access')).toBeNull();
   });
 

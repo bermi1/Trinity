@@ -8,10 +8,11 @@ function LeadCard({ l }) {
     <button type="button" className={'cr-card' + (l.stale ? ' is-stale' : '')} onClick={l.open} data-lead={l.id}>
       <span className="cr-card-top"><b>{l.c}</b>{l.v ? <em>{l.v}</em> : null}</span>
       <span className="cr-card-t">{l.t}</span>
+      {l.event ? <span className="cr-card-ev">{l.event}</span> : null}
       <span className="cr-card-foot">
         <span className="cr-face" style={{ background: l.oc }} title={l.owner}>{l.oi}</span>
         <span>{l.stale ? l.days + ' days without update' : l.next ? 'Next: ' + l.next : l.stage}</span>
-        {l.hasProposal ? <span className="cr-doc" title="Proposal attached">PDF</span> : null}
+        {l.hasFile ? <span className="cr-doc" title={l.fileL + ' attached'}>{l.fileL === 'Proposal' ? 'PDF' : l.fileL === 'Artwork' ? 'ART' : 'FILE'}</span> : null}
       </span>
     </button>
   );
@@ -22,10 +23,12 @@ function LeadPanel({ L, reasons }) {
   const [note, setNote] = useState('');
   const [value, setValue] = useState('');
   const [file, setFile] = useState(null);
+  const [kind, setKind] = useState('proposal');
   const [busy, setBusy] = useState(false);
   const [lost, setLost] = useState(false);
   const [reason, setReason] = useState('');
   const [err, setErr] = useState('');
+  const [pushErr, setPushErr] = useState('');
   useEffect(() => { const k = e => { if (e.key === 'Escape') L.close(); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [L]);
 
   const pick = async e => {
@@ -34,7 +37,9 @@ function LeadPanel({ L, reasons }) {
     try { setFile(await L.store(f)); } catch (x) { setErr('Upload failed · ' + (x.message || x)); }
     setBusy(false);
   };
-  const go = (to, extra) => { const e = L.move(to, Object.assign({ note }, extra)); if (e) setErr(e); };
+  const go = (to, extra) => { const e = L.move(to, Object.assign({ note }, extra)); if (e) setErr(e); else { setFile(null); setKind('proposal'); setErr(''); } };
+  // Attach the chosen file now, without moving the lead.
+  const attachOnly = () => { const e = L.attach(file, kind); if (e) setErr(e); else { setFile(null); setKind('proposal'); setErr(''); } };
 
   return (
     <div className="cr-back" onClick={L.close}>
@@ -45,6 +50,7 @@ function LeadPanel({ L, reasons }) {
             <h2>{L.c}</h2>
             <p>{L.t}{L.v ? ' · ' + L.v : ''}</p>
           </div>
+          {L.canEdit ? <button type="button" className="td-start cr-edit" onClick={L.edit}>Edit details</button> : null}
           <button type="button" className="fm-x" onClick={L.close} aria-label="Close">×</button>
         </header>
 
@@ -52,28 +58,47 @@ function LeadPanel({ L, reasons }) {
           <dl className="cr-facts">
             <div><dt>Follow-up by</dt><dd>{L.owner}</dd></div>
             <div><dt>Came in by</dt><dd>{L.src || '—'}</dd></div>
+            <div><dt>Venue</dt><dd>{L.venue || '—'}</dd></div>
+            <div><dt>Setup</dt><dd>{L.setup || '—'}</dd></div>
+            <div><dt>Pax</dt><dd>{L.pax || '—'}</dd></div>
             {L.contact ? <div><dt>Contact</dt><dd>{L.contact}</dd></div> : null}
             {L.lost ? <div><dt>Lost because</dt><dd>{L.lost}</dd></div> : null}
           </dl>
 
-          {L.proposal ? (
-            <button type="button" className="cr-file" onClick={L.proposal.open}>
-              <span className="cr-doc">PDF</span>
-              <span><b>{L.proposal.name}</b><small>Sent by {L.proposal.byN} · {L.proposal.at} · {L.proposal.size}</small></span>
+          {L.files.map((f, i) => (
+            <button key={i} type="button" className="cr-file" onClick={f.open} aria-label={'Open ' + f.label}>
+              <span className="cr-doc">{f.kind === 'proposal' ? 'PDF' : f.kind === 'artwork' ? 'ART' : 'FILE'}</span>
+              <span><b>{f.label}</b><small>Added by {f.byN}{f.at ? ' · ' + f.at : ''} · {f.size}</small></span>
             </button>
-          ) : null}
+          ))}
 
-          {L.job ? <Btn kind="ghost" onClick={L.goJob}>Open job {L.job}</Btn> : null}
+          {L.job ? <Btn kind="ghost" onClick={L.goJob}>Open project {L.job}</Btn> : L.can ? (
+            <div className="cr-push">
+              <Btn kind="primary" onClick={() => { const r = L.push(); setPushErr(r && r.indexOf('PRJ') !== 0 ? r : ''); }}>Make client &amp; open project</Btn>
+              <small>Adds {L.c} to clients and opens a project now. The lead stays at {L.stage}.</small>
+              {pushErr ? <div className="fm-err" role="alert">{pushErr}</div> : null}
+            </div>
+          ) : null}
 
           {L.can && L.next1 != null ? (
             <section className="cr-step">
               <h3>Next step</h3>
-              {L.needsFile ? (
-                <label className={'ff-file' + (file ? ' is-done' : '')}>
-                  <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" onChange={pick} aria-label="Proposal file" />
-                  <span className="ff-file-ic" aria-hidden="true">{file ? '✓' : '↑'}</span>
-                  <span>{file ? file.name : busy ? 'Uploading…' : 'Attach the proposal you sent'}<small>Required · PDF, Word or PowerPoint</small></span>
-                </label>
+              {L.offerFile && !lost ? (
+                <>
+                  <label className={'ff-file' + (file ? ' is-done' : '')}>
+                    <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.ai,.psd,.eps,.svg,image/*" onChange={pick} aria-label="Lead file" />
+                    <span className="ff-file-ic" aria-hidden="true">{file ? '✓' : '↑'}</span>
+                    <span>{file ? file.name : busy ? 'Uploading…' : 'Attach a file (optional)'}<small>Optional · the proposal, artwork or another file you sent</small></span>
+                  </label>
+                  {file ? (
+                    <div className="ff"><span className="ff-l">This file is</span>
+                      <div className="ff-chips" role="radiogroup" aria-label="File type">
+                        {L.kinds.map(k => <button key={k.v} type="button" role="radio" aria-checked={kind === k.v} className={kind === k.v ? 'is-on' : ''} onClick={() => setKind(k.v)}>{k.l}</button>)}
+                      </div>
+                      <button type="button" className="td-link" onClick={attachOnly}>Attach without moving the lead</button>
+                    </div>
+                  ) : null}
+                </>
               ) : null}
               {L.needsValue && !lost ? (
                 <label className="ff"><span className="ff-l">Agreed value (TZS M)</span><input inputMode="decimal" value={value} onChange={e => setValue(e.target.value)} placeholder={L.v ? L.v.replace(/[^\d.]/g, '') : 'e.g. 120'} /></label>
@@ -95,7 +120,7 @@ function LeadPanel({ L, reasons }) {
                   </>
                 ) : (
                   <>
-                    <Btn kind="dark" disabled={busy} onClick={() => go(L.next1, L.needsFile ? { proposal: file } : L.needsValue ? { value } : {})}>{L.nextLabel}</Btn>
+                    <Btn kind="dark" disabled={busy} onClick={() => go(L.next1, Object.assign(file && L.offerFile ? { proposal: file, kind } : {}, L.needsValue ? { value } : {}))}>{L.nextLabel}</Btn>
                     <Btn kind="ghost" onClick={() => setLost(true)}>Lost</Btn>
                   </>
                 )}
@@ -188,7 +213,7 @@ function Customers({ C }) {
       <div className="cr-cust">
         {list.map(c => (
           <article key={c.id} className="cr-cust-card" data-customer={c.n}>
-            <header><b>{c.n}</b>{c.active ? <span className="cr-active">{c.active} active</span> : null}</header>
+            <header><b>{c.n}</b>{c.active ? <span className="cr-active">{c.active} active</span> : null}{c.canEdit ? <button type="button" className="td-start cr-edit" onClick={c.edit} aria-label={'Edit ' + c.n}>Edit</button> : null}</header>
             <p>{c.contact || '—'}</p>
             <p className="k-sub">{[c.phone, c.email].filter(Boolean).join(' · ') || 'No contact details yet'}</p>
             {c.tin || c.vrn ? <p className="k-sub">{[c.tin ? 'TIN ' + c.tin : '', c.vrn ? 'VRN ' + c.vrn : ''].filter(Boolean).join(' · ')}</p> : null}

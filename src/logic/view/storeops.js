@@ -66,24 +66,26 @@ export function storeVals(s) {
   };
 
   // ---- Production job page
+  // While the store is parked, printing runs without store requisitions, issues or returns.
+  const storeOn = !this.isOff('store');
   const j = s.jobs.find(x => x.id === s.jobId);
   if (j) {
     const r = s.requisitions.find(q => q.id === j.req && q.st !== 'cancelled'), P = this.proj(j.p), done = j.s >= 7;
     const issuedVal = (j.bom || []).reduce((a, b) => { const line = r && r.items.find(it => it.sku === b.sku); return a + (line ? (line.issued - (line.returned || 0)) * this.item(b.sku).cost : 0); }, 0);
     const refs = [j.req, 'Unused from ' + j.id].filter(Boolean);
     V.JOB = {
-      id: j.id, t: j.t, client: P.client, project: P.name, projectId: P.id, who: this.av(j.who), due: j.due, qty: j.qty, waste: j.waste,
+      store: storeOn, id: j.id, t: j.t, client: P.client, project: P.name, projectId: P.id, who: this.av(j.who), due: j.due, qty: j.qty, waste: j.waste,
       cost: this.fmtM(j.cost), matValue: fmtT(issuedVal), budget: this.fmtM(P.bud) + ' budget · ' + this.fmtM(P.spent) + ' spent',
       stages: JOB_STAGES.map((l, i) => ({ l, state: i < j.s || done ? 'done' : i === j.s ? 'cur' : 'todo' })),
       stage: done ? 'Delivered' : JOB_STAGES[j.s], canAdv: !done, advL: done ? '' : JOB_NEXT[j.s], adv: () => this.advanceJob(j.id),
-      blocked: !done && j.s === 2 && !this.materialsReady(j),
+      blocked: storeOn && !done && j.s === 2 && !this.materialsReady(j),
       ready: this.materialsReady(j), matLabel: this.matLabel(j),
       bom: (j.bom || []).map(b => {
         const it = this.item(b.sku), line = r && r.items.find(x => x.sku === b.sku);
         return { sku: b.sku, n: it.n, u: it.u, need: b.qty, issued: line ? line.issued : 0, returned: line ? line.returned || 0 : 0, have: it.q, cost: fmtT(b.qty * it.cost) };
       }),
       req: r ? Object.assign({ id: r.id, d: r.d, open: () => this.go('requisitions', { srqFilter: 'all' }) }, pill(REQ_STATUS[r.st])) : null,
-      canRequest: !r && !!(j.bom && j.bom.length) && !done,
+      canRequest: storeOn && !r && !!(j.bom && j.bom.length) && !done,
       request: () => this.requestMaterials(j.id),
       returnable: r ? r.items.filter(it => it.issued - (it.returned || 0) > 0).map(it => ({ v: it.sku, l: this.item(it.sku).n + ' · up to ' + (it.issued - (it.returned || 0)), max: it.issued - (it.returned || 0) })) : [],
       doReturn: (sku, qty) => this.returnToStore(j.id, sku, +qty),
@@ -95,18 +97,23 @@ export function storeVals(s) {
 
   // ---- Print floor (printing department home)
   const active = s.jobs.filter(x => x.s < 7);
-  const waiting = active.filter(x => !this.materialsReady(x));
+  const waiting = storeOn ? active.filter(x => !this.materialsReady(x)) : [];
   const pf = this.av(this.ROLES.production.k);
   V.PS = {
     greet: (new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening') + ', ' + pf.first,
+    store: storeOn,
     kpis: [
       { l: 'On the press', v: String(active.filter(x => x.s === 3).length), n: 'printing now' },
-      { l: 'Waiting for materials', v: String(waiting.length), n: 'with the store or purchasing', warn: waiting.length > 0 },
-      { l: 'Ready to print', v: String(active.filter(x => x.s === 2 && this.materialsReady(x)).length), n: 'approved, materials in hand' },
+      ...(storeOn ? [
+        { l: 'Waiting for materials', v: String(waiting.length), n: 'with the store or purchasing', warn: waiting.length > 0 },
+        { l: 'Ready to print', v: String(active.filter(x => x.s === 2 && this.materialsReady(x)).length), n: 'approved, materials in hand' }
+      ] : [
+        { l: 'Ready to print', v: String(active.filter(x => x.s === 2).length), n: 'approved by the client' }
+      ]),
       { l: 'Average wastage', v: (s.jobs.reduce((a, x) => a + x.waste, 0) / Math.max(1, s.jobs.length)).toFixed(1) + '%', n: 'target under 4%' }
     ],
     jobs: active.map(x => ({ id: x.id, t: x.t, client: this.proj(x.p).client, stage: JOB_STAGES[x.s], due: x.due, who: this.av(x.who), mat: this.matLabel(x), ready: this.materialsReady(x),
-      canRequest: !!(x.bom && x.bom.length) && !s.requisitions.some(q => q.id === x.req && q.st !== 'cancelled'),
+      canRequest: storeOn && !!(x.bom && x.bom.length) && !s.requisitions.some(q => q.id === x.req && q.st !== 'cancelled'),
       request: () => this.requestMaterials(x.id), open: () => this.go('job', { jobId: x.id }) })),
     issues: s.movements.filter(m => m.type === 'issue' && /^SRQ-/.test(m.ref)).slice(0, 6).map(m => ({ d: m.d, t: this.item(m.sku).n + ' × ' + -m.qty, ref: m.ref, client: m.p ? this.proj(m.p).client : '' })),
     newReq: () => this.openModal('srq')

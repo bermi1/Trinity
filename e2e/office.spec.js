@@ -107,7 +107,8 @@ test('a new customer’s TIN, VRN and address flow into the invoice', async ({ p
   await btn(page, 'New invoice').click();
   const ed = page.getByRole('dialog');
   await ed.getByRole('button', { name: 'Azam Media Ltd', exact: true }).click();
-  await expect(ed.locator('[data-field] input, label.ff input').nth(1)).toHaveValue('10-031122-K');
+  await expect(ed.getByPlaceholder('10-000000-X')).toHaveValue('10-031122-K');
+  await expect(ed.getByPlaceholder('100-000-000')).toHaveValue('104-555-210');
   await ed.getByLabel('Item 1').fill('Studio branding');
   await ed.getByLabel('Rate 1').fill('2500000');
   await btn(ed, 'Create invoice').click();

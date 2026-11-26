@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PageHead, Card, Pill, Btn, Avatar, Empty, qty } from '../../ui/kit';
 
-// One production job: stages, the materials it needs from the store, costs, returns and wastage.
+// One production job: stages, costs and wastage, plus (while the store is in use) its store materials and returns.
 export default function JobPage({ v }) {
   const J = v.JOB;
   const [ret, setRet] = useState({ sku: '', qty: '' });
@@ -21,7 +21,7 @@ export default function JobPage({ v }) {
       </Card>
 
       <div className="k-row">
-        <Card title="Materials from the store" aside={J.req ? <span className="k-req-meta"><button className="k-link" onClick={J.req.open}>{J.req.id}</button><Pill l={J.req.stl} bg={J.req.stbg} fg={J.req.stfg} /></span> : <span className="k-sub">{J.matLabel}</span>}>
+        {J.store ? <Card title="Materials from the store" aside={J.req ? <span className="k-req-meta"><button className="k-link" onClick={J.req.open}>{J.req.id}</button><Pill l={J.req.stl} bg={J.req.stbg} fg={J.req.stfg} /></span> : <span className="k-sub">{J.matLabel}</span>}>
           {J.bom.length === 0 ? <Empty>No materials listed for this job.</Empty> : (
             <div className="k-scroll">
               <table className="k-table">
@@ -42,11 +42,11 @@ export default function JobPage({ v }) {
           )}
           {J.canRequest ? <div style={{ marginTop: 14 }}><Btn kind="dark" icon={v.ic.package} onClick={J.request}>Request materials from store</Btn></div> : null}
           {J.ready && J.bom.length ? <div className="k-alert is-ok" style={{ marginTop: 14 }}>All materials issued · ready to print</div> : null}
-        </Card>
+        </Card> : null}
 
         <Card title="Cost & quality">
           <div className="k-timeline">
-            <div><span style={{ flex: 1 }}>Materials issued to this job</span><b>{J.matValue}</b></div>
+            {J.store ? <div><span style={{ flex: 1 }}>Materials issued to this job</span><b>{J.matValue}</b></div> : null}
             <div><span style={{ flex: 1 }}>Total job cost</span><b>{J.cost}</b></div>
             <div><span style={{ flex: 1 }}>Project</span><span className="k-sub">{J.budget}</span></div>
             <div><span style={{ flex: 1 }}>Assigned to</span><Avatar p={J.who} size={22} />{J.who.n}</div>
@@ -59,7 +59,7 @@ export default function JobPage({ v }) {
         </Card>
       </div>
 
-      <div className="k-row">
+      {J.store ? <div className="k-row">
         <Card title="Return unused material">
           {J.returnable.length === 0 ? <Empty>Nothing issued yet, so nothing to return.</Empty> : (
             <form className="k-form" onSubmit={e => { e.preventDefault(); if (J.doReturn(retSku, ret.qty)) setRet({ sku: retSku, qty: '' }); }}>
@@ -74,7 +74,7 @@ export default function JobPage({ v }) {
             <div className="k-timeline">{J.history.map((h, i) => <div key={i}><span className="k-mono">{h.d}</span><Pill l={h.stl} bg={h.stbg} fg={h.stfg} /><span style={{ flex: 1 }}>{h.t}</span><span className="k-sub">{h.v}</span></div>)}</div>
           )}
         </Card>
-      </div>
+      </div> : null}
     </>
   );
 }

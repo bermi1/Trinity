@@ -19,11 +19,11 @@ import { todoMethods, todayVals } from './todos';
 import { deptMethods, deptVals } from './depts';
 import { crmMethods, crmVals, SOURCES } from './crm';
 import { projectMethods, projectVals, reqFlowMethods } from './projectview';
-import { financeMethods, financeVals, reportMethods, reportVals } from './finance';
+import { financeMethods, financeVals, reportMethods, reportVals, parseFee } from './finance';
 import { homeVals } from './home';
 import { targetVals, targetMethods } from './targets';
 import { teamVals, teamMethods } from './team';
-import { attendanceVals, attendanceMethods } from './attendance';
+import { attendanceVals, attendanceMethods, myCheckinVals } from './attendance';
 import { memoVals, memoMethods } from './memos';
 import { officeMethods, officeVals } from './office';
 import { flowMethods, FLOW } from './flow';
@@ -33,6 +33,9 @@ import { briefingMethods, briefingVals } from './briefing';
 import { payrollMethods, payrollVals } from './payroll';
 
 // Password of the demo accounts, so they open with one tap (see .env). Leave it out to require passwords.
+// The "+ New client" choice in the New project form.
+const NEW_CLIENT = '__new_client__';
+
 const demoPassword = () => import.meta.env.VITE_DEMO_PASSWORD || '';
 const OFFLINE = 'Could not reach the server. Check your connection and try again.';
 // Supabase retries network failures indefinitely; give up after a while so people get an answer.
@@ -94,7 +97,7 @@ export default class TrinityApp extends Logic {
       if (target) {
         history.replaceState(history.state, '', location.pathname);
         if (target === 'newreq') this._afterAuth = () => this.openModal('req');
-        else this._afterAuth = () => this.go(target);
+        else this._afterAuth = () => this.goTarget(target);
         if (this.state.auth) { this._afterAuth(); this._afterAuth = null; }
       }
     } catch (e) {}
@@ -382,16 +385,16 @@ export default class TrinityApp extends Logic {
   dataKeys() { return this._dk || (this._dk = Object.keys(this.seed())); }
   navGroups(role) {
     const s = this.state, R = this.ROLES[role];
-    const unread = this.myNotes(s).filter(n => !n.read).length, myReq = s.reqs.filter(q => q.st === 'pending' && q.step === 4).length, openTasks = s.tasks.filter(t => t.st !== 'done').length;
-    const srqN = s.requisitions.filter(q => q.st === 'pending' || q.st === 'partial').length, waitN = s.jobs.filter(j => j.s < 7 && !this.materialsReady(j)).length;
+    const unread = this.myNotes(s).filter(n => !n.read).length, vreqs = this.visibleReqs(s), myReq = vreqs.filter(q => q.st === 'pending' && q.step === 4).length, openTasks = s.tasks.filter(t => t.st !== 'done').length;
+    const srqN = s.requisitions.filter(q => q.st === 'pending' || q.st === 'partial').length;
     const rptN = (s.reports || []).filter(r => r.by !== this.me().k && this.reportVisibleTo(r, this.me().k) && !(r.readBy || {})[this.me().k]).length;
-    const lowN = s.stock.filter(i => i.q < i.min).length, finQ = s.reqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === this.me().k && t.st !== 'done' && t.kind !== 'brief').length;
+    const lowN = s.stock.filter(i => i.q < i.min).length, finQ = vreqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === this.me().k && t.st !== 'done' && t.kind !== 'brief').length;
     // Each portal shows only what that person uses every day; everything else waits under "More".
     const mob = ['ceomobile','Mobile app','phone',0,{mobileRole:role}];
     const company = [['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']];
     const N = {
       ceo:[['Every day',[['dashboard','Dashboard','grid'],['today','My work','checkSquare',myOpen],['briefing','Monday Briefing','presentation'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['requests','Approvals','banknote',myReq],['projects','Projects','folder'],['clients','Clients & leads','users'],['team','Team & departments','users'],['attendance','Staff attendance','clock'],['event','Event registration','clipboard'],['finance','Finance & Invoices','chart'],['payroll','Payroll','user']]],
-        ['More',[['calendar','Calendar','calendar'],['notifications','Notifications','bell',unread],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['procurement','Procurement','cart'],['store','Store & Inventory','package'],['requisitions','Store requisitions','clipboard',srqN],['movements','Stock ledger','receipt'],['logistics','Logistics','truck'],['staff','Staff & Reports','user'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['ceomobile','Mobile apps','phone',0,{mobileRole:'ceo'}],['field','Field capture app','camera'],...(this.canSetup() ? [['company','Company setup','settings']] : []),...(this.isAdmin() ? [['users','Users & access','shield']] : []),['settings','Settings','settings']], true]],
+        ['More',[['calendar','Calendar','calendar'],['notifications','Notifications','bell',unread],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['procurement','Procurement','cart'],['store','Store & Inventory','package'],['requisitions','Store requisitions','clipboard',srqN],['movements','Stock ledger','receipt'],['logistics','Logistics','truck'],['staff','Staff & Reports','user'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['ceomobile','Mobile apps','phone',0,{mobileRole:'ceo'}],['field','Field capture app','camera'],...(this.canSetup() ? [['company','Company setup','settings']] : []),...(this.canManageStaff() ? [['users','Users & access','shield']] : []),['settings','Settings','settings']], true]],
       staff:[['My work',[['staffportal','My Day','home'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['payslips','My payslips','wallet'],['today','My work','checkSquare',myOpen],['requests','My requests','banknote'],['field','Field capture','camera']]],
         ['More',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
       finance:[['Finance',[['financeportal','My queue','wallet',finQ],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['briefing','Monday Briefing','presentation'],['today','My work','checkSquare',myOpen],['finance','Finance','chart'],['invoices','Invoices','fileText'],['cashbook','Cash book','receipt'],['petty','Petty cash','wallet'],['freports','Finance reports','pie'],['float','Float','wallet'],['requests','Requests & Floats','banknote']]],
@@ -399,26 +402,28 @@ export default class TrinityApp extends Logic {
       reception:[['Front office',[['reception','Front desk','message'],['attendance','Staff check-in','clock'],['event','Event registration','clipboard'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['payslips','My payslips','wallet'],['today','My work','checkSquare',myOpen],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['clients','Client enquiries','users']]],
         ['More',[['staff','Staff directory','user'],['briefing','Monday Briefing','presentation'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
       store:[['Store',[['storekeeper','My store','home',lowN],['today','My work','checkSquare',myOpen],['requisitions','Requisitions','clipboard',srqN],['store','Inventory','package'],['movements','Stock ledger','receipt'],['procurement','Procurement','cart']]],
-        ['More',[['production','Production','printer'],['logistics','Logistics','truck'],...company], true]],
-      production:[['Printing',[['printshop','Print floor','printer',waitN],['today','My work','checkSquare',myOpen],['production','Production jobs','checkSquare'],['requisitions','Store requisitions','clipboard']]],
-        ['More',[['store','Inventory','package'],['procurement','Procurement','cart'],...company], true]]
+        ['More',[['production','Production','printer'],['logistics','Logistics','truck'],...company], true]]
     };
     const slips = ['payslips','My payslips','wallet'];
     // The Personal Assistant runs Management's diary and records purchase orders; no money.
     N.pa = [['Office',[['dashboard','Management overview','grid'],['attendance','Staff attendance','clock'],['meetings','Calendar','calendar'],['requests','Approvals','banknote'],['briefing','Monday Briefing','presentation'],['reception','Front desk','message'],['event','Event registration','clipboard'],['projects','Projects','folder'],['clients','Clients & leads','users'],['today','My work','checkSquare',myOpen],['reporting','Reports','fileText',rptN],slips]]];
     // Department portals: their dashboard first, then what that department works with.
-    const myReqs = ['requests','My requests','banknote'], deptMore = [['payslips','My payslips','wallet'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['briefing','Monday Briefing','presentation'],['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['rooms','Meeting rooms','calendar'],['settings','Settings','settings']];
+    const myReqs = ['requests','My requests','banknote'], deptMore = [['payslips','My payslips','wallet'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['rooms','Meeting rooms','calendar'],['settings','Settings','settings']];
     N.clientservice = [['Client Service',[['dept','Client Service','home'],['event','Event registration','clipboard'],['today','My work','checkSquare',myOpen],['clients','Clients & leads','users'],['proposals','Proposals','clipboard'],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
     N.creative = [['Creative',[['dept','Creative','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
     N.operations = [['Operations',[['dept','Operations','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',[['field','Field capture app','camera'], ...deptMore],true]];
+    // Printing is an ordinary department for now: its home, My work, Projects and requests.
+    N.production = [['Printing',[['dept','Printing','home'],['today','My work','checkSquare',myOpen],['projects','Projects','folder'],myReqs]],['More',deptMore,true]];
     // The General Manager sees what Management sees, without company setup and accounts.
-    N.gm = N.ceo.map(([t, items, more]) => [t, items.filter(i => !['company','users','field','ceomobile'].includes(i[0])).map(i => (i[0] === 'requests' ? ['requests','Approvals','banknote',s.reqs.filter(q => q.st === 'pending' && q.step === 2).length] : i[0] === 'finance' ? ['finance','Invoices','fileText'] : i)), more]);
+    N.gm = N.ceo.map(([t, items, more]) => [t, items.filter(i => !['company','field','ceomobile'].includes(i[0])).map(i => (i[0] === 'requests' ? ['requests','Approvals','banknote',vreqs.filter(q => q.st === 'pending' && q.step === 2).length] : i[0] === 'finance' ? ['finance','Invoices','fileText'] : i)), more]);
     let G = N[role] || N.ceo;
     // Client Service team members on the staff portal also get their own clients & leads (targets show on My work).
     if (role === 'staff' && this.isCsStaff && this.isCsStaff()) G = G.map(([t, items, more], gi) => [t, gi === 0 ? [...items.slice(0, 1), ['clients', 'My clients & leads', 'users'], ...items.slice(1)] : items, more]);
     // Memos sit with each person's everyday pages, with a count of the ones waiting on them.
     const meK = this.me().k, memoN = (s.memos || []).filter(m => m.st !== 'done' && (m.who === meK || (!m.who && (m.to === meK || this.isManagerOf(m.dept))))).length;
     if (role !== 'store') G = G.map(([t, items, more], gi) => [t, gi === 0 && !items.some(i => i[0] === 'memos') ? [...items.slice(0, 2), ['memos', 'Memos', 'fileText', memoN], ...items.slice(2)] : items, more]);
+    // My check-in: everyone checks themselves in and out with their own face, right after their home page.
+    if (role !== 'store') G = G.map(([t, items, more], gi) => [t, gi === 0 && !items.some(i => i[0] === 'checkin') ? [...items.slice(0, 1), ['checkin', 'My check-in', 'clock'], ...items.slice(1)] : items, more]);
     // Sections the administrator switched off are hidden everywhere.
     // Notifications open from the bell (and the Alerts tab on phones), not from the side menu.
     G = G.map(([t, items, more]) => [t, items.filter(i => !this.isOff(i[0]) && i[0] !== 'notifications' && i[0] !== 'settings' && !(i[0] === 'briefing' && !this.canBriefing()) && !(s.embed && i[0] === 'ceomobile')), more]).filter(g => g[1].length);
@@ -464,6 +469,8 @@ export default class TrinityApp extends Logic {
     if (page === 'payroll' && !['ceo','gm'].includes(role)) return 'payslips';
     if (page === 'team' && !['ceo','gm'].includes(role)) return home;
     if (page === 'attendance' && !['ceo','gm','pa','reception'].includes(role)) return home;
+    // My check-in is open to every role.
+    if (page === 'checkin') return page;
     if (page === 'briefing' && this.state && !this.canBriefing()) return home;
     // Finance tools: Float for Management and Finance; the rest also for the GM.
     if (page === 'finance' && !['ceo','gm','finance'].includes(role)) return home;
@@ -533,7 +540,9 @@ export default class TrinityApp extends Logic {
     const msg = { id: 'OB' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), to: n.to, phone, ch: N.wa ? 'whatsapp' : 'sms', kind, text: 'Trinity Mark 360 · ' + n.t + (n.s ? '\n' + n.s : ''), st: 'queued', at: dayKey(0) + ' ' + this.now() };
     this.setState(s => ({ outbox: [msg, ...(s.outbox || [])].slice(0, 200) }));
   }
-  log(ic, tone, t, sub) { this.setState(s => ({activity:[{time:this.now(),ic,tone,t,s:sub}, ...s.activity].slice(0,7)})); }
+  // `req` ties an entry to a money request, so it only shows to people who may see that request.
+  log(ic, tone, t, sub, req) { this.setState(s => ({activity:[Object.assign({time:this.now(),ic,tone,t,s:sub}, req ? {req} : {}), ...s.activity].slice(0,7)})); }
+  visibleActivity(s) { const S = s || this.state, reqs = S.reqs || []; return (S.activity || []).filter(e => !e.req || this.canSeeReq(reqs.find(r => r.id === e.req))); }
   smooth(pts) { let d = 'M' + pts[0][0] + ' ' + pts[0][1]; for (let i = 0; i < pts.length - 1; i++) { const p0 = pts[i-1] || pts[i], p1 = pts[i], p2 = pts[i+1], p3 = pts[i+2] || p2; d += ' C' + (p1[0]+(p2[0]-p0[0])/6).toFixed(1) + ' ' + (p1[1]+(p2[1]-p0[1])/6).toFixed(1) + ' ' + (p2[0]-(p3[0]-p1[0])/6).toFixed(1) + ' ' + (p2[1]-(p3[1]-p1[1])/6).toFixed(1) + ' ' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1); } return d; }
   spark(vals) { const mn = Math.min(...vals), mx = Math.max(...vals), r = mx - mn || 1; const pts = vals.map((v,i) => [3 + i*(84/(vals.length-1)), 27 - (v-mn)/r*22]); const l = this.smooth(pts); return {l, f:l + ' L87 30 L3 30 Z'}; }
 
@@ -546,15 +555,17 @@ export default class TrinityApp extends Logic {
     const defs = {
       task:{title:'New task',sub:'Every task is linked to a project, an owner and a deadline. The person is notified.',submit:'Create task',fields:[{k:'t',l:'Task',ph:'e.g. Print 500 flyers',req:1},{k:'p',l:'Project',opts:PO},{k:'who',l:'Assign to',opts:this.assignable().map(k => ({v:k, l:this.av(k).n}))},{k:'due',l:'Deadline',ph:'e.g. Fri 25'},{k:'pri',l:'Priority',opts:[{v:'high',l:'High'},{v:'med',l:'Medium'},{v:'low',l:'Low'}]}]},
       req:{title:'Request money',sub:'Choose the kind of request.',submit:'Continue',fields:[{k:'type',l:'Type of request',opts:[{v:'project',l:'Project request'},{v:'internal',l:'Internal office request'},{v:'emergency',l:'Emergency request'},...((this.state.role || 'ceo') === 'ceo' ? [{v:'management',l:'Management request'}] : [])]}]},
-      work:{title:'New work',sub:'Record work that came in and choose who in Client Service follows it up. They are notified.',submit:'Create lead',fields:[{k:'c',l:'Client',ph:'Company name',req:1},{k:'t',l:'What do they need?',ph:'e.g. Roadshow in 6 regions',req:1},{k:'owner',l:'Follow-up by',opts:(this.isTop() || this.isManagerOf('clientservice') ? this.teamOf('clientservice') : [this.me().k]).map(k => ({v:k,l:this.av(k).n}))},{k:'src',l:'Came in by',opts:O(SOURCES)},{k:'v',l:'Estimated value (TZS M)',type:'number',ph:'e.g. 80'},{k:'contact',l:'Contact person',ph:'Name and phone'},{k:'note',l:'Notes',ph:'What was asked, deadlines, budget'}]},
+      work:{title:'New work',sub:'Record work that came in and choose who in Client Service follows it up. They are notified.',submit:'Create lead',fields:[{k:'c',l:'Client',ph:'Company name',req:1},{k:'t',l:'What do they need?',ph:'e.g. Roadshow in 6 regions',req:1},{k:'owner',l:'Follow-up by',opts:(this.isTop() || this.isManagerOf('clientservice') ? this.teamOf('clientservice') : [this.me().k]).map(k => ({v:k,l:this.av(k).n}))},{k:'src',l:'Came in by',opts:O(SOURCES)},{k:'v',l:'Estimated value (TZS M)',type:'number',ph:'e.g. 80'},{k:'venue',l:'Venue',ph:'e.g. Serena Hotel, Dar es Salaam'},{k:'setupDate',l:'Setup date',type:'date'},{k:'pax',l:'Pax (number of guests)',im:'numeric',ph:'e.g. 250'},{k:'contact',l:'Contact person',ph:'Name and phone'},{k:'note',l:'Notes',ph:'What was asked, deadlines, budget'}]},
       customer:{title:'Add client',sub:'Everything an invoice needs about the client. The PO number, PO date and vendor number come later, per project.',submit:'Add client',wide:true,fields:[{k:'n',l:'Company name',ph:'e.g. CRDB Bank PLC',req:1},{k:'contact',l:'Contact person',ph:'Name'},{k:'title',l:'Contact title',ph:'e.g. Head of Marketing'},{k:'phone',l:'Phone',ph:'+255 7xx xxx xxx'},{k:'email',l:'Email',ph:'name@company.co.tz'},{k:'tin',l:'TIN',ph:'100-000-000'},{k:'vrn',l:'VRN',ph:'10-000000-X'},{k:'address',l:'Physical address',ph:'Street, building, area'},{k:'box',l:'P.O. Box',ph:'e.g. P.O. Box 268'},{k:'city',l:'City',ph:'Dar es Salaam'},{k:'owner',l:'Account owner',opts:this.teamOf('clientservice').map(k => ({v:k,l:this.av(k).n}))}]},
+      leadEdit:{title:'Edit lead',sub:'Fix the client name, what they need, the estimated value, the event details or the contact. The change is noted on the lead.',submit:'Save changes',fields:[{k:'c',l:'Client',ph:'Company name',req:1},{k:'t',l:'What do they need?',ph:'e.g. Roadshow in 6 regions',req:1},{k:'v',l:'Estimated value (TZS M)',ph:'e.g. 80'},{k:'venue',l:'Venue',ph:'e.g. Serena Hotel, Dar es Salaam'},{k:'setupDate',l:'Setup date',type:'date'},{k:'pax',l:'Pax (number of guests)',im:'numeric',ph:'e.g. 250'},{k:'contact',l:'Contact person',ph:'Name and phone'},{k:'src',l:'Came in by',opts:O(SOURCES)}]},
       brief:{title:'Send brief to Creative',sub:'The Creative lead receives it and assigns a designer. You are told when artwork goes to the client.',submit:'Send brief',fields:[{k:'t',l:'What is needed',ph:'e.g. Stage backdrop and 3 roll-up banners',req:1},{k:'p',l:'Project',opts:PO},{k:'place',l:'For',opts:O(['Indoor event','Outdoor event','Print','Digital'])},{k:'note',l:'Brief memo',ph:'Theme, sizes, client wishes, deadlines'},{k:'due',l:'Needed by',ph:'e.g. Fri 21'}]},
       reqProject:{title:'Project request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'amt',l:'Amount (TZS)',type:'number',ph:'300000',req:1},{k:'cat',l:'Category',opts:O(['Team','Operations','Supplies'])},{k:'p',l:'Project',opts:PO},{k:'purpose',l:'Purpose',ph:'What is the money for?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'},...this.payFields()]},
       reqInternal:{title:'Internal office request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'cat',l:'Category',opts:O(INTERNAL_CATS),req:1},{k:'title',l:'Title',ph:'e.g. Office internet, May',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'150000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for and why?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'},...(this.fl().allocs.some(a => a.to.indexOf('office:') === 0) ? [{k:'alloc',l:'From the office float',opts:this.fl().allocs.filter(a => a.to.indexOf('office:') === 0).map(a => ({v:a.to,l:a.to.slice(7) + ' · ' + this.fmtT(this.allocUse(a).left) + ' left'}))}] : []),...this.payFields()]},
       reqEmergency:{title:'Emergency request',sub:'Goes to GM → Management → Finance pays. Use only when it cannot wait.',submit:'Submit emergency',fields:[{k:'title',l:'Title',ph:'e.g. Generator repair on site',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'250000',req:1},{k:'p',l:'Project',opts:[{v:'',l:'Not for a project'}, ...PO,...this.payFields()]},{k:'purpose',l:'What happened, and what is it for?',ph:'Explain the emergency',req:1}]},
       reqMgmt:{title:'Management request',sub:'Finance checks, then pays.',submit:'Submit request',fields:[{k:'title',l:'Title',ph:'e.g. Client meeting expenses',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'500000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for?',req:1},...this.payFields()]},
       lead:{title:'New lead',sub:'Leads move Lead → Qualified → Proposal → Negotiation → Won.',submit:'Add lead',fields:[{k:'c',l:'Client',ph:'Company name',req:1},{k:'t',l:'Opportunity',ph:'e.g. Product launch event',req:1},{k:'v',l:'Estimated value (TZS M)',type:'number',ph:'80'},{k:'src',l:'Source',opts:O(['Website','Referral','Tender','Existing client','Walk-in'])}]},
-      project:{title:'New project',sub:'Starts at the brief. Operations sets the Project Manager, budget and value later.',submit:'Create project',fields:[{k:'client',l:'Client',opts:(this.state.customers || []).map(c => ({v:c.n,l:c.n})),req:1},{k:'name',l:'Project name',ph:'e.g. Brand activation',req:1},{k:'due',l:'Deadline',ph:'e.g. 30 Oct'}]},
+      project:{title:'New project',sub:'Starts at the brief. Operations sets the Project Manager, budget and value later. A new client? Choose “+ New client” and add their details here.',submit:'Create project',fields:[{k:'client',l:'Client',opts:[{v:NEW_CLIENT,l:'+ New client'}, ...(this.state.customers || []).map(c => ({v:c.n,l:c.n}))],req:1,kind:'pick'},
+        ...[{k:'nc_n',l:'New client · company name',ph:'e.g. Azam Media Ltd',req:1},{k:'nc_contact',l:'Contact person',ph:'Name'},{k:'nc_phone',l:'Phone',ph:'+255 7xx xxx xxx'},{k:'nc_email',l:'Email',ph:'name@company.co.tz'},{k:'nc_tin',l:'TIN',ph:'100-000-000'},{k:'nc_vrn',l:'VRN',ph:'10-000000-X'},{k:'nc_box',l:'P.O. Box',ph:'e.g. P.O. Box 268'},{k:'nc_city',l:'City',ph:'Dar es Salaam'}].map(x => Object.assign(x, {when:fm => fm.client === NEW_CLIENT})),{k:'name',l:'Project name',ph:'e.g. Brand activation',req:1},{k:'due',l:'Deadline',ph:'e.g. 30 Oct'},{k:'venue',l:'Venue',ph:'e.g. Mlimani City Hall'},{k:'setupDate',l:'Setup date',type:'date'},{k:'pax',l:'Pax (number of people)',type:'number',ph:'e.g. 250'}]},
       issue:{title:'Issue stock',sub:'',submit:'Issue from store',fields:[{k:'q',l:'Quantity',type:'number',ph:'1',req:1},{k:'p',l:'For project',opts:PO},{k:'who',l:'Collected by',opts:PP}]},
       receive:{title:'Receive stock',sub:'',submit:'Receive into store',fields:[{k:'q',l:'Quantity received',type:'number',ph:'10',req:1},{k:'sup',l:'Supplier',ph:'e.g. Chapa Supplies'}]},
       invoice:{title:'New invoice',sub:'Saved as a draft until you send it.',submit:'Create invoice',fields:[{k:'p',l:'Project',opts:PO},{k:'v',l:'Amount (TZS M)',type:'number',ph:'25',req:1},{k:'due',l:'Due date',ph:'e.g. 15 Oct'}]},
@@ -570,12 +581,14 @@ export default class TrinityApp extends Logic {
     const m = Object.assign({act}, defs[act], preset && preset._meta ? preset._meta : {});
     const form = {}; m.fields.forEach(f => { form[f.k] = f.opts ? f.opts[0].v : ''; });
     Object.assign(form, preset || {}); delete form._meta;
+    // New project: the client is chosen on purpose (no silent default); with no clients yet it starts on "+ New client".
+    if (act === 'project' && !(preset && preset.client)) form.client = (this.state.customers || []).length ? '' : NEW_CLIENT;
     this.setState({modal:m, form, modalErr:'', cmd:false, menu:false});
   }
   submitModal() {
     const s = this.state, m = s.modal, f = s.form;
     for (const fd of m.fields) {
-      if (fd.type === 'file') continue;
+      if (fd.type === 'file' || (fd.when && !fd.when(f))) continue;
       const val = String(f[fd.k] == null ? '' : f[fd.k]).trim();
       if (fd.req && !val) { this.setState({modalErr:fd.l + ' is required.'}); return; }
       if (fd.type === 'number' && val && !(+val > 0)) { this.setState({modalErr:fd.l + ' must be a number above 0.'}); return; }
@@ -585,12 +598,22 @@ export default class TrinityApp extends Logic {
     const P = this.proj(f.p);
     if (m.act === 'task') this.createTask(f);
     if (m.act === 'brief') this.createBrief(f);
-    if (m.act === 'work') this.newWork(f);
-    if (m.act === 'customer') this.addCustomer(f);
+    if (m.act === 'work') { const id = this.newWork(f); if (typeof id !== 'string' || id[0] !== 'L') { this.setState({modalErr:id}); return; } }
+    if (m.act === 'customer' && f.id) { const e = this.updateCustomer(f); if (e) { this.setState({modalErr:e}); return; } }
+    else if (m.act === 'customer') this.addCustomer(f);
+    if (m.act === 'leadEdit') { const e = this.updateLead(f); if (e) { this.setState({modalErr:e}); return; } }
     if (m.act === 'req') { const next = {project:'reqProject', internal:'reqInternal', emergency:'reqEmergency', management:'reqMgmt'}[f.type] || 'reqProject'; const keep = Object.assign({who:f.who}, f.p ? {p:f.p} : {}); this.setState({modal:null}); setTimeout(() => this.openModal(next, keep), 0); return; }
     if (/^req(Project|Internal|Emergency|Mgmt)$/.test(m.act)) { const pi = this.payInfo(f); if (pi.error) { this.setState({modalErr:pi.error}); return; } }
     if (/^req(Project|Internal|Emergency|Mgmt)$/.test(m.act)) this.createRequest(Object.assign({}, f, {type:{reqProject:'project', reqInternal:'internal', reqEmergency:'emergency', reqMgmt:'management'}[m.act]}));
     if (m.act === 'lead') { this.setState(x => ({leads:[{id:'L'+Date.now(),c:f.c,t:f.t,v:+f.v||0,s:0,src:f.src}, ...x.leads]})); this.toast('Lead added · ' + f.c); this.log('users','blue','New lead · ' + f.c, f.t); }
+    // A new client typed in the New project form is added to the clients first (or reused if the name exists).
+    if (m.act === 'project' && f.client === NEW_CLIENT) {
+      const n = String(f.nc_n || '').trim(), have = (s.customers || []).find(c => c.n.toLowerCase() === n.toLowerCase());
+      if (!have) this.addCustomer({ n, contact:f.nc_contact, phone:f.nc_phone, email:f.nc_email, tin:f.nc_tin, vrn:f.nc_vrn, box:f.nc_box, city:f.nc_city, owner:this.me().k });
+      const id = this.newProject(Object.assign({}, f, { client: have ? have.n : n }));
+      if (typeof id === 'string' && id.indexOf('PRJ') === 0) { this.setState({modal:null}); setTimeout(() => this.go('project',{projectId:id}), 50); return; }
+      this.setState({modalErr:id}); return;
+    }
     if (m.act === 'project') { const id = this.newProject(f); if (typeof id === 'string' && id.indexOf('PRJ') === 0) setTimeout(() => this.go('project',{projectId:id}), 50); }
     if (m.act === 'issue') { const q = Math.max(0, +f.q || 0); this.setState(this.stockChange([{sku:f.sku, qty:-q, type:'issue'}], 'Direct issue · ' + this.av(f.who).n, f.p, '')); this.toast('Issued ' + q + ' ' + f.u + ' of ' + f.n + ' to ' + P.client); this.log('package','dark','Store issued ' + q + ' ' + f.u + ' · ' + f.n, P.name + ' · ' + this.av(f.who).first); }
     if (m.act === 'receive') { const q = Math.max(0, +f.q || 0); this.setState(this.stockChange([{sku:f.sku, qty:q, type:'receipt'}], 'Received' + (f.sup ? ' · ' + f.sup : ''), '', '')); this.toast('Received ' + q + ' ' + f.u + ' · ' + f.n); this.log('package','green','Stock received · ' + f.n, q + ' ' + f.u + (f.sup ? ' from ' + f.sup : '')); }
@@ -632,6 +655,20 @@ export default class TrinityApp extends Logic {
   }
 
   canPay() { const role = this.state.role || 'ceo'; return role === 'ceo' || role === 'finance'; }
+  // Privacy of money requests. Management, the GM and the PA (who follows Management's approvals) see every
+  // request. Everyone else sees only their own requests (asked by them or for them) and the ones waiting for
+  // their approval right now. Finance also sees what it must verify, pay and reconcile: requests at the
+  // Finance step, approved ones waiting for payment and paid ones.
+  seesAllReqs() { return ['ceo', 'gm', 'pa'].includes(this.state.role || 'ceo'); }
+  reqWaitingOnMe(r) { return !!r && r.st === 'pending' && (this.canAct(r) || this.approverAt(r, r.step) === this.me().k); }
+  canSeeReq(r) {
+    if (!r) return false;
+    if (this.seesAllReqs()) return true;
+    const me = this.me().k;
+    if (r.who === me || r.by === me || this.reqWaitingOnMe(r)) return true;
+    return (this.state.role || 'ceo') === 'finance' && (r.st === 'approved' || r.st === 'paid' || (r.st === 'pending' && r.step === 3));
+  }
+  visibleReqs(s) { return ((s || this.state).reqs || []).filter(r => this.canSeeReq(r)); }
   // Requests up to this amount need only the Project Manager and Finance (0 = every request takes all steps).
   // Project stage 1–5 (older projects stored 1–15).
   stageOf(p) { return FLOW.indexOf(this.flowOf(p)) + 1; }
@@ -661,13 +698,13 @@ export default class TrinityApp extends Logic {
     const id = this.nextId('REQ', s.reqs), draft = {type, amt};
     const step = this.nextStep(draft, 0), log = [this.now()];
     for (let i = 1; i < step; i++) log.push('Not needed');
-    const r = {id, type, who, amt, pay:(this.payInfo(f).pay || null), cat:type === 'project' ? (f.cat || 'Operations') : type === 'internal' && f.cat ? f.cat : REQ_TYPES[type].l.replace(' request', ''), title:(f.title || '').trim(), purpose:(f.purpose || '').trim(), p:f.p || '', alloc:f.alloc || '', need:f.need || (type === 'emergency' ? 'Today' : 'This week'), step, st:step >= 5 ? 'approved' : 'pending', log};
+    const r = {id, type, who, ...(who !== this.me().k ? {by:this.me().k} : {}), amt, pay:(this.payInfo(f).pay || null), cat:type === 'project' ? (f.cat || 'Operations') : type === 'internal' && f.cat ? f.cat : REQ_TYPES[type].l.replace(' request', ''), title:(f.title || '').trim(), purpose:(f.purpose || '').trim(), p:f.p || '', alloc:f.alloc || '', need:f.need || (type === 'emergency' ? 'Today' : 'This week'), step, st:step >= 5 ? 'approved' : 'pending', log};
     this.setState(x => ({reqs:[r, ...x.reqs], reqSel:id}));
     const to = step >= 5 ? this.roleKey('finance', 'RT') : this.approverAt(r, step);
     this.remind(to, step >= 5 ? id + ' is ready to pay' : id + ' needs your approval', 'requests', 'banknote', this.av(who).n + ' · ' + this.fmtT(amt));
     this.smsTo(to, (step >= 5 ? id + ' is ready to pay. ' : id + ' needs your approval. ') + this.av(who).n + ' requests ' + this.fmtT(amt) + ' - ' + this.reqWhat(r) + '. Open the system to act.');
     this.toast(id + ' submitted · waiting for ' + (step >= 5 ? 'payment' : this.CHAIN[step]));
-    this.log('banknote','amber',this.av(who).first + ' requested ' + this.fmtT(amt), this.reqWhat(r) + ' · ' + id);
+    this.log('banknote','amber',this.av(who).first + ' requested ' + this.fmtT(amt), this.reqWhat(r) + ' · ' + id, id);
     return id;
   }
   // What a request is for, in a few words.
@@ -686,31 +723,38 @@ export default class TrinityApp extends Logic {
     if (ok && last) this.smsTo(r.who, 'Your request ' + r.id + ' for ' + this.fmtT(r.amt) + ' is approved and sent to Finance for payment.');
     if (!ok) this.smsTo(r.who, 'Your request ' + r.id + ' for ' + this.fmtT(r.amt) + ' was not approved (' + this.me().n + '). Open the system for details.');
     this.toast(ok ? r.id + (last ? ' approved · sent to Finance for payment' : (r.step === 3 ? ' verified' : ' approved') + ' · sent to ' + this.CHAIN[n]) : r.id + ' rejected · ' + this.av(r.who).first + ' notified');
-    this.log(ok ? 'check' : 'x', ok ? 'green' : 'red', this.me().n + (ok ? ' approved ' : ' rejected ') + this.fmtT(r.amt), this.reqWhat(r) + ' · ' + r.id);
+    this.log(ok ? 'check' : 'x', ok ? 'green' : 'red', this.me().n + (ok ? ' approved ' : ' rejected ') + this.fmtT(r.amt), this.reqWhat(r) + ' · ' + r.id, r.id);
   }
-  // Finance records what was actually paid (the full amount unless they enter less).
-  payReq(r, paid) {
+  // Finance records what was actually paid (the full amount unless they enter less), and the transaction
+  // charges of sending it (bank or mobile money fee). Charges are a company cost: they go in the cash book
+  // as "Transaction charges" and are not added to the person's float.
+  payReq(r, paid, charges) {
     const t = this.now(), amt = paid == null || String(paid).trim() === '' ? r.amt : Math.round(+String(paid).replace(/[^0-9.]/g, '') || 0);
     if (!(amt > 0)) { this.toast('Enter the amount paid'); return 'Enter the amount paid'; }
     if (amt > r.amt) { this.toast('More than was requested (' + this.fmtT(r.amt) + ')'); return 'More than was requested'; }
-    this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, {step:6,st:'paid',paidOn:dayKey(0),paidAmt:amt,paidBy:this.me().k,log:[...q.log,t]}) : q), staff:x.staff.map(p => p.k === r.who ? Object.assign({}, p, {fl:p.fl + amt}) : p)}));
-    this.toast('Paid ' + this.fmtT(amt) + ' · float opened for ' + this.av(r.who).n);
+    const fee = parseFee(charges);
+    if (fee < 0) { this.toast('Transaction charges must be a number'); return 'Transaction charges must be a number'; }
+    this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, {step:6,st:'paid',paidOn:dayKey(0),paidAmt:amt,paidBy:this.me().k,log:[...q.log,t]}, fee ? {payFee:fee} : {}) : q), staff:x.staff.map(p => p.k === r.who ? Object.assign({}, p, {fl:p.fl + amt}) : p)}));
+    this.toast('Paid ' + this.fmtT(amt) + ' · float opened for ' + this.av(r.who).n + (fee ? ' · charges ' + this.fmtT(fee) : ''));
     this.remind(r.who, r.id + ' paid · ' + this.fmtT(amt), 'requests', 'wallet', (amt < r.amt ? 'Part of ' + this.fmtT(r.amt) + ' · ' : '') + 'bring the receipts within 3 days');
     this.smsTo(r.who, 'Your request ' + r.id + ' has been paid: ' + this.fmtT(amt) + (amt < r.amt ? ' of ' + this.fmtT(r.amt) : '') + (r.pay && r.pay.by ? ' by ' + r.pay.by : '') + '. Please bring the receipts within 3 days.');
-    this.log('wallet','green','Float opened · ' + this.fmtT(amt), this.av(r.who).n + ' · receipts due in 3 days');
+    this.log('wallet','green','Float opened · ' + this.fmtT(amt), this.av(r.who).n + ' · receipts due in 3 days', r.id);
     return '';
   }
   answer(q) {
     const s = this.state; q = q.toLowerCase();
     const list = a => a.join('\n• ');
     if (/budget|\bover\b|margin|profit/.test(q)) { const o = s.projects.filter(p => p.st !== 'done' && p.spent > p.bud * 0.6).sort((a,b) => b.spent/b.bud - a.spent/a.bud).slice(0,4); return 'Budget usage, highest first:\n• ' + list(o.map(p => p.client + ' · ' + p.name + ' — ' + Math.round(p.spent/p.bud*100) + '% of ' + this.fmtM(p.bud))) + '\n\nPwani Beverages is over budget; I recommend a cost review before the Wednesday deadline.'; }
-    if (/approv|pending|request|money/.test(q)) { const r = s.reqs.filter(x => x.st === 'pending' && x.step === 4); const tot = r.reduce((a,b) => a + b.amt, 0); return r.length ? r.length + ' requests are waiting for you (' + this.fmtT(tot) + '):\n• ' + list(r.map(x => this.av(x.who).first + ' — ' + this.fmtT(x.amt) + ' · ' + x.cat + ' · needed ' + x.need)) : 'Nothing is waiting for your approval.'; }
+    // Only requests this person may see and that are waiting for them (see canSeeReq).
+    const role = s.role || 'ceo', waiting = this.visibleReqs(s).filter(x => x.st === 'pending' && this.canAct(x) && (role !== 'ceo' || x.step === 4));
+    if (/approv|pending|request|money/.test(q)) { const r = waiting; const tot = r.reduce((a,b) => a + b.amt, 0); return r.length ? r.length + ' requests are waiting for you (' + this.fmtT(tot) + '):\n• ' + list(r.map(x => this.av(x.who).first + ' — ' + this.fmtT(x.amt) + ' · ' + x.cat + ' · needed ' + x.need)) : 'Nothing is waiting for your approval.'; }
     if (/stock|inventory|material|low|vinyl|ink/.test(q)) { const l = s.stock.filter(i => i.q < i.min); return l.length + ' items are below minimum:\n• ' + list(l.map(i => i.n + ' — ' + i.q + ' ' + i.u + ' (min ' + i.min + ')')); }
-    if (/float/.test(q)) { const f = s.staff.filter(p => p.fl > 0); return 'Open staff floats total ' + this.fmtT(f.reduce((a,b) => a + b.fl, 0)) + ':\n• ' + list(f.map(p => this.av(p.k).n + ' — ' + this.fmtT(p.fl))) + '\n\nPeter Laizer\u2019s float is 12 days old with no receipts.'; }
+    // Floats of other people are for Management, the GM, the PA and Finance; everyone else hears about their own.
+    if (/float/.test(q)) { const allF = ['ceo', 'gm', 'pa', 'finance'].includes(role), f = s.staff.filter(p => p.fl > 0 && (allF || p.k === this.me().k)); if (!f.length) return 'No open floats.'; return 'Open staff floats total ' + this.fmtT(f.reduce((a,b) => a + b.fl, 0)) + ':\n• ' + list(f.map(p => this.av(p.k).n + ' — ' + this.fmtT(p.fl))) + (allF ? '\n\nPeter Laizer\u2019s float is 12 days old with no receipts.' : ''); }
     if (/report|staff|missing|who/.test(q)) { const m = s.staff.filter(p => !p.rep); return m.length ? m.length + ' staff have not submitted yesterday\u2019s report:\n• ' + list(m.map(p => this.av(p.k).n + ' · ' + p.role)) : 'Everyone has submitted their report.'; }
     if (/risk|late|delay/.test(q)) { const r = s.projects.filter(p => p.st === 'risk' || p.st === 'late'); return r.length + ' projects need attention:\n• ' + list(r.map(p => p.client + ' · ' + p.name + ' — ' + this.ST[p.st].l + ', due ' + p.due)); }
     if (/invoice|receiv|owe|overdue|cash/.test(q)) { const o = s.invoices.filter(i => i.st === 'overdue'); return 'Overdue invoices total ' + this.fmtM(o.reduce((a,b) => a + b.v, 0)) + ':\n• ' + list(o.map(i => i.c + ' — ' + this.fmtM(i.v) + ' · ' + i.due)); }
-    const act = s.projects.filter(p => p.st !== 'done').length, pend = s.reqs.filter(x => x.st === 'pending' && x.step === 4).length;
+    const act = s.projects.filter(p => p.st !== 'done').length, pend = waiting.length;
     return 'Today at a glance: ' + act + ' active projects, ' + pend + ' approvals waiting for you, ' + s.stock.filter(i => i.q < i.min).length + ' stock items below minimum, and ' + s.staff.filter(p => !p.rep).length + ' missing staff reports. Try asking about budgets, floats, stock or overdue invoices.';
   }
   askAI(q) {
@@ -722,4 +766,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, targetVals, teamVals, attendanceVals, memoVals, officeVals, reportingVals, pettyVals, briefingVals, payrollVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods, briefingMethods, payrollMethods, targetMethods, teamMethods, attendanceMethods, memoMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, targetVals, teamVals, attendanceVals, myCheckinVals, memoVals, officeVals, reportingVals, pettyVals, briefingVals, payrollVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods, briefingMethods, payrollMethods, targetMethods, teamMethods, attendanceMethods, memoMethods);

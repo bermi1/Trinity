@@ -38,7 +38,7 @@ function InvoiceRow({ i, F }) {
   return (
     <li className={'fh-inv' + (i.sel ? ' is-open' : '')} data-invoice={i.id}>
       <button type="button" className="fh-inv-row" onClick={i.open} aria-expanded={i.sel}>
-        <span className="fh-inv-id">{i.id}</span>
+        <span className="fh-inv-id">{i.no}</span>
         <span className="fh-inv-c"><b>{i.c}</b><small>{i.proj || '—'}</small></span>
         <span className="fh-inv-bar" aria-hidden="true"><i style={{ width: i.pct + '%' }} /></span>
         <span className="fh-inv-amt"><b>{i.totalT}</b><small>{i.paid ? i.dueT + ' due' : i.dueOn}</small></span>
@@ -78,7 +78,7 @@ const EMPTY_LINE = { item: '', n: '1', rate: '', days: '1', events: '1' };
 function Editor({ F }) {
   const d = F.draft;
   const [f, setF] = useState(() => d ? Object.assign({}, d, { lines: d.lines.map(l => ({ item: l.item, n: String(l.n), rate: String(l.rate), days: String(l.days), events: String(l.events) })) })
-    : { c: '', tin: '', vrn: '', p: '', title: '', po: '', poDate: '', vendor: '', signer: 'ED', due: '30 days', admin: 15, lines: [Object.assign({}, EMPTY_LINE)] });
+    : { no: '', c: '', tin: '', vrn: '', p: '', title: '', po: '', poDate: '', vendor: '', signer: 'ED', due: '30 days', admin: 15, lines: [Object.assign({}, EMPTY_LINE)] });
   const [err, setErr] = useState('');
   const set = (k, v) => setF(x => Object.assign({}, x, { [k]: v }));
   const setLine = (i, k, v) => setF(x => Object.assign({}, x, { lines: x.lines.map((l, j) => (j === i ? Object.assign({}, l, { [k]: v }) : l)) }));
@@ -87,8 +87,9 @@ function Editor({ F }) {
   return (
     <div className="fm-back" onClick={F.closeEdit}>
       <div className="fm fh-ed" role="dialog" aria-label={d ? 'Edit ' + d.id : 'New invoice'} onClick={e => e.stopPropagation()}>
-        <header className="fm-head"><div><h2>{d ? 'Edit ' + d.id : 'New invoice'}</h2><p>Signed by the person you choose. Their signature and the stamp appear once they approve.</p></div><button type="button" className="fm-x" onClick={F.closeEdit} aria-label="Close">×</button></header>
+        <header className="fm-head"><div><h2>{d ? 'Edit ' + (d.no || d.id) : 'New invoice'}</h2><p>Signed by the person you choose. Their signature and the stamp appear once they approve.</p></div><button type="button" className="fm-x" onClick={F.closeEdit} aria-label="Close">×</button></header>
         <div className="fm-body">
+          <label className="ff"><span className="ff-l">Invoice number</span><input value={f.no || ''} onChange={e => set('no', e.target.value)} placeholder={d ? d.id : F.nextNo} aria-label="Invoice number" /><small className="k-sub">Leave empty to use {d ? d.id : F.nextNo}. Use your own numbering if you need to (e.g. TMS/2026/045).</small></label>
           <div className="ff" data-field="Client"><span className="ff-l">Client<em>*</em></span>
             <div className="ff-chips">{F.customers.map(c => <button key={c.v} type="button" className={f.c === c.v ? 'is-on' : ''} onClick={() => pickClient(c.v)}>{c.l}</button>)}</div>
           </div>

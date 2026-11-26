@@ -52,15 +52,49 @@ function Report({ r, sent }) {
   );
 }
 
+// Daily reports calendar: a month of days, each marked by whether the daily reports came in.
+function Calendar({ C }) {
+  return (
+    <section className="rp-cal" aria-label="Daily reports calendar">
+      <header className="rp-cal-head">
+        <button type="button" className="rp-cal-nav" onClick={C.prev} aria-label="Previous month">‹</button>
+        <h3>{C.label}</h3>
+        <button type="button" className="rp-cal-nav" onClick={C.next} disabled={!C.canNext} aria-label="Next month">›</button>
+        <button type="button" className="rp-cal-today" onClick={C.thisMonth}>Today</button>
+      </header>
+      {C.people.length ? (
+        <label className="rp-cal-who">Person
+          <select value={C.who} onChange={e => C.setWho(e.target.value)} aria-label="Person">{C.people.map(p => <option key={p.v} value={p.v}>{p.l}</option>)}</select>
+        </label>
+      ) : null}
+      <p className="k-sub">{C.summary}</p>
+      <div className="rp-cal-grid" role="grid">
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => <span key={d} className="rp-cal-dow">{d}</span>)}
+        {C.cells.map((c, i) => c ? (
+          <button key={c.key} type="button" data-day={c.key} className={'rp-cal-day is-' + c.st + (c.on ? ' is-on' : '') + (c.today ? ' is-today' : '') + (c.future ? ' is-future' : '')} onClick={c.pick} aria-pressed={c.on} aria-label={c.key + (c.n ? ' · ' + c.n + ' report' + (c.n > 1 ? 's' : '') : '')}>
+            <b>{c.d}</b>{c.n ? <small>{C.receive && C.who === 'all' ? c.n + '/' + c.of : '✓'}</small> : null}
+          </button>
+        ) : <span key={'x' + i} />)}
+      </div>
+      <div className="rp-cal-legend"><span className="is-full">Sent</span>{C.receive && C.who === 'all' ? <span className="is-part">Some sent</span> : null}<span className="is-miss">Not sent</span></div>
+      <h4 className="rp-cal-dayh">{C.selLabel}</h4>
+      {C.reports.length ? <ul className="rp-list">{C.reports.map(r => <Report key={r.id} r={r} sent={r.mine} />)}</ul> : <Empty>No daily report on this day.</Empty>}
+      {C.missing.length && C.receive ? <p className="rp-cal-miss"><b>Not sent:</b> {C.missing.join(', ')}</p> : null}
+      {!C.receive && C.today && !C.reports.length && C.canSend ? <Btn kind="dark" onClick={C.sendToday}>Send today’s report</Btn> : null}
+    </section>
+  );
+}
+
 // Reports: send yours up the line, read what was sent to you.
 export default function ReportingPage({ v }) {
   const R = v.RPT;
   // Staff only send reports: their page has Sent and New report, no Received.
-  const tabs = [...(R.canReceive ? [['inbox', 'Received' + (R.unread ? ' · ' + R.unread + ' new' : '')]] : []), ...(R.canSend ? [['sent', 'Sent'], ['new', 'New report']] : [])];
+  const tabs = [['calendar', 'Calendar'], ...(R.canReceive ? [['inbox', 'Received' + (R.unread ? ' · ' + R.unread + ' new' : '')]] : []), ...(R.canSend ? [['sent', 'Sent'], ['new', 'New report']] : [])];
   return (
     <>
       <PageHead kicker="Reporting" title="Reports" sub="Daily, weekly and monthly reports go up the line: staff to their head, heads and Finance to the GM and Management, the GM to Management." />
       <div className="rc-smart" role="tablist">{tabs.map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={R.tab === k} className={R.tab === k ? 'is-on' : ''} onClick={() => R.setTab(k)}><span>{l}</span></button>)}</div>
+      {R.tab === 'calendar' ? <Calendar C={R.cal} /> : null}
       {R.tab === 'new' && R.canSend ? <NewReport R={R} onDone={() => R.setTab('sent')} /> : null}
       {R.tab === 'inbox' ? (R.inbox.length ? <ul className="rp-list">{R.inbox.map(r => <Report key={r.id} r={r} />)}</ul> : <Empty>No reports yet.</Empty>) : null}
       {R.tab === 'sent' ? (R.sent.length ? <ul className="rp-list">{R.sent.map(r => <Report key={r.id} r={r} sent />)}</ul> : <Empty>You have not sent a report yet.</Empty>) : null}

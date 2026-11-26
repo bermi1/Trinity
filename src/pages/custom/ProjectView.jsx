@@ -67,6 +67,37 @@ function PurchaseOrder({ P }) {
   );
 }
 
+// Venue, setup date and pax: shown to everyone on the project; changed by those who manage it.
+function EventDetails({ E }) {
+  const [edit, setEdit] = useState(false);
+  const [f, setF] = useState({ venue: E.venue, setupDate: E.setupDate, pax: E.paxN ? String(E.paxN) : '' });
+  const [err, setErr] = useState('');
+  const set = (k, v) => { setErr(''); setF(x => Object.assign({}, x, { [k]: v })); };
+  const open = () => { setF({ venue: E.venue, setupDate: E.setupDate, pax: E.paxN ? String(E.paxN) : '' }); setErr(''); setEdit(true); };
+  return (
+    <section className="rc-sec" aria-label="Event details">
+      <h3><span className="rc-dot" style={{ background: '#B49A5A' }} />Event details{E.canEdit && !edit ? <button type="button" className="td-start" style={{ marginLeft: 'auto' }} onClick={open} aria-label="Edit event details">Edit</button> : null}</h3>
+      {edit ? (
+        <div className="pn-form">
+          <div className="fh-three">
+            <label className="ff"><span className="ff-l">Venue</span><input value={f.venue} onChange={e => set('venue', e.target.value)} placeholder="e.g. Mlimani City Hall" maxLength={200} /></label>
+            <label className="ff"><span className="ff-l">Setup date</span><input type="date" value={f.setupDate} onChange={e => set('setupDate', e.target.value)} /></label>
+            <label className="ff"><span className="ff-l">Pax (number of people)</span><input inputMode="numeric" value={f.pax} onChange={e => set('pax', e.target.value.replace(/[^\d]/g, ''))} placeholder="e.g. 250" /></label>
+          </div>
+          {err ? <div className="fm-err" role="alert">{err}</div> : null}
+          <div className="fh-row"><button type="button" className="me-cancel" onClick={() => setEdit(false)}>Cancel</button><button type="button" className="me-save" onClick={() => { const m = E.save(f); if (m) setErr(m); else setEdit(false); }}>Save event details</button></div>
+        </div>
+      ) : (
+        <dl className="pv-event">
+          <div><dt>Venue</dt><dd className={E.venue ? '' : 'is-empty'}>{E.venue || 'Not set'}</dd></div>
+          <div><dt>Setup date</dt><dd className={E.setup ? '' : 'is-empty'}>{E.setup || 'Not set'}</dd></div>
+          <div><dt>Pax</dt><dd className={E.pax ? '' : 'is-empty'}>{E.pax ? E.pax + ' people' : 'Not set'}</dd></div>
+        </dl>
+      )}
+    </section>
+  );
+}
+
 function Overview({ P, M }) {
   return (
     <div className="rc-sections">
@@ -212,6 +243,7 @@ export default function ProjectView({ v }) {
             <Field l="Due">{P.due}</Field>
             <Field l="Stage">{P.stageLabel}</Field>
           </dl>
+          {P.event ? <div className="pv-event-wrap"><EventDetails key={P.event.venue + P.event.setupDate + P.event.paxN} E={P.event} /></div> : null}
 
           <div className="rc-smart" role="tablist">
             {P.tabs.map(t => (

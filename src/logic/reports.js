@@ -30,16 +30,21 @@ export const reportChannel = {
     this.toast('Report sent to ' + to.map(k => this.av(k).first).join(' and '));
     return '';
   },
-  // Who reads reports: Management, the GM and the PA see every report; a head of department sees the reports
-  // of their own department's staff (and anything sent to them); everyone else only sends and sees what they sent.
+  // Who reads reports: Management, the GM and the PA see every report. Everyone else sees the reports they
+  // sent and the reports addressed to them (a head of department receives what their staff send them) — never
+  // a colleague's report that was sent to someone else.
   seesAllReports() { return ['ceo', 'gm', 'pa'].includes(this.state.role || 'ceo'); },
   headOfDept() { const d = this.myDept(); return d && this.isManagerOf(d) ? d : null; },
-  canReceiveReports() { return this.seesAllReports() || !!this.headOfDept(); },
+  canReceiveReports() {
+    if (this.seesAllReports() || this.headOfDept()) return true;
+    const me = this.me().k;
+    return (this.state.reports || []).some(r => r.by !== me && (r.to || []).includes(me));
+  },
+  // Whether report r shows in k's inbox (k is the signed-in person; their own reports are under Sent).
   reportVisibleTo(r, k) {
-    if (r.by === k) return false;
+    if (!r || r.by === k) return false;
     if (this.seesAllReports()) return true;
-    const d = this.headOfDept();
-    return !!d && (r.to.includes(k) || this.deptOf(r.by) === d || r.dept === d);
+    return (r.to || []).includes(k);
   },
   readReport(id) {
     const me = this.me().k, r = (this.state.reports || []).find(x => x.id === id);
@@ -67,7 +72,7 @@ export function reportingVals(s) {
   const row = r => {
     const a = this.av(r.by), read = Object.keys(r.readBy || {});
     return { id: r.id, by: a.n, bi: a.i, bc: a.c, dept: (DEPTS[r.dept] || {}).l || '', kind: (REPORT_KINDS.find(k => k[0] === r.kind) || [0, 'Report'])[1], title: r.title, at: r.at, time: r.time || '',
-      summary: r.summary, issues: r.issues, next: r.next, to: r.to.map(k => this.av(k).n).join(', '), unread: r.by !== me && !(r.readBy || {})[me],
+      summary: r.summary, issues: r.issues, next: r.next, to: (r.to || []).map(k => this.av(k).n).join(', '), unread: r.by !== me && !(r.readBy || {})[me],
       readBy: read.map(k => this.av(k).first + ' · ' + r.readBy[k]).join(', '),
       file: r.file ? { name: r.file.name, open: () => this.openDoc({ n: r.file.name, url: r.file.url, path: r.file.path }) } : null,
       replies: (r.replies || []).map(x => ({ who: this.av(x.by).n, t: x.t, at: x.at, mine: x.by === me })),
@@ -76,9 +81,58 @@ export function reportingVals(s) {
   const inbox = all.filter(r => r.by !== me && this.reportVisibleTo(r, me)).map(row), sent = all.filter(r => r.by === me).map(row);
   const targets = this.reportTargets().map(k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c, ph: a.ph }; });
   const canReceive = this.canReceiveReports();
-  const tab = s.rptTab && (canReceive || s.rptTab !== 'inbox') ? s.rptTab : !canReceive ? (targets.length ? 'new' : 'sent') : (targets.length && !inbox.length ? 'new' : 'inbox');
+  // The calendar is where Reports opens: each day shows whose daily report came in.
+  const tab = s.rptTab && (canReceive || s.rptTab !== 'inbox') ? s.rptTab : 'calendar';
   return { RPT: { inbox: canReceive ? inbox : [], sent, unread: canReceive ? inbox.filter(r => r.unread).length : 0, canReceive, targets, kinds: REPORT_KINDS, canSend: targets.length > 0, send: f => this.sendReport(f),
-    tab, setTab: k => this.setState({ rptTab: k }),
+    tab, setTab: k => this.setState({ rptTab: k }), cal: dailyCalendar.call(this, s, row),
     draft: s.rptDraft || null, clearDraft: () => this.setState({ rptDraft: null }),
     defaultKind: (s.role || 'ceo') === 'finance' ? 'monthly' : (s.role || 'ceo') === 'gm' ? 'daily' : 'weekly' } };
+}
+
+// Daily reports calendar: a month grid. Staff see the days they sent their daily report; Management,
+// the GM and the PA see how many came in each day from everyone, can pick one person, and see who has not
+// sent theirs. A head of department sees the same for their own team, counting only the reports sent to them.
+const pad = n => String(n).padStart(2, '0');
+function dailyCalendar(s, row) {
+  const me = this.me().k, today = dayKey(0), all = (s.reports || []).filter(r => r.kind === 'daily');
+  // People whose daily reports this person follows: everyone for Management, the GM and the PA; a head's own team.
+  const head = this.headOfDept(), receive = this.seesAllReports() || !!head;
+  const people = !receive ? [me] : this.seesAllReports()
+    ? [...new Set([...(s.staff || []).map(p => p.k), ...(this.ROLES.gm ? [this.ROLES.gm.k] : [])].filter(k => k && k !== me))]
+    : this.teamOf(head).filter(k => k !== me);
+  const who = receive && s.rptWho && people.includes(s.rptWho) ? s.rptWho : receive ? 'all' : me;
+  const scope = who === 'all' ? people : [who];
+  const list = all.filter(r => scope.includes(r.by) && (r.by === me || this.reportVisibleTo(r, me)));
+  const month = /^\d{4}-\d{2}$/.test(s.rptMonth || '') ? s.rptMonth : today.slice(0, 7);
+  const [y, m] = month.split('-').map(Number);
+  const first = new Date(y, m - 1, 1), days = new Date(y, m, 0).getDate();
+  const lead = (first.getDay() + 6) % 7; // weeks start on Monday
+  const byDay = {};
+  list.forEach(r => { (byDay[r.at] ||= []).push(r); });
+  const sel = s.rptDay && s.rptDay.slice(0, 7) === month ? s.rptDay : today.slice(0, 7) === month ? today : month + '-01';
+  const cells = [];
+  for (let i = 0; i < lead; i++) cells.push(null);
+  for (let d = 1; d <= days; d++) {
+    const key = month + '-' + pad(d), dow = new Date(y, m - 1, d).getDay(), recs = byDay[key] || [];
+    const senders = new Set(recs.map(r => r.by));
+    const work = dow !== 0 && key <= today;
+    cells.push({ key, d, n: senders.size, of: scope.length, today: key === today, on: key === sel, future: key > today, weekend: dow === 0 || dow === 6,
+      st: !recs.length ? (work && dow !== 6 && key < today ? 'miss' : 'none') : senders.size >= scope.length ? 'full' : 'part',
+      pick: () => this.setState({ rptDay: key }) });
+  }
+  const dayRecs = (byDay[sel] || []).slice().sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  const sentBy = new Set(dayRecs.map(r => r.by));
+  const shift = k => { const d = new Date(y, m - 1 + k, 1); return d.getFullYear() + '-' + pad(d.getMonth() + 1); };
+  const sentDays = cells.filter(c => c && c.n).length, workDays = cells.filter(c => c && !c.future && !c.weekend).length;
+  return {
+    month, label: first.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }), receive, who,
+    prev: () => this.setState({ rptMonth: shift(-1), rptDay: '' }), next: () => this.setState({ rptMonth: shift(1), rptDay: '' }),
+    thisMonth: () => this.setState({ rptMonth: today.slice(0, 7), rptDay: today }), canNext: shift(1) <= today.slice(0, 7),
+    people: receive ? [{ v: 'all', l: 'Everyone' }, ...people.map(k => ({ v: k, l: this.av(k).n }))] : [],
+    setWho: k => this.setState({ rptWho: k }),
+    cells, sel, selLabel: new Date(sel + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
+    reports: dayRecs.map(r => Object.assign(row(r), { mine: r.by === me })), today: sel === today, missing: sel <= today ? scope.filter(k => !sentBy.has(k)).map(k => this.av(k).n) : [],
+    summary: receive ? sentDays + ' of ' + workDays + ' working days with reports' : 'You sent ' + sentDays + ' of ' + workDays + ' working days',
+    canSend: !receive || this.reportTargets().length > 0, sendToday: () => this.setState({ rptTab: 'new' })
+  };
 }

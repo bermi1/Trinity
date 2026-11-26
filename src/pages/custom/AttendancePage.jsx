@@ -1,22 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
-import { readFace, bestMatch, pack } from '../../logic/face';
+import { readFace, bestMatch } from '../../logic/face';
 
 const minsSince = t => { if (!t) return 0; const [h, m] = t.split(':').map(Number), d = new Date(); return d.getHours() * 60 + d.getMinutes() - (h * 60 + m); };
 
 // Staff check-in / check-out on the reception screen, and today's attendance for the GM.
 export default function AttendancePage({ v }) {
   const A = v.ATT;
-  const [q, setQ] = useState(''), [pick, setPick] = useState(null), [msg, setMsg] = useState(null), [cam, setCam] = useState(false), [camErr, setCamErr] = useState(''), [now, setNow] = useState(new Date());
+  const [q, setQ] = useState(''), [msg, setMsg] = useState(null), [cam, setCam] = useState(false), [camErr, setCamErr] = useState(''), [now, setNow] = useState(new Date());
   const video = useRef(null), stream = useRef(null);
   const [faceOn, setFaceOn] = useState(true), [seen, setSeen] = useState(''), [faceErr, setFaceErr] = useState('');
-  const [reg, setReg] = useState(false), [who, setWho] = useState(''), [consent, setConsent] = useState(false), [capMsg, setCapMsg] = useState(''), [capBusy, setCapBusy] = useState(false);
+  const [reg, setReg] = useState(false), [capMsg, setCapMsg] = useState('');
   const busy = useRef(false), streak = useRef({ k: '', n: 0 }), cool = useRef({}), live = useRef(null);
-  live.current = { A, pick, capBusy, reg };
+  live.current = { A, reg };
   // Face check-in: every ~0.9 s, read the face in front of the camera; two matching frames in a row = recognised.
   useEffect(() => {
     if (!cam || !faceOn) return undefined;
     const t = setInterval(async () => {
-      const L = live.current; if (busy.current || !L.A || L.pick || L.capBusy || L.reg || !(L.A.faces || []).length) return;
+      const L = live.current; if (busy.current || !L.A || L.reg || !(L.A.faces || []).length) return;
       const el = video.current; if (!el || !el.videoWidth) return;
       busy.current = true;
       try {
@@ -37,24 +37,6 @@ export default function AttendancePage({ v }) {
     return () => clearInterval(t);
   }, [cam, faceOn]);
   // Register a face: three good frames, a moment apart, saved as numbers only.
-  async function capture() {
-    if (!cam) { setCapMsg('Turn on the camera first'); return; }
-    if (!consent) { setCapMsg('Tick the consent box first'); return; }
-    if (!video.current || !video.current.videoWidth) { setCapMsg('The camera is still starting. Try again in a moment.'); return; }
-    setCapBusy(true); setCapMsg('Loading face check-in… (first time takes a few seconds)');
-    const ds = [];
-    try {
-      for (let i = 0; i < 12 && ds.length < 3; i++) {
-        const f = await readFace(video.current);
-        if (f && f.score > 0.6) { ds.push(pack(f.d)); setCapMsg('Captured ' + ds.length + ' of 3…'); }
-        await new Promise(r => setTimeout(r, 450));
-      }
-      if (ds.length < 3) { setCapMsg('Could not see the face clearly. Face the camera in good light and try again.'); return; }
-      const m = A.saveFace(who, ds, consent);
-      setCapMsg(m || 'Saved. ' + (A.people.find(p => p.k === who) || {}).first + ' can now check in by face.');
-      if (!m) { setWho(''); setConsent(false); }
-    } catch (e) { setCapMsg('Face check-in could not start · ' + (e.message || e)); } finally { setCapBusy(false); }
-  }
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 15000); return () => { clearInterval(t); stopCam(); }; }, []);
   if (!A) return null;
   async function startCam() {
@@ -69,7 +51,6 @@ export default function AttendancePage({ v }) {
     const c = document.createElement('canvas'), w = 240, h = Math.round(el.videoHeight / el.videoWidth * w); c.width = w; c.height = h;
     c.getContext('2d').drawImage(el, 0, 0, w, h); return c.toDataURL('image/jpeg', 0.7);
   }
-  const confirm = () => { const r = A.clock(pick.k, snap()); setPick(null); setQ(''); setMsg(r); setTimeout(() => setMsg(null), 6000); };
   const list = A.people.filter(p => !q || p.n.toLowerCase().includes(q.toLowerCase()));
   return (
     <div className="att">
@@ -87,45 +68,25 @@ export default function AttendancePage({ v }) {
             {camErr ? <small className="att-err">{camErr}</small> : null}
           </div>
           {msg ? <div className={'att-msg' + (msg.error ? ' is-err' : msg.kind === 'out' ? ' is-out' : '')} role="status">{msg.error ? msg.error : msg.kind === 'in' ? <><b>Karibu, {msg.name.split(' ')[0]}!</b> {msg.face ? 'Recognised · ' : ''}Checked in at {msg.time}{msg.late ? ' · late' : ''}</> : <><b>Kwaheri, {msg.name.split(' ')[0]}!</b> {msg.face ? 'Recognised · ' : ''}Checked out at {msg.time} · in since {msg.since}</>}</div> : null}
+          <p className="att-regnote">Check in by looking at the camera; nobody can check in for someone else. No face registered yet? Register it on your own phone: <b>More → My check-in</b>.</p>
           {A.canFaces ? (
             <details className="att-reg" open={reg} onToggle={e => setReg(e.target.open)}>
-              <summary>Register faces · {A.faces.length} of {A.people.length} registered</summary>
-              <p className="att-regnote">Each person agrees first (signed consent form). Only numbers describing the face are saved, never the photo. Turn on the camera, choose the person, tick consent, then capture while they look at the camera.</p>
-              <div className="att-regpick" role="radiogroup" aria-label="Person to register">{A.people.map(p => { const has = A.faces.some(f => f.k === p.k); return <button key={p.k} type="button" role="radio" aria-checked={who === p.k} className={(who === p.k ? 'is-on' : '') + (has ? ' has-face' : '')} onClick={() => { setWho(p.k); setCapMsg(''); }}>{has ? '✓ ' : ''}{p.n}</button>; })}</div>
-              {who ? (
-                <div className="att-regact">
-                  <label className="att-consent"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} /> {(A.people.find(p => p.k === who) || {}).n} has agreed to face check-in</label>
-                  <button type="button" className="att-go" disabled={capBusy} onClick={capture}>{capBusy ? 'Capturing…' : 'Capture face'}</button>
-                  {A.faces.some(f => f.k === who) ? <button type="button" className="att-cancel" onClick={() => { A.removeFace(who); setCapMsg('Face removed'); }}>Remove face</button> : null}
-                </div>
-              ) : null}
+              <summary>Registered faces · {A.faces.length} of {A.people.length}</summary>
+              <p className="att-regnote">Each person registers their own face on their own account. If someone’s face no longer matches, remove it here and they register again on My check-in.</p>
+              <div className="att-regpick" aria-label="Registered faces">{A.people.map(p => { const has = A.faces.some(f => f.k === p.k); return has ? <button key={p.k} type="button" className="has-face" onClick={() => { A.removeFace(p.k); setCapMsg('Face removed · ' + p.first + ' registers again on My check-in'); }} aria-label={'Remove face of ' + p.n}>✓ {p.n} · remove</button> : <span key={p.k} className="att-noface">{p.n}</span>; })}</div>
               {capMsg ? <p className="att-capmsg" role="status">{capMsg}</p> : null}
             </details>
           ) : null}
           <input className="att-search" value={q} onChange={e => setQ(e.target.value)} placeholder="Type your name · Andika jina lako" aria-label="Find your name" />
           <ul className="att-grid">
             {list.map(p => (
-              <li key={p.k}><button type="button" className={'att-tile is-' + p.st} onClick={() => setPick(p)} aria-label={(p.st === 'in' ? 'Check out ' : 'Check in ') + p.n}>
+              <li key={p.k}><div className={'att-tile is-' + p.st} aria-label={p.n + ' · ' + (p.st === 'in' ? 'in' : p.st === 'left' ? 'left' : 'not in yet')}>
                 <span className="att-av" style={{ background: p.c }}>{p.i}</span><b>{p.n}</b>
                 <small>{p.st === 'in' ? 'In since ' + p.in : p.st === 'left' ? 'Left at ' + p.out : 'Not in yet'}</small>
-              </button></li>
+              </div></li>
             ))}
           </ul>
         </section>
-      ) : null}
-
-      {pick ? (
-        <div className="att-sheet" role="dialog" aria-label={'Confirm ' + pick.n}>
-          <div className="att-sheetc">
-            <span className="att-av is-big" style={{ background: pick.c }}>{pick.i}</span>
-            <h2>{pick.n}</h2>
-            {pick.st === 'left' ? <p>Already checked out today at {pick.out}.</p> : <p>{pick.st === 'in' ? 'Leaving the office now?' : 'Arriving now?'}</p>}
-            <div className="att-sheetb">
-              {pick.st !== 'left' ? <button type="button" className={'att-go' + (pick.st === 'in' ? ' is-out' : '')} onClick={confirm}>{pick.st === 'in' ? 'Check out' : 'Check in'}</button> : null}
-              <button type="button" className="att-cancel" onClick={() => setPick(null)}>Cancel</button>
-            </div>
-          </div>
-        </div>
       ) : null}
 
       {A.see ? (

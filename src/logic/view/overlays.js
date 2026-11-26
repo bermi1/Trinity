@@ -9,9 +9,9 @@ export function overlayVals(s, IC) {
   // Each field becomes chips, faces, a searchable list, an amount, a file drop or text (see FormFields).
   const setF = k => val => this.setState(x => ({form:Object.assign({}, x.form, {[k]:val}), modalErr:''}));
   const isPerson = v => !!(this.PPL[v] || (this.people || {})[v]);
-  V.modalFields = m ? m.fields.map(f => {
+  V.modalFields = m ? m.fields.filter(f => !f.when || f.when(s.form || {})).map(f => {
     if (f.type === 'file') return {k:f.k, l:f.l, kind:'file', accept:f.accept, hint:f.hint, attached:s.form._file ? (s.form.n || 'File') + ' · ' + this.fmtSize(s.form._file.size) : '', uploading:!!s.form._uploading, on:e => this.attachFile(e.target.files && e.target.files[0])};
-    const base = {k:f.k, l:f.l, v:s.form[f.k] == null ? '' : s.form[f.k], ph:f.ph || '', type:f.type || 'text', req:!!f.req, set:setF(f.k)};
+    const base = {k:f.k, l:f.l, v:s.form[f.k] == null ? '' : s.form[f.k], ph:f.ph || '', type:f.type || 'text', req:!!f.req, im:f.im, set:setF(f.k)};
     if (f.opts) {
       const people = f.opts.length > 0 && f.opts.every(o => isPerson(o.v));
       if (people) return Object.assign(base, {kind:'people', opts:f.opts.map(o => { const a = this.av(o.v); return {v:o.v, l:o.l, i:a.i, c:a.c, ph:a.ph}; })});

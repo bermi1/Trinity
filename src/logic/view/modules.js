@@ -94,10 +94,10 @@ export function pageVals2(s, IC, ST, narrow) {
 
   // Finance portal: the finance officer signed in (Rose in the demo)
   const FK = this.av(this.ROLES.finance.k);
-  const fReqs = s.reqs.filter(r => r.st === 'pending' && r.step === 3);
+  const fReqs = this.visibleReqs(s).filter(r => r.st === 'pending' && r.step === 3);
   V.FP = {
     title:FK.n + '\u2019s queue',
-    kpis:[{l:'Awaiting verification', v:String(fReqs.length)}, {l:'Overdue invoices', v:String(s.invoices.filter(i => i.st === 'overdue').length), c:'#B23A46'}, {l:'Open floats', v:String(s.staff.filter(p => p.fl > 0).length)}, {l:'Paid this week', v:String(s.reqs.filter(r => r.st === 'paid').length)}],
+    kpis:[{l:'Awaiting verification', v:String(fReqs.length)}, {l:'Overdue invoices', v:String(s.invoices.filter(i => i.st === 'overdue').length), c:'#B23A46'}, {l:'Open floats', v:String(s.staff.filter(p => p.fl > 0).length)}, {l:'Paid this week', v:String(this.visibleReqs(s).filter(r => r.st === 'paid').length)}],
     reqs:fReqs.map(r => ({who:this.av(r.who).n, amt:this.fmtT(r.amt), cat:this.reqWhat(r).split(' · ')[0], proj:this.reqWhat(r).split(' · ').slice(1).join(' · '), verify:() => this.decide(r, true)})),
     reqsEmpty:fReqs.length === 0,
     overdue:s.invoices.filter(i => i.st === 'overdue').map(i => ({id:i.id, c:i.c, due:i.due, v:this.fmtM(i.v)})), overdueEmpty:s.invoices.filter(i => i.st === 'overdue').length === 0,
@@ -137,7 +137,7 @@ export function pageVals2(s, IC, ST, narrow) {
       else this.toast('Booked by ' + this.av(b[0]).n + ' · ' + b[1]);
     }}; })}));
   V.roomsFree = s.rooms.reduce((a, rm) => a + H.filter(hh => !rm.b[hh]).length, 0) + ' free slots today';
-  const appr = s.reqs.filter(q => q.st === 'pending' && q.step === 4);
+  const appr = this.visibleReqs(s).filter(q => q.st === 'pending' && q.step === 4);
   const unreadN = this.myNotes(s).filter(n => !n.read).length;
   const rv = this.CH['12W'].rev, sx = i => i * 300 / (rv.length - 1), sy = v => 76 - v / 100 * 70;
   const sl = this.smooth(rv.map((v,i) => [sx(i), sy(v)]));
@@ -202,10 +202,10 @@ export function pageVals2(s, IC, ST, narrow) {
     // Reports
     const dl = (name, rows) => { try { const csv = rows.map(rw => rw.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(',')).join('\n'); const b = new Blob([csv], {type:'text/csv'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); a.remove(); this.toast(name + ' downloaded'); } catch (e) { this.toast('The export could not be completed. Please try again.'); } };
     const RPT = [
-      ['Weekly management report','Revenue, spend, projects and decisions for the Monday Briefing','presentation','Mon 07:00', () => [['Metric','Value'],['Active projects', s.projects.filter(p => p.st !== 'done').length],['Pending approvals', s.reqs.filter(q => q.st === 'pending').length],['Overdue invoices (TZS M)', s.invoices.filter(i => i.st === 'overdue').reduce((a,b) => a + b.v, 0)],['Staff reports submitted', s.reportsSub + '/48']]],
+      ['Weekly management report','Revenue, spend, projects and decisions for the Monday Briefing','presentation','Mon 07:00', () => [['Metric','Value'],['Active projects', s.projects.filter(p => p.st !== 'done').length],['Pending approvals', this.visibleReqs(s).filter(q => q.st === 'pending').length],['Overdue invoices (TZS M)', s.invoices.filter(i => i.st === 'overdue').reduce((a,b) => a + b.v, 0)],['Staff reports submitted', s.reportsSub + '/48']]],
       ['Project P&L','Budget, spend and progress for every project','folder','Today 08:00', () => [['Project','Client','Status','Contract (M)','Budget (M)','Spent (M)','Progress %']].concat(s.projects.map(p => [p.id + ' ' + p.name, p.client, this.ST[p.st].l, p.val, p.bud, p.spent, p.prog]))],
       ['Receivables & invoices','Every invoice with status and due date','fileText','Today 08:00', () => [['Invoice','Client','Amount (M)','Status','Due']].concat(s.invoices.map(i => [i.id, i.c, i.v, i.st, i.due]))],
-      ['Money requests & floats','Every request with its approval status','banknote','Live', () => [['Request','Staff','Amount (TZS)','Category','Project','Status']].concat(s.reqs.map(q => [q.id, this.av(q.who).n, q.amt, q.cat, this.proj(q.p).name, this.rst(q)[0]]))],
+      ['Money requests & floats','Every request with its approval status','banknote','Live', () => [['Request','Staff','Amount (TZS)','Category','Project','Status']].concat(this.visibleReqs(s).map(q => [q.id, this.av(q.who).n, q.amt, q.cat, this.proj(q.p).name, this.rst(q)[0]]))],
       ['Store stock report','Quantities, minimums and bin locations','package','Live', () => [['SKU','Item','Category','Qty','Unit','Minimum','Bin']].concat(s.stock.map(i => [i.sku, i.n, i.cat, i.q, i.u, i.min, i.loc]))],
       ['Staff daily reports','Submissions and open floats by person','user','Yesterday 18:00', () => [['Name','Role','Department','Reported','Open float (TZS)']].concat(s.staff.map(p => [this.av(p.k).n, p.role, p.dept, p.rep ? 'Yes' : 'No', p.fl]))],
       ['Stock movements','Every receipt, issue, return and count','receipt','Live', () => [['Date','Item','SKU','Movement','Qty','Reference','Project','By','Value (TZS)']].concat(s.movements.map(m => [m.d, this.item(m.sku).n, m.sku, m.type, m.qty, m.ref, m.p ? this.proj(m.p).name : '', this.av(m.by).n, m.v]))],
@@ -226,7 +226,7 @@ export function pageVals2(s, IC, ST, narrow) {
     V.permHead = MODS.map(m => ({m}));
     V.permRows = Object.keys(PERM).map(rl => ({r:rl, cells:PERM[rl].map(v => ({l:v === 2 ? 'Full' : v === 1 ? 'View' : '—', bg:v === 2 ? '#E6F4EC' : v === 1 ? '#EFE8FA' : 'transparent', c:v === 2 ? '#1F7549' : v === 1 ? '#5A2FA8' : '#A9A3B8'}))}));
     V.company = [['Company','Trinity Mark Solutions Ltd'],['Location','Dar es Salaam, Tanzania'],['Currency','TZS · Tanzanian shilling'],['Time zone','Africa/Dar_es_Salaam (EAT)'],['Financial year','January – December'],['Data',s.db ? 'Live · Supabase database' : 'Demo data only']].map(([k,v]) => ({k,v}));
-    V.audit = s.activity.slice(0,6).map(e => ({time:e.time, t:e.t, s:e.s}));
+    V.audit = this.visibleActivity(s).slice(0,6).map(e => ({time:e.time, t:e.t, s:e.s}));
     V.meP = {n:me.n, t:me.t, e:me.email, i:me.k, c:this.av(me.k).c, role:me.label};
     V.changeEmail = em => this.changeMyEmail(em);
     // Mobile apps preview

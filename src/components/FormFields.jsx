@@ -96,7 +96,7 @@ export default function FormFields({ fields, onEnter }) {
           <span className="ff-l">{f.l}{f.req ? <em>*</em> : null}</span>
           {f.kind === 'area'
             ? <textarea value={f.v} onChange={e => f.set(e.target.value)} placeholder={f.ph} rows={3} />
-            : <input type={f.type === 'number' ? 'text' : f.type || 'text'} inputMode={f.type === 'number' ? 'decimal' : undefined} value={f.v} onChange={e => f.set(e.target.value)} placeholder={f.ph} enterKeyHint={last ? 'done' : 'next'} onKeyDown={onEnter} />}
+            : <input type={f.type === 'number' ? 'text' : f.type || 'text'} inputMode={f.type === 'number' ? 'decimal' : f.im || undefined} value={f.v} onChange={e => f.set(e.target.value)} placeholder={f.ph} enterKeyHint={last ? 'done' : 'next'} onKeyDown={onEnter} />}
         </label>
       );
     }

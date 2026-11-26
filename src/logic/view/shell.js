@@ -9,10 +9,10 @@ export function renderVals() {
   const s = this.state, IC = this.IC, ST = this.ST;
   const narrow = s.w < 960, wide = s.w >= 1240;
   const unread = this.myNotes(s).filter(n => !n.read).length;
-  const myReq = s.reqs.filter(r => r.st === 'pending' && r.step === 4);
+  const vreqs = this.visibleReqs(s), myReq = vreqs.filter(r => r.st === 'pending' && r.step === 4);
   const navPage = s.page === 'project' ? 'projects' : s.page === 'job' ? 'production' : s.page;
   const role = s.role || 'ceo', R = this.ROLES[role];
-  const lowN = s.stock.filter(i => i.q < i.min).length, finQ = s.reqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === R.k && t.st !== 'done').length;
+  const lowN = s.stock.filter(i => i.q < i.min).length, finQ = vreqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === R.k && t.st !== 'done').length;
   const G = this.navGroups(role);
   // "More" opens by itself when the page you are on is inside it; its count adds up what waits inside.
   const inMore = G.some(([, items, more]) => more && items.some(i => i[0] === navPage));
@@ -39,7 +39,7 @@ export function renderVals() {
   const cnt = k => s.projects.filter(p => p.st === k).length;
   const unpaid = s.invoices.filter(i => i.st !== 'paid' && i.st !== 'draft'), overdue = s.invoices.filter(i => i.st === 'overdue');
   const mk = (l,v,u,dd,dc,n,ic,go,sp,spc) => { const k = this.spark(sp); return {l,v,u,d:dd,dc,n,ic:IC[ic],go:() => this.go(go),sp:k.l,spf:k.f,spc}; };
-  const pend = s.reqs.filter(r => r.st === 'pending').length;
+  const pend = vreqs.filter(r => r.st === 'pending').length;
   const kpis = [
     mk('Active projects', active.length, '', '▲ 3', '#1F7549', 'vs last week · ' + (cnt('risk') + cnt('late')) + ' at risk', 'folder', 'projects', [11,12,12,13,14,14,15,active.length], '#6D3CC2'),
     mk('Today\u2019s revenue', '14.2M', 'TZS', '▲ 8%', '#1F7549', 'vs Tue average', 'trendUp', 'finance', [9,12,10,13,11,12,13,14.2], '#2E9B63'),
@@ -67,8 +67,8 @@ export function renderVals() {
     ...s.projects.filter(p => p.st === 'late').map(p => ({t:p.client + ' · ' + p.name, s:'Production behind · due ' + p.due, ic:IC.clock, bg:'#FBF1DD', fg:'#8A6414', on:() => this.go('project',{projectId:p.id})})),
     ...(overdue[0] ? [{t:overdue[0].c + ' · ' + overdue[0].id, s:'Invoice ' + overdue[0].due + ' · ' + this.fmtM(overdue[0].v), ic:IC.fileText, bg:'#FBEDEE', fg:'#B23A46', on:() => this.go('finance')}] : [])
   ].slice(0,3);
-  const activity = s.activity.map(e => { const t = this.tone(e.tone); return Object.assign({}, e, {ic:IC[e.ic], bg:t[0], fg:t[1]}); });
-  const pipe = [['GM',2],['Finance',3],['Management',4],['Payment',5],['Paid',6]].map(([l,k]) => { const nn = s.reqs.filter(r => r.step === k && r.st !== 'rejected').length; const you = k === 4, paid = k === 6; return {l, n:nn, bg:you ? '#FBF6EA' : paid ? '#E6F4EC' : '#F4F1FA', bd:you ? '#E4CD95' : 'transparent', fg:you ? '#8A6414' : paid ? '#1F7549' : '#2B1459'}; });
+  const activity = this.visibleActivity(s).map(e => { const t = this.tone(e.tone); return Object.assign({}, e, {ic:IC[e.ic], bg:t[0], fg:t[1]}); });
+  const pipe = [['GM',2],['Finance',3],['Management',4],['Payment',5],['Paid',6]].map(([l,k]) => { const nn = vreqs.filter(r => r.step === k && r.st !== 'rejected').length; const you = k === 4, paid = k === 6; return {l, n:nn, bg:you ? '#FBF6EA' : paid ? '#E6F4EC' : '#F4F1FA', bd:you ? '#E4CD95' : 'transparent', fg:you ? '#8A6414' : paid ? '#1F7549' : '#2B1459'}; });
   const PS = ['Request','Approved','Delivered'], pcol = p => (p.s >= 4 ? 2 : p.s >= 2 ? 1 : 0);
   const procPipe = PS.map((l,i) => ({l, n:s.proc.filter(p => pcol(p) === i).length}));
   const missing = s.staff.filter(p => !p.rep);
@@ -87,11 +87,11 @@ export function renderVals() {
     resetDemo:() => this.resetDemo(),
     loginNote:s.db ? 'Sign in with your Trinity Mark account' : 'Demo workspace · any password of 4+ characters', dataBadge:s.db ? 'LIVE DATA' : 'DEMO DATA',
     page:s.page, pageKey:s.page + '|' + (s.page === 'project' ? s.projectId : s.page === 'job' ? s.jobId : ''), navDir:s.navDir || 'tab', online:s.online !== false, signingIn:!!s.signingIn, db:!!s.db,
-    isAdmin:this.isAdmin(), canSwitch, workspaceLive:!!s.workspaceLive, colorFor,
+    isAdmin:this.isAdmin(), canStaff:this.canManageStaff(), canSwitch, workspaceLive:!!s.workspaceLive, colorFor,
     pinMenu:pinFor(s.pinUser) ? {l:'Turn off PIN unlock', on:() => this.turnOffPin()} : {l:'Set up PIN unlock', on:() => this.setState({pin:'setup', menu:false})},
     photos:s.photos || {},
     ADM:{db:!!s.db, photo:(k, f) => this.setPhoto(k, f), users:s.users || null, busy:!!s.usersBusy, me:this.state.pinUser, load:() => this.loadUsers(), create:f => this.createUser(f), update:(u, c) => this.updateUser(u, c),
-      reset:(u, pw) => this.resetPassword(u, pw), del:u => this.deleteUser(u), removeDemo:() => this.removeDemo(), live:!!s.workspaceLive,
+      reset:(u, pw) => this.resetPassword(u, pw), del:u => this.deleteUser(u), removeDemo:() => this.removeDemo(), live:!!s.workspaceLive, admin:this.isAdmin(), role:s.role || 'ceo',
       roles:Object.keys(this.ROLES).filter(k => k !== 'store').map(k => ({v:k, l:ROLES_LABEL[k]}))},
     PIN:{mode:s.pin || null, user:s.pinUser, name:R.n, set:(a, b) => this.setPin(a, b), unlock:p => this.unlock(p), skip:() => this.skipPin(), usePassword:() => this.signOut(), hasPin:!!pinFor(s.pinUser), setup:() => this.setState({pin:'setup', menu:false, more:false}), off:() => this.turnOffPin()},
     showBack:phone && !this.isTab(s.page), goSettings:() => this.go('settings'), goBack:() => this.goBack(), refresh:() => this.refresh(), haptic:ms => this.haptic(ms), remember:s.remember !== false,
@@ -106,5 +106,5 @@ export function renderVals() {
     openCmd:() => this.setState({cmd:true,cmdQ:''}), openAI:() => this.setState({ai:true,drawer:false,more:false}),
     greeting:hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening',
     kpis, chart, tip, chartLeave:() => this.setState({tip:-1}), rangeBtns, donut, attention, activity, pipe, procPipe, reports, quick
-  }, this.pageVals(s, IC, ST, narrow), this.overlayVals(s, IC), this.storeVals(s, IC), this.todayVals(s), this.deptVals(s), this.crmVals(s), this.projectVals(s), this.financeVals(s), this.reportVals(s), this.homeVals(s), this.targetVals(s), this.teamVals(s), this.attendanceVals(s), this.memoVals(s), this.officeVals(s), this.reportingVals(s), this.pettyVals(s), this.briefingVals(s), this.payrollVals(s));
+  }, this.pageVals(s, IC, ST, narrow), this.overlayVals(s, IC), this.storeVals(s, IC), this.todayVals(s), this.deptVals(s), this.crmVals(s), this.projectVals(s), this.financeVals(s), this.reportVals(s), this.homeVals(s), this.targetVals(s), this.teamVals(s), this.attendanceVals(s), this.myCheckinVals(s), this.memoVals(s), this.officeVals(s), this.reportingVals(s), this.pettyVals(s), this.briefingVals(s), this.payrollVals(s));
 }

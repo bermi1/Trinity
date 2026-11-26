@@ -3,7 +3,7 @@
 // Operations the PM, team and internal budget, Finance and Management the money.
 // Mixed into TrinityApp, so `this` is the app.
 import { ST } from './constants';
-import { FLOW, FLOW_L, FLOW_OWNER, sumLines } from './flow';
+import { FLOW, FLOW_L, FLOW_OWNER, sumLines, eventFields, fmtDay } from './flow';
 
 export function projectVals(s) {
   const P = (s.projects || []).find(p => p.id === s.projectId);
@@ -17,6 +17,10 @@ export function projectVals(s) {
     stages: this.STAGES.map((l, i) => ({ l, done: i + 1 < stage || P.st === 'done', cur: i + 1 === stage && P.st !== 'done' })),
     stageLabel: this.STAGES[stage - 1], back: () => this.go('projects')
   };
+  // The event: venue, setup date and pax. Those who manage the project can change them.
+  const E = eventFields(P);
+  V.event = { venue: E.venue, setupDate: E.setupDate, setup: fmtDay(E.setupDate), pax: E.pax ? E.pax.toLocaleString('en-US') : '', paxN: E.pax,
+    empty: !E.venue && !E.setupDate && !E.pax, canEdit: this.canEditProject(P), save: f => this.editProjectEvent(P.id, f) };
 
   if (can.client) {
     const lead = (s.leads || []).find(l => l.job === P.id) || (s.leads || []).find(l => l.c === P.client && this.leadStage(l) === 5);
@@ -50,26 +54,32 @@ export function projectVals(s) {
   const flow = this.flowOf(P), B = P.budget || {}, role = s.role || 'ceo';
   const briefs = (s.tasks || []).filter(t => t.kind === 'brief' && t.p === P.id);
   const openTasks = (s.tasks || []).filter(t => t.p === P.id && t.kind !== 'brief' && t.st !== 'done').length;
-  const N = { flow, title: FLOW_L[FLOW.indexOf(flow)], owner: FLOW_OWNER[flow] };
+  const nx = this.flowNext(P);
+  const N = { flow, title: FLOW_L[FLOW.indexOf(flow)], owner: FLOW_OWNER[flow], next: nx ? FLOW_L[FLOW.indexOf(nx)] : '' };
+  // Brief and Design can also be moved on by hand, with a comment (see advanceProject).
+  if (['brief', 'design'].includes(flow) && this.canMoveOn(P)) N.move = c => this.advanceProject(P.id, c);
   if (flow === 'brief') { N.text = 'Client Service sends the design brief to Creative.'; if (this.canCS()) N.brief = () => this.openModal('brief', { p: P.id }); }
-  if (flow === 'design') { const done = briefs.filter(b => b.st === 'done').length; N.text = 'Creative is designing · ' + done + ' of ' + briefs.length + ' design(s) approved by the Creative Manager.'; N.goDesigns = () => this.setState({ pvTab: 'designs' }); if (this.canCS()) N.brief = () => this.openModal('brief', { p: P.id }); }
+  if (flow === 'design') {
+    const done = briefs.filter(b => b.st === 'done').length; N.text = 'Creative is designing · ' + done + ' of ' + briefs.length + ' design(s) approved by the Creative Manager.'; N.goDesigns = () => this.setState({ pvTab: 'designs' }); if (this.canCS()) N.brief = () => this.openModal('brief', { p: P.id });
+    if (N.move && done < briefs.length) N.moveBlock = 'Approve every design first (' + (briefs.length - done) + ' open)';
+  }
   if (flow === 'proposal') { N.text = 'Designs approved. Client Service uploads the proposal; it then goes to Operations for the budget.'; if (this.canCS()) N.upload = (f, note) => this.uploadProposal(P.id, f, note); }
   if (flow === 'budget') {
     N.text = B.st === 'returned' ? 'Sent back: ' + B.note : 'Operations chooses the Project Manager and prepares the internal budget and the project value.';
     N.returned = B.st === 'returned';
     if (this.canOps()) N.budgetForm = { pm: P.pm || '', lines: (B.lines || []).map(l => ({ item: l.item, qty: String(l.qty), cost: String(l.cost) })), value: B.value ? String(B.value) : '', file: B.file || null,
       people: [...new Set([...this.teamOf('operations'), ...this.teamOf('clientservice'), P.pm].filter(Boolean))].map(face),
-      save: b => this.saveBudget(P.id, b), submit: b => this.submitBudget(P.id, b), attach: f => this.attachBudgetFile(P.id, f) };
+      save: b => this.saveBudget(P.id, b), submit: (b, c) => this.submitBudget(P.id, b, c), attach: f => this.attachBudgetFile(P.id, f) };
   }
   if (flow === 'approval') {
     N.text = B.st === 'gm' ? 'Waiting for the General Manager to approve the budget.' : 'Approved by the GM · waiting for Management.';
-    if (this.canApproveBudget(P)) { N.approve = () => this.approveBudget(P.id); N.sendBack = note => this.returnBudget(P.id, note); }
+    if (this.canApproveBudget(P)) { N.approve = c => this.approveBudget(P.id, c); N.gmStep = B.st === 'gm' && role === 'gm'; N.sendBack = note => this.returnBudget(P.id, note); }
   }
   if (flow === 'execution') {
     N.text = openTasks ? openTasks + ' task(s) open. Heads and the PM assign work; people finish tasks with a short report.' : 'All tasks done. The PM can close the project.';
     const canRun = this.isTop() || P.pm === me || this.isManagerOf('operations') || (this.myDept() && this.isManagerOf(this.myDept()));
     if (canRun) N.assign = () => this.openModal('task', { p: P.id });
-    if ((this.isTop() || P.pm === me || this.isManagerOf('operations')) && !openTasks) N.close = () => this.closeProject(P.id);
+    if (this.canClose(P)) { N.close = c => this.closeProject(P.id, c); if (openTasks) N.closeBlock = 'Finish the ' + openTasks + ' open task(s) first'; }
   }
   if (flow === 'closed') N.text = 'Closed.';
   V.now = N;
@@ -103,8 +113,9 @@ export function projectVals(s) {
   V.tasksTitle = can.allTasks ? 'Tasks' : 'Your tasks on this project';
   V.addTask = can.canTask ? () => this.openModal('task', { p: P.id }) : null;
 
-  // Money requests: your own, or all of them for the PM, Operations, Finance and the top.
-  const reqs = (s.reqs || []).filter(r => r.p === P.id && (can.allReqs || r.who === me));
+  // Money requests on this project, as far as this person may see them (see canSeeReq): all of them for
+  // Management, the GM and the PA; otherwise your own and the ones waiting for you (Finance: what it handles).
+  const reqs = this.visibleReqs(s).filter(r => r.p === P.id);
   V.reqs = reqs.map(r => ({ id: r.id, what: this.reqWhat(r), who: this.av(r.who).n, amt: this.fmtT(r.amt), status: this.moneyStatus(r), tone: this.reqTone(r),
     open: () => this.go('requests', { reqSel: r.id, reqFilter: 'all' }) }));
   V.reqsTitle = can.allReqs ? 'Money requests' : 'Your requests on this project';
@@ -126,7 +137,7 @@ export function projectVals(s) {
   });
   tasks.filter(t => t.st === 'done').forEach(t => ev.push({ at: t.doneOn || '', who: t.who, t: 'Task done', s: t.t, tone: 'green' }));
   reqs.forEach(r => ev.push({ at: '', who: r.who, t: 'Money request · ' + this.fmtT(r.amt), s: this.moneyStatus(r), tone: 'amber' }));
-  (P.notes || []).forEach(n => ev.push({ at: n.at, who: n.by, t: 'Note', s: n.t, tone: 'dark', note: true }));
+  (P.notes || []).forEach(n => ev.push({ at: n.at, who: n.by, t: n.step ? 'Step · ' + (FLOW_L[FLOW.indexOf(n.step)] || '') : 'Note', s: n.t, tone: n.step ? 'purple' : 'dark', note: true }));
   V.feed = ev.sort((a, b) => (b.at || '').localeCompare(a.at || '')).slice(0, 30).map(e => Object.assign({}, e, { w: face(e.who) }));
   V.addNote = t => {
     const text = String(t || '').trim(); if (!text) return false;

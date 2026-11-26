@@ -25,19 +25,29 @@ import { Btn, faceStyle, faceText } from '../../ui/kit';
 const n = v => Math.round(+v || 0).toLocaleString('en-US');
 const digits = v => String(v || '').replace(/\D/g, '');
 
-function Upload({ N }) {
-  const [f, setF] = useState(null); const [note, setNote] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
+// The comment that goes with a step change: saved in the project's notes and sent to the next person.
+function StepComment({ value, set, next, ph }) {
+  return (
+    <label className="pn-comment">
+      <span>{next ? 'Comment for the move to ' + next : 'Comment'} <em>optional</em></span>
+      <textarea rows={2} value={value} onChange={e => set(e.target.value)} placeholder={ph || 'What was done / note for the next step'} aria-label="Step comment" maxLength={500} />
+    </label>
+  );
+}
+
+function Upload({ N, c, setC }) {
+  const [f, setF] = useState(null); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
   return (
     <div className="pn-form">
       <label className="bi-up"><input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" onChange={e => setF(e.target.files[0] || null)} aria-label="Proposal file" />{f ? '✓ ' + f.name : '↑ Choose the proposal file'}</label>
-      <input className="me-who" value={note} onChange={e => setNote(e.target.value)} placeholder="Note for Operations (optional)" aria-label="Note for Operations" />
+      <StepComment value={c} set={setC} next={N.next} ph="What was done / note for Operations" />
       {err ? <div className="fm-err" role="alert">{err}</div> : null}
-      <div><button type="button" className="me-save" disabled={busy} onClick={async () => { setBusy(true); const m = await N.upload(f, note); setBusy(false); if (m) setErr(m); }}>{busy ? 'Uploading…' : 'Upload proposal · send to Operations'}</button></div>
+      <div><button type="button" className="me-save" disabled={busy} onClick={async () => { setBusy(true); const m = await N.upload(f, c); setBusy(false); if (m) setErr(m); else setC(''); }}>{busy ? 'Uploading…' : 'Upload proposal · send to Operations'}</button></div>
     </div>
   );
 }
 
-function Budget({ B }) {
+function Budget({ B, N, c, setC }) {
   const [pm, setPm] = useState(B.pm);
   const [lines, setLines] = useState(B.lines.length ? B.lines : [{ item: '', qty: '1', cost: '' }]);
   const [value, setValue] = useState(B.value);
@@ -71,16 +81,17 @@ function Budget({ B }) {
         <label className="fh-amt"><span>Project value TZS</span><input inputMode="numeric" value={value ? n(value) : ''} onChange={e => setValue(digits(e.target.value))} placeholder="What the client pays" aria-label="Project value" /></label>
         {+value > 0 ? <span>Margin <b>{Math.round((value - internal) / value * 100)}%</b></span> : null}
       </div>
+      <StepComment value={c} set={setC} next={N.next} ph="What was done / note for the GM" />
       {err ? <div className="fm-err" role="alert">{err}</div> : ok ? <div className="td-sent">{ok}</div> : null}
       <div className="fh-row">
         <button type="button" className="me-cancel" onClick={() => { const m = B.save(data()); setErr(m); setOk(m ? '' : 'Draft saved'); }}>Save draft</button>
-        <button type="button" className="me-save" onClick={() => { const m = B.submit(data()); if (m) { setErr(m); setOk(''); } }}>Submit for approval</button>
+        <button type="button" className="me-save" onClick={() => { const m = B.submit(data(), c); if (m) { setErr(m); setOk(''); } else setC(''); }}>Submit for approval</button>
       </div>
     </div>
   );
 }
 
-function Approve({ N }) {
+function Approve({ N, c, setC }) {
   const [back, setBack] = useState(false); const [note, setNote] = useState(''); const [err, setErr] = useState('');
   return back ? (
     <div className="pn-form">
@@ -89,32 +100,45 @@ function Approve({ N }) {
       <div className="fh-row"><button type="button" className="me-cancel" onClick={() => setBack(false)}>Cancel</button><button type="button" className="me-save" onClick={() => { const m = N.sendBack(note); if (m) setErr(m); }}>Send back</button></div>
     </div>
   ) : (
-    <div className="fh-row"><button type="button" className="me-save" onClick={N.approve}>Approve budget</button><Btn kind="ghost" onClick={() => setBack(true)}>Send back</Btn></div>
+    <div className="pn-form">
+      <StepComment value={c} set={setC} next={N.gmStep ? '' : N.next} ph={N.gmStep ? 'Note for Management' : 'What was done / note for the team'} />
+      {err ? <div className="fm-err" role="alert">{err}</div> : null}
+      <div className="fh-row"><button type="button" className="me-save" onClick={() => { const m = N.approve(c); if (m) setErr(m); else setC(''); }}>Approve budget</button><Btn kind="ghost" onClick={() => setBack(true)}>Send back</Btn></div>
+    </div>
   );
 }
 
-function Close({ N }) {
+// A hand move (Brief → Design, Design → Proposal) or closing: the comment box and the button.
+function Move({ N, c, setC, run, label, block }) {
   const [err, setErr] = useState('');
-  return <>{err ? <div className="fm-err">{err}</div> : null}<Btn kind="dark" onClick={() => { const m = N.close(); if (m) setErr(m); }}>Close project</Btn></>;
+  return (
+    <div className="pn-form pn-move">
+      <StepComment value={c} set={setC} next={N.next} />
+      {err ? <div className="fm-err" role="alert">{err}</div> : block ? <p className="k-sub">{block}</p> : null}
+      <div className="fh-row"><Btn kind={N.flow === 'brief' ? 'ghost' : 'dark'} disabled={!!block} onClick={() => { const m = run(c); if (m) setErr(m); else setC(''); }}>{label}</Btn></div>
+    </div>
+  );
 }
 
 // The current step of the project: who is responsible and, for that person, the action itself.
 export default function ProjectNow({ N }) {
+  const [c, setC] = useState('');
   return (
     <section className={'pn is-' + N.flow} aria-label="Current step">
       <header><span className="pn-step">Now · {N.title}</span>{N.owner ? <span className="pn-owner">{N.owner}</span> : null}</header>
       <p className={N.returned ? 'pn-back' : ''}>{N.text}</p>
-      {N.brief || N.goDesigns || N.assign || N.close ? (
+      {N.brief || N.goDesigns || N.assign ? (
         <div className="fh-row">
           {N.brief ? <Btn kind={N.flow === 'brief' ? 'dark' : 'ghost'} onClick={N.brief}>{N.flow === 'brief' ? 'Send design brief to Creative' : 'Send another brief'}</Btn> : null}
           {N.goDesigns ? <Btn kind="ghost" onClick={N.goDesigns}>See designs</Btn> : null}
           {N.assign ? <Btn kind="dark" onClick={N.assign}>Assign a task</Btn> : null}
-          {N.close ? <Close N={N} /> : null}
         </div>
       ) : null}
-      {N.upload ? <Upload N={N} /> : null}
-      {N.budgetForm ? <Budget B={N.budgetForm} /> : null}
-      {N.approve ? <Approve N={N} /> : null}
+      {N.move ? <Move N={N} c={c} setC={setC} run={N.move} label={'Move to ' + N.next} block={N.moveBlock} /> : null}
+      {N.close ? <Move N={N} c={c} setC={setC} run={N.close} label="Close project" block={N.closeBlock} /> : null}
+      {N.upload ? <Upload N={N} c={c} setC={setC} /> : null}
+      {N.budgetForm ? <Budget B={N.budgetForm} N={N} c={c} setC={setC} /> : null}
+      {N.approve ? <Approve N={N} c={c} setC={setC} /> : null}
     </section>
   );
 }
