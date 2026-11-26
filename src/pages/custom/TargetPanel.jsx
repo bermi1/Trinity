@@ -138,8 +138,8 @@ export default function TargetPanel({ T }) {
         <div className="tg-legend"><span><i className="is-got" />Earned {T.pctEarned}%</span><span><i className="is-time" />Year gone {T.pctTime}%</span><span>{T.ahead ? T.gap + ' ahead of where we should be' : T.gap + ' behind where we should be'}</span></div>
         {T.won && T.won.n ? (
           <div className="tg-won" aria-label="Won projects">
-            <b>{T.won.total}</b><span>from {T.won.n} won project{T.won.n === 1 ? '' : 's'}, taken off the goal automatically</span>
-            <ul>{T.won.list.map(x => <li key={x.id}><span>{x.name}{x.client ? ' · ' + x.client : ''}</span><em>{x.v}</em></li>)}</ul>
+            <b>{T.won.total}</b><span>from {[T.won.projects ? T.won.projects + ' won project' + (T.won.projects === 1 ? '' : 's') : '', T.won.invoices ? T.won.invoices + ' invoice' + (T.won.invoices === 1 ? '' : 's') + ' (before VAT)' : ''].filter(Boolean).join(' and ')}, counted toward the goal automatically</span>
+            <ul>{T.won.list.map(x => <li key={x.kind + x.id}><span>{x.kind === 'invoice' ? 'Invoice · ' : ''}{x.name}{x.client ? ' · ' + x.client : ''}</span><em>{x.v}</em></li>)}</ul>
           </div>
         ) : null}
         <div className="tg-clock">

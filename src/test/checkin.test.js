@@ -16,7 +16,7 @@ describe('my check-in (own face, own device)', () => {
 
   it('cannot save or remove someone else’s face', () => {
     const a = staff();
-    expect(a.saveFace('RT', ds(), true)).toMatch(/reception or by Management/);
+    expect(a.saveFace('RT', ds(), true)).toMatch(/registers their own face/);
     a.setState({ faces: [{ k: 'RT', ds: ds() }] });
     expect(a.removeFace('RT')).toBe('Not allowed');
     expect(a.state.faces.length).toBe(1);
@@ -43,10 +43,19 @@ describe('my check-in (own face, own device)', () => {
     expect(a.myCheckinVals(a.state).CHK.status).toBe('left');
   });
 
-  it('the reception kiosk still clocks anyone, without the face-self mark', () => {
+  it('nobody checks in for someone else: reception only checks in a face the camera recognised', () => {
     const a = staff(); a.setState({ role: 'reception' });
-    expect(a.clock('GM', '')).toMatchObject({ kind: 'in' });
-    expect(a.attendanceOf('GM').how).toBeUndefined();
+    // No tapping a name: without a face match, nothing happens.
+    expect(a.clock('GM', '')).toHaveProperty('error');
+    expect(a.attendanceOf('GM')).toBeNull();
+    // Reception cannot register someone's face either.
+    expect(a.saveFace('GM', ds(), true)).toMatch(/registers their own face/);
+    // The camera recognised GM's own registered face.
+    expect(a.clock('GM', '', { face: true })).toMatchObject({ kind: 'in' });
+    expect(a.attendanceOf('GM').how).toBe('face-kiosk');
+    // Management or the GM can remove a face so the person registers again.
+    a.setState({ role: 'gm', faces: [{ k: 'GM', ds: ds() }] });
+    expect(a.removeFace('GM')).toBe('');
     expect(a.attendanceVals(a.state).ATT).not.toBeNull();
     a.setState({ role: 'staff' });
     expect(a.attendanceVals(a.state).ATT).toBeNull();

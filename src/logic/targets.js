@@ -78,18 +78,43 @@ export const targetMethods = {
     this.toast('Team targets saved');
     return '';
   },
-  // What one person brought in this year, counted from their work in the system.
-  // Won projects count towards the company goal as soon as their agreed value is in: the value lands in
-  // the week the project was won (its start date), on top of what the GM records for that week.
+  // What counts toward the company goal from work in the system, on top of what the GM records each week:
+  //  · a won project's agreed value, in the week it was won (its start date);
+  //  · invoices sent to clients (not drafts or cancelled ones), before VAT, in the week they were issued.
+  // A project is never counted twice: its invoices add only what goes beyond what was already counted for it
+  // (its agreed value, or its earlier invoices). An invoice with no project counts in full.
   projectValue(p) { return (p.budget && +p.budget.value) || (+p.val || 0) * 1e6; },
+  invoiceNet(inv) { const gross = (+inv.v || 0) * 1e6, vat = +inv.vat || 0; return vat > 0 ? gross / (1 + vat / 100) : gross; },
+  invoiceCounts(inv) { return !!inv && !['draft', 'cancelled', 'void'].includes(inv.st) && this.invoiceNet(inv) > 0; },
   wonByWeek(year) {
-    const out = { weeks: {}, list: [] };
-    (this.state.projects || []).forEach(p => {
-      const v = this.projectValue(p), d = p.at ? new Date(p.at) : null;
-      if (!v || !d || isNaN(d) || p.st === 'lost' || p.st === 'cancelled') return;
+    const out = { weeks: {}, list: [], fromProjects: 0, fromInvoices: 0 };
+    const add = (at, v, row) => {
+      const d = at ? new Date(at) : null;
+      if (!v || !d || isNaN(d)) return;
       const w = isoWeek(d); if (w.year !== year) return;
       out.weeks[w.week] = (out.weeks[w.week] || 0) + v;
-      out.list.push({ id: p.id, name: p.name || p.id, client: p.client || '', v, at: p.at, week: w.week });
+      out.list.push(Object.assign({ v, at, week: w.week }, row));
+      if (row.kind === 'invoice') out.fromInvoices += v; else out.fromProjects += v;
+    };
+    const counted = {};
+    (this.state.projects || []).forEach(p => {
+      if (p.st === 'lost' || p.st === 'cancelled') { counted[p.id] = Infinity; return; }
+      const v = this.projectValue(p);
+      counted[p.id] = v;
+      add(p.at, v, { id: p.id, kind: 'project', name: p.name || p.id, client: p.client || '' });
+    });
+    const invs = (this.state.invoices || []).filter(inv => this.invoiceCounts(inv)).slice().sort((a, b) => String(a.at || '').localeCompare(String(b.at || '')));
+    const billed = {};
+    invs.forEach(inv => {
+      const net = this.invoiceNet(inv), pid = inv.p && counted[inv.p] !== undefined ? inv.p : '';
+      let v = net;
+      if (pid) {
+        if (counted[pid] === Infinity) return;
+        const before = billed[pid] || 0, after = before + net;
+        v = Math.max(0, after - Math.max(counted[pid], before));
+        billed[pid] = after;
+      }
+      add(inv.at || inv.sentAt, v, { id: inv.id, kind: 'invoice', name: (inv.title || inv.id) + ' · ' + inv.id, client: inv.c || '' });
     });
     out.list.sort((a, b) => String(b.at).localeCompare(String(a.at)));
     return out;
@@ -97,7 +122,9 @@ export const targetMethods = {
   personResults(k, year) {
     const s = this.state, inYear = d => !d || String(d).slice(0, 4) === String(year);
     const projects = (s.projects || []).filter(p => p.cs === k && inYear(p.at));
-    const revenue = projects.reduce((a, p) => a + ((p.budget && p.budget.value) || (p.val || 0) * 1e6), 0);
+    // A project brings in its agreed value, or what was invoiced on it (before VAT) when that is more.
+    const billed = pid => (s.invoices || []).filter(i => i.p === pid && this.invoiceCounts(i)).reduce((a, i) => a + this.invoiceNet(i), 0);
+    const revenue = projects.filter(p => p.st !== 'lost' && p.st !== 'cancelled').reduce((a, p) => a + Math.max(this.projectValue(p), billed(p.id)), 0);
     const clients = (s.customers || []).filter(c => c.owner === k && inYear(c.at)).length;
     const props = new Set();
     (s.leads || []).forEach(l => { if (l.proposal && l.proposal.by === k && inYear(l.proposal.at)) props.add('L' + l.id); });
@@ -193,7 +220,7 @@ export function targetVals(s) {
     need: { perWeek: tzs(left / weeksLeft), weeksLeft, left: tzs(left) },
     bars: bars.map(b => Object.assign(b, { gotH: Math.round(b.got / peak * 100), needH: Math.round(b.need / peak * 100), gotT: tzs(b.got), needT: tzs(b.need) })),
     depts,
-    won: { total: tzs(won.list.reduce((a, x) => a + x.v, 0)), n: won.list.length, list: won.list.slice(0, 6).map(x => ({ id: x.id, name: x.name, client: x.client, v: tzs(x.v), week: x.week })) },
+    won: { total: tzs(won.list.reduce((a, x) => a + x.v, 0)), n: won.list.length, projects: won.list.filter(x => x.kind === 'project').length, invoices: won.list.filter(x => x.kind === 'invoice').length, list: won.list.slice(0, 6).map(x => ({ id: x.id, kind: x.kind, name: x.name, client: x.client, v: tzs(x.v), week: x.week })) },
     projects: { done: projDone, target: projTarget, pace: projPace, closed: closedInSystem },
     recent,
     record: (w, f) => this.recordWeek(year, w, f),
