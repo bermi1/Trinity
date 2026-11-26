@@ -33,6 +33,9 @@ import { briefingMethods, briefingVals } from './briefing';
 import { payrollMethods, payrollVals } from './payroll';
 
 // Password of the demo accounts, so they open with one tap (see .env). Leave it out to require passwords.
+// The "+ New client" choice in the New project form.
+const NEW_CLIENT = '__new_client__';
+
 const demoPassword = () => import.meta.env.VITE_DEMO_PASSWORD || '';
 const OFFLINE = 'Could not reach the server. Check your connection and try again.';
 // Supabase retries network failures indefinitely; give up after a while so people get an answer.
@@ -561,7 +564,8 @@ export default class TrinityApp extends Logic {
       reqEmergency:{title:'Emergency request',sub:'Goes to GM → Management → Finance pays. Use only when it cannot wait.',submit:'Submit emergency',fields:[{k:'title',l:'Title',ph:'e.g. Generator repair on site',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'250000',req:1},{k:'p',l:'Project',opts:[{v:'',l:'Not for a project'}, ...PO,...this.payFields()]},{k:'purpose',l:'What happened, and what is it for?',ph:'Explain the emergency',req:1}]},
       reqMgmt:{title:'Management request',sub:'Finance checks, then pays.',submit:'Submit request',fields:[{k:'title',l:'Title',ph:'e.g. Client meeting expenses',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'500000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for?',req:1},...this.payFields()]},
       lead:{title:'New lead',sub:'Leads move Lead → Qualified → Proposal → Negotiation → Won.',submit:'Add lead',fields:[{k:'c',l:'Client',ph:'Company name',req:1},{k:'t',l:'Opportunity',ph:'e.g. Product launch event',req:1},{k:'v',l:'Estimated value (TZS M)',type:'number',ph:'80'},{k:'src',l:'Source',opts:O(['Website','Referral','Tender','Existing client','Walk-in'])}]},
-      project:{title:'New project',sub:'Starts at the brief. Operations sets the Project Manager, budget and value later.',submit:'Create project',fields:[{k:'client',l:'Client',opts:(this.state.customers || []).map(c => ({v:c.n,l:c.n})),req:1},{k:'name',l:'Project name',ph:'e.g. Brand activation',req:1},{k:'due',l:'Deadline',ph:'e.g. 30 Oct'},{k:'venue',l:'Venue',ph:'e.g. Mlimani City Hall'},{k:'setupDate',l:'Setup date',type:'date'},{k:'pax',l:'Pax (number of people)',type:'number',ph:'e.g. 250'}]},
+      project:{title:'New project',sub:'Starts at the brief. Operations sets the Project Manager, budget and value later. A new client? Choose “+ New client” and add their details here.',submit:'Create project',fields:[{k:'client',l:'Client',opts:[{v:NEW_CLIENT,l:'+ New client'}, ...(this.state.customers || []).map(c => ({v:c.n,l:c.n}))],req:1,kind:'pick'},
+        ...[{k:'nc_n',l:'New client · company name',ph:'e.g. Azam Media Ltd',req:1},{k:'nc_contact',l:'Contact person',ph:'Name'},{k:'nc_phone',l:'Phone',ph:'+255 7xx xxx xxx'},{k:'nc_email',l:'Email',ph:'name@company.co.tz'},{k:'nc_tin',l:'TIN',ph:'100-000-000'},{k:'nc_vrn',l:'VRN',ph:'10-000000-X'},{k:'nc_box',l:'P.O. Box',ph:'e.g. P.O. Box 268'},{k:'nc_city',l:'City',ph:'Dar es Salaam'}].map(x => Object.assign(x, {when:fm => fm.client === NEW_CLIENT})),{k:'name',l:'Project name',ph:'e.g. Brand activation',req:1},{k:'due',l:'Deadline',ph:'e.g. 30 Oct'},{k:'venue',l:'Venue',ph:'e.g. Mlimani City Hall'},{k:'setupDate',l:'Setup date',type:'date'},{k:'pax',l:'Pax (number of people)',type:'number',ph:'e.g. 250'}]},
       issue:{title:'Issue stock',sub:'',submit:'Issue from store',fields:[{k:'q',l:'Quantity',type:'number',ph:'1',req:1},{k:'p',l:'For project',opts:PO},{k:'who',l:'Collected by',opts:PP}]},
       receive:{title:'Receive stock',sub:'',submit:'Receive into store',fields:[{k:'q',l:'Quantity received',type:'number',ph:'10',req:1},{k:'sup',l:'Supplier',ph:'e.g. Chapa Supplies'}]},
       invoice:{title:'New invoice',sub:'Saved as a draft until you send it.',submit:'Create invoice',fields:[{k:'p',l:'Project',opts:PO},{k:'v',l:'Amount (TZS M)',type:'number',ph:'25',req:1},{k:'due',l:'Due date',ph:'e.g. 15 Oct'}]},
@@ -577,12 +581,14 @@ export default class TrinityApp extends Logic {
     const m = Object.assign({act}, defs[act], preset && preset._meta ? preset._meta : {});
     const form = {}; m.fields.forEach(f => { form[f.k] = f.opts ? f.opts[0].v : ''; });
     Object.assign(form, preset || {}); delete form._meta;
+    // New project: the client is chosen on purpose (no silent default); with no clients yet it starts on "+ New client".
+    if (act === 'project' && !(preset && preset.client)) form.client = (this.state.customers || []).length ? '' : NEW_CLIENT;
     this.setState({modal:m, form, modalErr:'', cmd:false, menu:false});
   }
   submitModal() {
     const s = this.state, m = s.modal, f = s.form;
     for (const fd of m.fields) {
-      if (fd.type === 'file') continue;
+      if (fd.type === 'file' || (fd.when && !fd.when(f))) continue;
       const val = String(f[fd.k] == null ? '' : f[fd.k]).trim();
       if (fd.req && !val) { this.setState({modalErr:fd.l + ' is required.'}); return; }
       if (fd.type === 'number' && val && !(+val > 0)) { this.setState({modalErr:fd.l + ' must be a number above 0.'}); return; }
@@ -600,6 +606,14 @@ export default class TrinityApp extends Logic {
     if (/^req(Project|Internal|Emergency|Mgmt)$/.test(m.act)) { const pi = this.payInfo(f); if (pi.error) { this.setState({modalErr:pi.error}); return; } }
     if (/^req(Project|Internal|Emergency|Mgmt)$/.test(m.act)) this.createRequest(Object.assign({}, f, {type:{reqProject:'project', reqInternal:'internal', reqEmergency:'emergency', reqMgmt:'management'}[m.act]}));
     if (m.act === 'lead') { this.setState(x => ({leads:[{id:'L'+Date.now(),c:f.c,t:f.t,v:+f.v||0,s:0,src:f.src}, ...x.leads]})); this.toast('Lead added · ' + f.c); this.log('users','blue','New lead · ' + f.c, f.t); }
+    // A new client typed in the New project form is added to the clients first (or reused if the name exists).
+    if (m.act === 'project' && f.client === NEW_CLIENT) {
+      const n = String(f.nc_n || '').trim(), have = (s.customers || []).find(c => c.n.toLowerCase() === n.toLowerCase());
+      if (!have) this.addCustomer({ n, contact:f.nc_contact, phone:f.nc_phone, email:f.nc_email, tin:f.nc_tin, vrn:f.nc_vrn, box:f.nc_box, city:f.nc_city, owner:this.me().k });
+      const id = this.newProject(Object.assign({}, f, { client: have ? have.n : n }));
+      if (typeof id === 'string' && id.indexOf('PRJ') === 0) { this.setState({modal:null}); setTimeout(() => this.go('project',{projectId:id}), 50); return; }
+      this.setState({modalErr:id}); return;
+    }
     if (m.act === 'project') { const id = this.newProject(f); if (typeof id === 'string' && id.indexOf('PRJ') === 0) setTimeout(() => this.go('project',{projectId:id}), 50); }
     if (m.act === 'issue') { const q = Math.max(0, +f.q || 0); this.setState(this.stockChange([{sku:f.sku, qty:-q, type:'issue'}], 'Direct issue · ' + this.av(f.who).n, f.p, '')); this.toast('Issued ' + q + ' ' + f.u + ' of ' + f.n + ' to ' + P.client); this.log('package','dark','Store issued ' + q + ' ' + f.u + ' · ' + f.n, P.name + ' · ' + this.av(f.who).first); }
     if (m.act === 'receive') { const q = Math.max(0, +f.q || 0); this.setState(this.stockChange([{sku:f.sku, qty:q, type:'receipt'}], 'Received' + (f.sup ? ' · ' + f.sup : ''), '', '')); this.toast('Received ' + q + ' ' + f.u + ' · ' + f.n); this.log('package','green','Stock received · ' + f.n, q + ' ' + f.u + (f.sup ? ' from ' + f.sup : '')); }
