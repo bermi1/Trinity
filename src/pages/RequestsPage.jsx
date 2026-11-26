@@ -1,6 +1,7 @@
 // Generated from the Claude Design file by scripts/dc-to-jsx.mjs.
 import { Fragment } from 'react';
 import MyRequests from './custom/MyRequests';
+import FixRequest from './custom/FixRequest';
 
 export default function RequestsPage({ v }) {
   if (v.MR) return <MyRequests M={v.MR} />;
@@ -107,6 +108,7 @@ export default function RequestsPage({ v }) {
                   <p style={{ margin: "0", fontSize: "14px", lineHeight: "1.6", maxWidth: "520px", textWrap: "pretty" }}>
                     {v.R.purpose}
                   </p>
+                  {v.R.canFix ? <FixRequest key={v.R.id + (v.R.isRej ? 'r' : '')} R={v.R} /> : null}
                   {(v.R.thread || []).length ? <ul className="mr-thread">{v.R.thread.map((m, i) => <li key={i}><b>{m.who}</b> · <small>{m.at}</small><p>{m.t}</p></li>)}</ul> : null}
                   {v.R.rec ? (
                     <div className="mr-rec">

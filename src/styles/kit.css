@@ -1377,3 +1377,13 @@
 @keyframes instup { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @media (max-width: 480px) { .inst { flex-wrap: wrap; } .inst-b { width: 100%; justify-content: flex-end; } }
 @media (max-width: 480px) { .inst:not(.is-prompt) { flex-wrap: nowrap; } .inst:not(.is-prompt) .inst-b { width: auto; } }
+/* Requester corrects their own request */
+.fx { display: grid; gap: 10px; padding: 14px 16px; border-radius: 12px; border: 1px solid #E8E4EF; background: #FAF8FD; } .fx.is-rej { border-color: #F0C2C8; background: #FDF5F6; } .fx.is-ask { border-color: #EBD9A8; background: #FFFBF0; }
+.fx-h { font-size: 14px; color: #2B1459; } .fx.is-rej .fx-h { color: #B23A46; } .fx.is-ask .fx-h { color: #8A6414; }
+.fx-f { display: grid; gap: 5px; font-size: 12px; font-weight: 600; color: #6E6A7C; flex: 1 1 180px; min-width: 0; }
+.fx-f input, .fx-f textarea { border: 1px solid #E8E4EF; border-radius: 9px; padding: 9px 11px; font: inherit; font-size: 14px; color: #17152A; background: #fff; resize: vertical; }
+.fx-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.fx-chips { display: flex; flex-wrap: wrap; gap: 6px; } .fx-chips button { min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid #E8E4EF; background: #fff; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; } .fx-chips button.is-on { background: #2B1459; border-color: #2B1459; color: #fff; }
+.fx-msg { font-size: 13px; font-weight: 600; color: #B23A46; } .fx-msg.is-ok { color: #1F7549; }
+.fx-go { justify-self: start; height: 40px; padding: 0 16px; border: none; border-radius: 10px; background: #2B1459; color: #fff; font: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer; }
+.mr-pay { margin: 0; font-size: 13px; color: #1F7549; } .mr-pay b { margin-right: 6px; }

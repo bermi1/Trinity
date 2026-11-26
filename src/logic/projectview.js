@@ -180,6 +180,33 @@ export const reqFlowMethods = {
     this.toast('Question sent to ' + this.av(r.who).n);
     return '';
   },
+  // The requester corrects their own request: a reply to a question, new payment details, and, for a request
+  // that was not approved, sending it back into the approval chain from the start.
+  fixReq(id, f) {
+    const r = this.state.reqs.find(x => x.id === id); if (!r) return 'Request not found';
+    if (r.who !== this.me().k) return 'Only the person who asked for the money can correct it';
+    if (!['pending', 'rejected'].includes(r.st)) return 'This request can no longer be changed';
+    const pi = this.payInfo(f); if (pi.error) return pi.error;
+    const reply = String(f.reply || '').trim(), at = this.today() + ' ' + this.now();
+    const changed = JSON.stringify(pi.pay) !== JSON.stringify(r.pay || null);
+    if (!reply && !changed && r.st !== 'rejected') return 'Write a reply or change the payment details';
+    const note = [reply, changed ? 'Payment details: ' + [pi.pay.by, pi.pay.bank, pi.pay.name, pi.pay.no].filter(Boolean).join(' · ') : ''].filter(Boolean).join('\n');
+    const resubmit = r.st === 'rejected', step = resubmit ? this.nextStep(r, 0) : r.step;
+    const patch = Object.assign({ pay: pi.pay, thread: [...(r.thread || []), ...(note || resubmit ? [{ by: this.me().k, t: (resubmit ? 'Corrected and resubmitted. ' : '') + note, at }] : [])] },
+      resubmit ? { st: 'pending', step, info: '', log: [...(r.log || []).slice(0, 1), ...Array.from({ length: Math.max(0, step - 1) }, () => 'Not needed')], resubmitted: at } : (r.info === 'asked' ? { info: 'answered' } : {}));
+    this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, patch) : q)) }));
+    if (resubmit) {
+      const to = this.approverAt(Object.assign({}, r, patch), step);
+      this.remind(to, r.id + ' was corrected and needs your approval', 'requests', 'banknote', this.av(r.who).n + ' · ' + this.fmtT(r.amt));
+      this.smsTo(to, r.id + ' was corrected and needs your approval. ' + this.av(r.who).n + ' requests ' + this.fmtT(r.amt) + '. Open the system to act.');
+      this.toast(r.id + ' resubmitted');
+    } else {
+      const asker = [...(r.thread || [])].reverse().find(m => m.by !== r.who), to = asker ? asker.by : this.approverAt(r, r.step);
+      this.notify({ to, ic: 'message', t: this.me().n + ' updated ' + r.id, s: note.slice(0, 120), go: 'requests' });
+      this.toast(r.id + ' updated');
+    }
+    return '';
+  },
   answerReq(id, text) {
     const t = String(text || '').trim(); if (!t) return 'Write your answer';
     const r = this.state.reqs.find(x => x.id === id); if (!r) return 'Request not found';

@@ -1,3 +1,4 @@
+import FixRequest from './FixRequest';
 import { useState } from 'react';
 import { PageHead, Card, Btn, Pill, Chips, Empty } from '../../ui/kit';
 
@@ -35,7 +36,8 @@ function Req({ r, showWho }) {
           </ol>
           {r.note ? <p className="bi-ret">Reason: {r.note}</p> : null}
           {r.thread.length ? <ul className="mr-thread">{r.thread.map((m, i) => <li key={i} className={m.mine ? 'is-mine' : ''}><b>{m.who}</b> · <small>{m.at}</small><p>{m.t}</p></li>)}</ul> : null}
-          {r.asked ? <Reply r={r} /> : null}
+          {r.payTo ? <p className="mr-pay"><b>Pay to</b> {r.payTo}</p> : null}
+          {r.canFix ? <FixRequest key={r.id + (r.isRej ? 'r' : '')} R={r} /> : r.asked ? <Reply r={r} /> : null}
           {r.rec ? <p className="mr-recline">Spent {r.rec.spent} · returns {r.rec.back} · {r.rec.st}</p> : r.canRec ? <Reconcile r={r} /> : null}
           <div className="mr-acts">
             <span className="k-sub">{r.id}</span>
