@@ -8,6 +8,24 @@ export const LATE_AFTER = '08:30';
 export const attendanceMethods = {
   canSeeAttendance() { return ['ceo', 'gm', 'pa'].includes(this.state.role || 'ceo'); },
   canRunKiosk() { return ['reception', 'ceo', 'gm', 'pa'].includes(this.state.role || 'ceo'); },
+  // Face registration (with the person's consent): up to five descriptors per person, numbers only.
+  canRegisterFaces() { return ['ceo', 'gm', 'pa', 'reception'].includes(this.state.role || 'ceo'); },
+  saveFace(k, descriptors, consent) {
+    if (!this.canRegisterFaces()) return 'Faces are registered at reception or by Management';
+    if (!consent) return 'Confirm the person has agreed to face check-in';
+    if (!descriptors || !descriptors.length) return 'No face captured';
+    const rec = { k, ds: descriptors.slice(0, 5), at: dayKey(0), by: this.me().k, consent: true };
+    this.setState(x => ({ faces: [...(x.faces || []).filter(f => f.k !== k), rec] }));
+    this.log('user', 'purple', 'Face registered · ' + this.av(k).n, 'Consent recorded by ' + this.me().n);
+    this.toast('Face registered · ' + this.av(k).first);
+    return '';
+  },
+  removeFace(k) {
+    if (!this.canRegisterFaces()) return 'Not allowed';
+    this.setState(x => ({ faces: (x.faces || []).filter(f => f.k !== k) }));
+    this.toast('Face removed · ' + this.av(k).first);
+    return '';
+  },
   attendanceOf(k, date) { return (this.state.attendance || []).find(a => a.k === k && a.date === (date || dayKey(0))) || null; },
   clock(k, photo) {
     if (!this.canRunKiosk()) return { error: 'Check-in runs on the reception screen' };
@@ -40,5 +58,8 @@ export function attendanceVals(s) {
     .sort((a, b) => b.t.localeCompare(a.t)).map(e => Object.assign(e, { n: this.av(e.k).n, late: e.kind === 'in' && e.t > LATE_AFTER }));
   return { ATT: { kiosk, see, today, people, feed, lateAfter: LATE_AFTER,
     counts: { in: people.filter(p => p.st === 'in').length, left: people.filter(p => p.st === 'left').length, out: people.filter(p => p.st === 'out').length, late: people.filter(p => p.late).length },
-    clock: (k, photo) => this.clock(k, photo) } };
+    clock: (k, photo) => this.clock(k, photo),
+    faces: (s.faces || []).filter(f => people.some(p => p.k === f.k)), canFaces: this.canRegisterFaces(),
+    saveFace: (k, ds, consent) => this.saveFace(k, ds, consent), removeFace: k => this.removeFace(k),
+    statusOf: k => { const p = people.find(x => x.k === k); return p ? p.st : 'out'; }, sinceOf: k => { const p = people.find(x => x.k === k); return p ? p.in : ''; } } };
 }

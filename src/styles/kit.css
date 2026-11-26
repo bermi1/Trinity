@@ -1356,3 +1356,12 @@
 .att-empty { margin: 0; color: #6E6A7C; font-size: 13px; }
 .att-table { width: 100%; border-collapse: collapse; font-size: 13px; } .att-table th { text-align: left; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #6E6A7C; padding: 8px; border-bottom: 1px solid #E8E4EF; } .att-table td { padding: 8px; border-bottom: 1px solid #F1EEF6; } .att-table tr.is-absent td { color: #9A95AA; }
 @media (max-width: 600px) { .att-head h1 { font-size: 34px; } .att-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.att-camoff.is-on { background: #E6F4EC; border-color: #9AD3B0; color: #1F7549; }
+.att-seen { font-size: 13px; font-weight: 700; color: #2B1459; background: #F6F3FB; border-radius: 999px; padding: 6px 12px; }
+.att-reg { background: #fff; border: 1px solid #E8E4EF; border-radius: 14px; padding: 12px 16px; } .att-reg summary { cursor: pointer; font-weight: 800; font-size: 14px; color: #2B1459; }
+.att-regnote { margin: 10px 0; font-size: 12.5px; color: #6E6A7C; line-height: 1.45; }
+.att-regpick { display: flex; flex-wrap: wrap; gap: 6px; } .att-regpick button { min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid #E8E4EF; background: #fff; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.att-regpick button.has-face { border-color: #9AD3B0; color: #1F7549; } .att-regpick button.is-on { background: #2B1459; border-color: #2B1459; color: #fff; }
+.att-regact { display: grid; gap: 8px; margin-top: 12px; max-width: 420px; } .att-regact small { font-size: 13px; font-weight: 600; color: #2B1459; }
+.att-consent { display: flex; gap: 8px; align-items: center; font-size: 13.5px; font-weight: 600; }
+.att-capmsg { margin: 10px 0 0; font-size: 13px; font-weight: 700; color: #2B1459; }

@@ -26,7 +26,7 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  if (url.pathname.startsWith('/assets/') || SHELL.includes(url.pathname) || url.hostname.endsWith('gstatic.com')) {
+  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/face-models/') || SHELL.includes(url.pathname) || url.hostname.endsWith('gstatic.com')) {
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
       return res;

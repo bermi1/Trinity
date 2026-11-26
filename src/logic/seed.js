@@ -277,6 +277,7 @@ export function seed() {
   ],
   newUpdate:{who:'SK', t:'', pres:false},
   attendance:[],
+  faces:[],
   visitors:[
     {id:'V1',name:'James Mollel',co:'Serengeti Telecom',phone:'+255 713 220 114',purpose:'Contract review',host:'SK',date:dayKey(0),time:'09:15',st:'in'},
     {id:'V2',name:'Grace Kimaro',co:'Chapa Supplies',phone:'+255 754 880 201',purpose:'Delivery',host:'RT',date:dayKey(0),time:'10:02',st:'out',outAt:'10:20'},
