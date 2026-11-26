@@ -94,7 +94,7 @@ export default class TrinityApp extends Logic {
       if (target) {
         history.replaceState(history.state, '', location.pathname);
         if (target === 'newreq') this._afterAuth = () => this.openModal('req');
-        else this._afterAuth = () => this.go(target);
+        else this._afterAuth = () => this.goTarget(target);
         if (this.state.auth) { this._afterAuth(); this._afterAuth = null; }
       }
     } catch (e) {}

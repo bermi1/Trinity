@@ -1,6 +1,22 @@
 import { useState } from 'react';
 import { faceStyle, faceText } from '../../ui/kit';
 
+const WA = 'M20.5 3.5A11 11 0 0 0 3.2 17.4L2 22l4.7-1.2A11 11 0 1 0 20.5 3.5zM12 20a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.7.7-2.7-.2-.3A8 8 0 1 1 12 20z';
+// WhatsApp reminder buttons for a memo still open (who depends on who is looking).
+function Remind({ m, onErr, small }) {
+  if (!m.remind || !m.remind.length) return null;
+  return (
+    <div className={'mm-remind' + (small ? ' is-small' : '')}>
+      {m.remind.map(p => (
+        <button key={p.k} type="button" className="td-start wa-btn" title={p.has ? '' : p.first + ' has not added a WhatsApp number yet'} aria-label={'Remind ' + p.n + ' on WhatsApp'}
+          onClick={e => { e.stopPropagation(); const r = p.wa(); if (onErr) onErr(r); }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d={WA} /></svg>{small ? 'Remind ' + p.first : 'Remind ' + p.first + ' on WhatsApp'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 const Face = ({ p, size = 32 }) => <span className="mm-face" style={faceStyle(p, { width: size, height: size })}>{faceText(p)}</span>;
 
 // Write a memo to a department: category, what is needed, an optional file, linked to a project or lead.
@@ -27,6 +43,7 @@ export function MemoCard({ m }) {
         <Face p={m.from} />
         <span className="mm-main"><span className="mm-tags"><em className={'mm-cat is-' + m.cat}>{m.catL}</em><em className={'mm-st is-' + m.st}>{m.stL}</em></span><b>{m.text}</b><small>{m.from.n} → {m.dept}{m.who ? ' · with ' + m.who.n : ''}{m.about ? ' · ' + m.about : ''} · {m.at}</small></span>
       </button>
+      <Remind m={m} small />
     </li>
   );
 }
@@ -43,6 +60,7 @@ function MemoFull({ m, back }) {
         <div className="mm-route"><span><Face p={m.from} size={28} /><span><small>From</small><b>{m.from.n}</b></span></span><i>→</i><span><Face p={m.to} size={28} /><span><small>{m.dept}</small><b>{m.to.n}</b></span></span>{m.who ? <><i>→</i><span><Face p={m.who} size={28} /><span><small>Working on it</small><b>{m.who.n}</b></span></span></> : null}</div>
         {m.about ? <button type="button" className="mm-about" onClick={m.goAbout}>Project · {m.about} →</button> : null}
       </header>
+      <Remind m={m} onErr={setErr} />
       <ol className="mm-steps" aria-label="Status">{m.steps.map(s => <li key={s.k} className={s.done ? 'is-done' : ''}><i />{s.l}</li>)}</ol>
       <div className="mm-grid">
         <div className="mm-col">

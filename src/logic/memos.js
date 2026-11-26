@@ -61,6 +61,18 @@ export const memoMethods = {
     this.toast('Attached · ' + file.name);
     return '';
   },
+  // WhatsApp reminder about a memo: opens WhatsApp to that person's number with the message written,
+  // and notes it on the memo's trail. The link in the message opens the memo in the app.
+  memoRemindWa(id, k) {
+    const m = this.memoById(id); if (!m) return 'Memo not found';
+    if (!k || k === this.me().k) return 'Choose who to remind';
+    const a = this.av(k), link = (typeof location !== 'undefined' ? location.origin : '') + '/?go=memo:' + id;
+    const text = 'Habari ' + a.first + ', reminder about the ' + catL(m.cat).toLowerCase() + ' memo from ' + this.av(m.from).n + ' to ' + (MEMO_DEPT_L[m.dept] || m.dept) + ':\n"' + m.text.slice(0, 200) + '"\nStatus: ' + (MEMO_ST[m.st] || 'Sent') + '. Please open it in Trinity Mark 360: ' + link;
+    if (!this.waOpen(k, text)) return a.first + ' has not added a WhatsApp number yet';
+    this.memoPatch(id, {}, 'WhatsApp reminder to ' + a.n);
+    this.notify({ to: k, ic: 'message', t: 'Reminder · memo from ' + this.av(m.from).n, s: m.text.slice(0, 90), go: 'memo:' + id });
+    return '';
+  },
   memoDone(id, reply) {
     const m = this.memoById(id); if (!m) return 'Memo not found';
     this.memoPatch(id, { st: 'done', reply: (reply || '').trim() }, 'Done' + (reply ? ': ' + reply.trim() : ''));
@@ -88,8 +100,22 @@ function memoRow(m) {
     canAssign: run && m.st !== 'done', team: run ? this.teamOf(m.dept).map(face) : [],
     canWork: (mine || run) && m.st !== 'done', canStart: (mine || run) && ['seen', 'assigned'].includes(m.st),
     isSender: m.from === me,
+    remind: memoRemindees.call(this, m, me, run).map(k => { const a = this.av(k); return { k, n: a.n, first: a.first, has: !!this.waNumber(k), wa: () => this.memoRemindWa(m.id, k) }; }),
     assign: k => this.memoAssign(m.id, k), start: () => this.memoStart(m.id), attach: f => this.memoAttach(m.id, f), done: r => this.memoDone(m.id, r), open: () => this.openMemo(m.id)
   };
+}
+
+// Who this person can remind on WhatsApp about a memo still open: the sender reminds whoever has it
+// (the person it is assigned to, else the department head); the head reminds the person assigned;
+// the person working on it can ping the sender back.
+function memoRemindees(m, me, run) {
+  if (m.st === 'done') return [];
+  const head = m.to || this.managerOf(m.dept), out = [];
+  if (m.from === me) out.push(m.who || head);
+  if (run && m.who && m.who !== me) out.push(m.who);
+  if (m.who === me && m.from !== me) out.push(m.from);
+  if (this.isTop() && m.from !== me && !m.who) out.push(head);
+  return [...new Set(out.filter(k => k && k !== me))];
 }
 
 export function memoVals(s) {
