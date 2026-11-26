@@ -21,7 +21,9 @@ export const crmMethods = {
   leadStage(l) { return l.sv === 2 ? l.s : OLD[l.s] != null ? OLD[l.s] : 1; },
   // The owner, the Client Service Manager, Management and the GM move leads.
   canMoveLead(l) { return this.isTop() || this.isManagerOf('clientservice') || l.owner === this.me().k; },
-  canSeeValues() { return this.isTop() || ['clientservice', 'finance', 'pa'].includes(this.state.role || 'ceo'); },
+  canSeeValues() { return this.isTop() || ['clientservice', 'finance', 'pa'].includes(this.state.role || 'ceo') || this.isCsStaff(); },
+  // A Client Service team member on the staff portal (e.g. Flavia, Mariam): sees their own leads, clients and targets.
+  isCsStaff() { return (this.state.role || 'ceo') === 'staff' && this.deptOf(this.me().k) === 'clientservice'; },
 
   // Saves a file: to the database storage when live, in this browser (small files) in the demo.
   async storeFile(file) {
@@ -122,14 +124,16 @@ export const crmMethods = {
 // Values for the Clients & leads page.
 export function crmVals(s) {
   const showV = this.canSeeValues(), fmtM = v => (showV ? this.fmtM(v) : '');
-  const leads = s.leads.map(l => Object.assign({}, l, { st: this.leadStage(l) }));
+  const mine = this.isCsStaff() ? this.me().k : null;
+  // Client Service staff see only their own leads and clients.
+  const leads = s.leads.filter(l => !mine || l.owner === mine).map(l => Object.assign({}, l, { st: this.leadStage(l) }));
   const team = this.teamOf('clientservice');
   const row = l => {
     const stale = l.st < WON && daysSince(l.at) >= 7, a = this.av(l.owner);
     return { id: l.id, c: l.c, t: l.t, v: fmtM(l.v), st: l.st, stage: LEAD_STAGES[l.st], owner: a.n, oi: a.i, oc: a.c, next: l.next || '', stale, days: daysSince(l.at), hasProposal: !!l.proposal, lost: l.lost || '', open: () => this.setState({ leadSel: l.id }) };
   };
   const open = leads.filter(l => l.st < WON);
-  const cust = (s.customers || []).map(c => {
+  const cust = (s.customers || []).filter(c => !mine || c.owner === mine || s.leads.some(l => l.owner === mine && (l.c || '').toLowerCase() === (c.n || '').toLowerCase())).map(c => {
     const jobs = s.projects.filter(p => (p.client || '').toLowerCase() === c.n.toLowerCase()), active = jobs.filter(p => p.st !== 'done').length;
     const same = x => (x || '').toLowerCase() === c.n.toLowerCase();
     const job = p => {

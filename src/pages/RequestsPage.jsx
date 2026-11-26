@@ -142,6 +142,12 @@ export default function RequestsPage({ v }) {
                     </b>
                   </div>
                 </div>
+                {v.R.payTo ? (
+                  <div className="rq-pay" style={{ border: "1px solid #CFE3D5", background: "#F2FBF5", borderRadius: "10px", padding: "12px 14px", display: "flex", flexDirection: "column", gap: "3px" }}>
+                    <span style={{ fontSize: "11.5px", color: "#1F7549", fontWeight: "700", letterSpacing: ".04em", textTransform: "uppercase" }}>Pay to</span>
+                    <b style={{ fontWeight: "600", fontSize: "14px" }}>{v.R.payTo}</b>
+                  </div>
+                ) : null}
                 <div style={{ border: "1px solid #E8E4EF", borderRadius: "10px", padding: "14px 16px", display: "flex", flexDirection: "column", gap: "8px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", gap: "8px" }}>
                     <b style={{ fontWeight: "600" }}>

@@ -65,6 +65,14 @@ export async function fillModal(page, values) {
     await field.locator('.ff-pick-btn').click();
     await field.getByRole('option', { name: String(value), exact: true }).click();
   }
+  // Money requests ask how to pay; fill a mobile-money payee unless the test chose its own.
+  const payBy = m.locator('[data-field="Pay by"]').first();
+  const payName = m.locator('[data-field="Name on the account / recipient"] input').first();
+  if (!('Pay by' in values) && !('Name on the account / recipient' in values) && await payBy.count() && !(await payName.inputValue())) {
+    await payBy.getByRole('radio', { name: 'M-Pesa', exact: true }).click();
+    await m.locator('[data-field="Name on the account / recipient"] input').first().fill('Test Payee');
+    await m.locator('[data-field="Phone or account number"] input').first().fill('0754 123 456');
+  }
   return m;
 }
 export const modal = page => page.locator('.fm, .m-sheet');
