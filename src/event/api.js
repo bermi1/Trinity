@@ -69,6 +69,8 @@ export async function register(f, mode) {
   }
   const { data, error } = await supabase.rpc('register_attendee', { p_event: eventId(), p_full_name: f.full_name, p_phone: f.phone, p_email: f.email || '', p_organization: f.organization || '', p_position: f.position || '', p_region: f.region || '', p_district: f.district || '', p_gender: f.gender || '', p_category: (f.category || '').trim(), p_mode: mode });
   if (error) return { error: /fetch|network/i.test(error.message || '') ? 'Mtandao haupatikani, jaribu tena · No connection, please try again' : clean(error) };
+  // A text with their registration number (sent by the event-sms function; never blocks the page).
+  if (data && !data.existing && data.id) supabase.functions.invoke('event-sms', { body: { id: data.id } }).catch(() => {});
   return data;
 }
 

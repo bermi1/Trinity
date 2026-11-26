@@ -57,7 +57,7 @@ export default function EventDesk() {
               {list.map(r => (
                 <li key={r.id} data-reg={badge(r.badge_no)}>
                   <span className="evd-no">{badge(r.badge_no)}</span>
-                  <span className="evd-who"><b>{r.full_name}</b><small>{[r.phone, r.organization, r.position].filter(Boolean).join(' · ')}</small><small>{[r.category, [r.region, r.district].filter(Boolean).join(', '), r.mode === 'qr' ? 'QR' : 'Walk-in'].filter(Boolean).join(' · ')}</small></span>
+                  <span className="evd-who"><b>{r.full_name}</b><small>{[r.phone, r.organization, r.position].filter(Boolean).join(' · ')}</small><small>{[r.category, [r.region, r.district].filter(Boolean).join(', '), r.mode === 'qr' ? 'QR' : 'Walk-in', r.sms_status === 'sent' ? 'SMS sent' : r.sms_status === 'failed' ? 'SMS failed' : ''].filter(Boolean).join(' · ')}</small></span>
                   <button type="button" className={'evd-in' + (r.checked_in ? ' is-on' : '')} aria-pressed={r.checked_in} onClick={() => toggle(r)} aria-label={(r.checked_in ? 'Undo check-in · ' : 'Check in · ') + r.full_name}>{r.checked_in ? <><Icon n="check" s={15} />Amefika</> : 'Check in'}</button>
                 </li>
               ))}

@@ -611,7 +611,15 @@ export default class TrinityApp extends Logic {
     this.setState({modal:null});
   }
   // Who approves a request at each step of the chain (index = step).
-  approverAt(r, step) { return [r.who, this.proj(r.p).pm || 'SK', 'GN', 'RT', 'DK', 'RT'][step]; }
+  // Who acts at each step: the requester, the project manager, the GM, Finance (verify), Management, Finance (pay).
+  // Uses whoever holds each role on the live system (the demo's named people only in the demo).
+  roleKey(role, demo) { return (this.ROLES[role] && this.ROLES[role].k) || demo; }
+  approverAt(r, step) { const fin = this.roleKey('finance', 'RT'); return [r.who, this.proj(r.p).pm || (this.state.workspaceLive ? this.roleKey('operations', 'MM') : 'SK'), this.roleKey('gm', 'GN'), fin, this.roleKey('ceo', 'DK'), fin][step]; }
+  // A text message to a member of staff, on the live system (sent by the staff-sms function through Textify).
+  smsTo(k, text) {
+    if (!this.state.db || !supabase || !k || k === this.me().k) return;
+    supabase.functions.invoke('staff-sms', { body: { to: k, text: 'Trinity Mark 360: ' + text } }).catch(() => {});
+  }
   // Management can act at any step; Finance verifies at step 3; the PM and Operations at their own step.
   // Management can act at any position; the GM, Finance and (older requests) the Project Manager at their own.
   canAct(r) {
@@ -642,8 +650,9 @@ export default class TrinityApp extends Logic {
     for (let i = 1; i < step; i++) log.push('Not needed');
     const r = {id, type, who, amt, cat:type === 'project' ? (f.cat || 'Operations') : type === 'internal' && f.cat ? f.cat : REQ_TYPES[type].l.replace(' request', ''), title:(f.title || '').trim(), purpose:(f.purpose || '').trim(), p:f.p || '', alloc:f.alloc || '', need:f.need || (type === 'emergency' ? 'Today' : 'This week'), step, st:step >= 5 ? 'approved' : 'pending', log};
     this.setState(x => ({reqs:[r, ...x.reqs], reqSel:id}));
-    const to = step >= 5 ? 'RT' : this.approverAt(r, step);
+    const to = step >= 5 ? this.roleKey('finance', 'RT') : this.approverAt(r, step);
     this.remind(to, step >= 5 ? id + ' is ready to pay' : id + ' needs your approval', 'requests', 'banknote', this.av(who).n + ' · ' + this.fmtT(amt));
+    this.smsTo(to, (step >= 5 ? id + ' is ready to pay. ' : id + ' needs your approval. ') + this.av(who).n + ' requests ' + this.fmtT(amt) + ' - ' + this.reqWhat(r) + '. Open the system to act.');
     this.toast(id + ' submitted · waiting for ' + (step >= 5 ? 'payment' : this.CHAIN[step]));
     this.log('banknote','amber',this.av(who).first + ' requested ' + this.fmtT(amt), this.reqWhat(r) + ' · ' + id);
     return id;
@@ -657,9 +666,12 @@ export default class TrinityApp extends Logic {
     const last = n >= 5;
     const patch = ok ? (last ? {step:5, st:'approved'} : {step:n}) : {st:'rejected'};
     this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, patch, {log:[...q.log, t, ...(ok ? skip.map(() => 'Not needed') : [])]}) : q)}));
-    const next = ok ? (last ? 'RT' : this.approverAt(r, n)) : r.who;
+    const next = ok ? (last ? this.roleKey('finance', 'RT') : this.approverAt(r, n)) : r.who;
     if (ok) this.remind(next, last ? r.id + ' is approved · ready to pay' : r.id + ' needs your approval', 'requests', 'banknote', this.av(r.who).n + ' · ' + this.fmtT(r.amt));
     else this.remind(r.who, r.id + ' was not approved', 'requests', 'x', 'Rejected by ' + this.me().n);
+    if (ok) this.smsTo(next, (last ? r.id + ' is approved and ready to pay. ' : r.id + ' needs your approval. ') + this.av(r.who).n + ' requests ' + this.fmtT(r.amt) + ' - ' + this.reqWhat(r) + '. Open the system to act.');
+    if (ok && last) this.smsTo(r.who, 'Your request ' + r.id + ' for ' + this.fmtT(r.amt) + ' is approved and sent to Finance for payment.');
+    if (!ok) this.smsTo(r.who, 'Your request ' + r.id + ' for ' + this.fmtT(r.amt) + ' was not approved (' + this.me().n + '). Open the system for details.');
     this.toast(ok ? r.id + (last ? ' approved · sent to Finance for payment' : (r.step === 3 ? ' verified' : ' approved') + ' · sent to ' + this.CHAIN[n]) : r.id + ' rejected · ' + this.av(r.who).first + ' notified');
     this.log(ok ? 'check' : 'x', ok ? 'green' : 'red', this.me().n + (ok ? ' approved ' : ' rejected ') + this.fmtT(r.amt), this.reqWhat(r) + ' · ' + r.id);
   }
@@ -667,6 +679,7 @@ export default class TrinityApp extends Logic {
     const t = this.now();
     this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, {step:6,st:'paid',paidOn:dayKey(0),log:[...q.log,t]}) : q), staff:x.staff.map(p => p.k === r.who ? Object.assign({}, p, {fl:p.fl + r.amt}) : p)}));
     this.toast('Paid · float opened for ' + this.av(r.who).n);
+    this.smsTo(r.who, 'Your request ' + r.id + ' for ' + this.fmtT(r.amt) + ' has been paid. Please bring the receipts within 3 days.');
     this.log('wallet','green','Float opened · ' + this.fmtT(r.amt), this.av(r.who).n + ' · receipts due in 3 days');
   }
   answer(q) {
