@@ -43,6 +43,7 @@ export default function ProjectsPage({ v }) {
                       <span style={{ fontSize: "12.5px", color: "#6E6A7C" }}>
                         {p.name}
                       </span>
+                      {p.ev ? <span data-event style={{ fontSize: "12px", color: "#8A7239", fontWeight: "600" }}>{p.ev}</span> : null}
                     </div>
                     <span style={{ fontSize: "10.5px", fontWeight: "700", padding: "3px 8px", borderRadius: "6px", background: p.stbg, color: p.stfg, whiteSpace: "nowrap" }}>
                       {p.stl}
@@ -109,6 +110,7 @@ export default function ProjectsPage({ v }) {
                     <span style={{ font: "500 11.5px 'IBM Plex Mono',monospace", color: "#6E6A7C" }}>
                       {p.id}
                     </span>
+                    {p.ev ? <span data-event style={{ fontSize: "12px", color: "#8A7239", fontWeight: "600" }}>{p.ev}</span> : null}
                   </div>
                   <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <span style={{ width: "26px", height: "26px", borderRadius: "50%", background: p.pmC, color: "#fff", fontSize: "10px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>

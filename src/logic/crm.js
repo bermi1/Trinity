@@ -24,6 +24,19 @@ const OLD = [1, 2, 3, 4, 5];
 
 const daysSince = key => { if (!key) return 0; const [y, m, d] = key.split('-').map(Number); return Math.max(0, Math.round((Date.now() - new Date(y, m - 1, d).getTime()) / 864e5)); };
 
+// The event's details on a lead (and its project): where, the setup date, how many people.
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const isDay = d => { if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false; const [y, m, x] = d.split('-').map(Number), t = new Date(y, m - 1, x); return t.getFullYear() === y && t.getMonth() === m - 1 && t.getDate() === x; };
+export const fmtSetup = d => (isDay(d || '') ? +d.slice(8) + ' ' + MON[+d.slice(5, 7) - 1] + (d.slice(0, 4) !== String(new Date().getFullYear()) ? ' ' + d.slice(0, 4) : '') : '');
+// Checks venue / setup date / pax from a form. Returns { error } or { venue, setupDate, pax }.
+export function eventDetails(f) {
+  const venue = String(f.venue == null ? '' : f.venue).trim(), setupDate = String(f.setupDate == null ? '' : f.setupDate).trim(), p = String(f.pax == null ? '' : f.pax).trim();
+  if (setupDate && !isDay(setupDate)) return { error: 'Enter a valid setup date' };
+  if (p && !/^\d+$/.test(p)) return { error: 'Pax must be a whole number (0 or more)' };
+  return { venue, setupDate, pax: p ? parseInt(p, 10) : 0 };
+}
+const eventLine = l => [l.venue || '', l.setupDate ? 'setup ' + fmtSetup(l.setupDate) : '', l.pax > 0 ? l.pax + ' pax' : ''].filter(Boolean).join(' · ');
+
 export const crmMethods = {
   leadStage(l) { return l.sv === 2 ? l.s : OLD[l.s] != null ? OLD[l.s] : 1; },
   // The owner, the Client Service Manager, Management and the GM move leads.
@@ -46,9 +59,11 @@ export const crmMethods = {
   },
 
   // Records incoming work (from Management or Client Service) as a New lead for one owner.
+  // Returns the new lead's id, or an error message (not starting with 'L') when venue / setup / pax are wrong.
   newWork(f) {
+    const ev = eventDetails(f); if (ev.error) return ev.error;
     const id = 'L' + Date.now().toString(36), owner = f.owner || this.me().k, today = dayKey(0);
-    const lead = { id, sv: 2, c: f.c.trim(), t: f.t.trim(), v: +f.v || 0, s: 0, src: f.src || 'Email to Management', owner, next: f.next || 'Today', at: today, contact: (f.contact || '').trim(), hist: [{ s: 0, by: this.me().k, at: today, note: (f.note || '').trim() || 'Work received' }] };
+    const lead = { id, sv: 2, c: f.c.trim(), t: f.t.trim(), v: +f.v || 0, s: 0, src: f.src || 'Email to Management', owner, next: f.next || 'Today', at: today, contact: (f.contact || '').trim(), venue: ev.venue, setupDate: ev.setupDate, pax: ev.pax, hist: [{ s: 0, by: this.me().k, at: today, note: (f.note || '').trim() || 'Work received' }] };
     this.setState(x => ({ leads: [lead, ...x.leads], leadSel: id, crmTab: 'leads' }));
     if (owner !== this.me().k) this.remind(owner, 'New work for you: ' + lead.c, 'clients', 'users', lead.t + ' · from ' + this.me().n);
     this.toast('Lead created · ' + lead.c + ' · ' + this.av(owner).n);
@@ -86,7 +101,7 @@ export const crmMethods = {
   // Editing a lead's details (client, the work, value, contact, how it came in): whoever can move the lead.
   editLead(id) {
     const l = (this.state.leads || []).find(x => x.id === id); if (!l) return;
-    this.openModal('leadEdit', { id: l.id, c: l.c || '', t: l.t || '', v: l.v ? String(l.v) : '', contact: l.contact || '', src: l.src || '' });
+    this.openModal('leadEdit', { id: l.id, c: l.c || '', t: l.t || '', v: l.v ? String(l.v) : '', contact: l.contact || '', src: l.src || '', venue: l.venue || '', setupDate: l.setupDate || '', pax: l.pax > 0 ? String(l.pax) : '' });
   },
   updateLead(f) {
     const l = (this.state.leads || []).find(x => x.id === f.id); if (!l) return 'This lead no longer exists.';
@@ -94,10 +109,12 @@ export const crmMethods = {
     const c = (f.c || '').trim(), t = (f.t || '').trim();
     if (!c) return 'Enter the client'; if (!t) return 'Enter what they need';
     const v = f.v === '' || f.v == null ? 0 : +f.v; if (!(v >= 0)) return 'The value must be a number';
-    const changes = [c !== l.c ? 'client' : '', t !== l.t ? 'work' : '', v !== (l.v || 0) ? 'value' : '', (f.contact || '').trim() !== (l.contact || '') ? 'contact' : '', (f.src || '') !== (l.src || '') ? 'source' : ''].filter(Boolean);
+    const ev = eventDetails(f); if (ev.error) return ev.error;
+    const changes = [c !== l.c ? 'client' : '', t !== l.t ? 'work' : '', v !== (l.v || 0) ? 'value' : '', (f.contact || '').trim() !== (l.contact || '') ? 'contact' : '', (f.src || '') !== (l.src || '') ? 'source' : '',
+      ev.venue !== (l.venue || '') ? 'venue' : '', ev.setupDate !== (l.setupDate || '') ? 'setup date' : '', ev.pax !== (l.pax || 0) ? 'pax' : ''].filter(Boolean);
     if (!changes.length) return '';
     const at = dayKey(0);
-    this.setState(x => ({ leads: x.leads.map(y => (y.id === l.id ? Object.assign({}, y, { c, t, v, contact: (f.contact || '').trim(), src: f.src || y.src || '', hist: [...(y.hist || []), { s: this.leadStage(y), by: this.me().k, at, note: 'Details updated: ' + changes.join(', ') }] }) : y)) }));
+    this.setState(x => ({ leads: x.leads.map(y => (y.id === l.id ? Object.assign({}, y, { c, t, v, contact: (f.contact || '').trim(), src: f.src || y.src || '', venue: ev.venue, setupDate: ev.setupDate, pax: ev.pax, hist: [...(y.hist || []), { s: this.leadStage(y), by: this.me().k, at, note: 'Details updated: ' + changes.join(', ') }] }) : y)) }));
     this.toast('Lead updated · ' + c);
     return '';
   },
@@ -151,15 +168,45 @@ export const crmMethods = {
     this.toast(kindL(patch.files.at(-1).kind) + ' attached · ' + info.name);
     return '';
   },
-  // A won lead becomes a client (if new) and a job, and Operations, the GM and Management are told.
-  wonToJob(l) {
-    const id = this.newProject({ client: l.c, name: l.t, cs: l.owner, lead: l.id });
+  // The lead's client added to the clients list, unless a client with that name is already there.
+  customerFromLead(l) {
     this.setState(x => ({
-      leads: x.leads.map(y => (y.id === l.id ? Object.assign({}, y, { job: id }) : y)),
       customers: (x.customers || []).some(c => c.n.toLowerCase() === l.c.toLowerCase()) ? x.customers : [{ id: 'C' + Date.now().toString(36), n: l.c, contact: l.contact || '', phone: '', email: '', tin: '', city: '', owner: l.owner, at: dayKey(0) }, ...(x.customers || [])]
     }));
+  },
+  // A project for the lead, made the normal way (newProject), carrying the value and the event's details,
+  // and linked both ways (project.lead, lead.job). Returns the project id, or an error message.
+  projectFromLead(l) {
+    const id = this.newProject({ client: l.c, name: l.t, cs: l.owner, lead: l.id });
+    if (typeof id !== 'string' || id.indexOf('PRJ') !== 0) return id;
+    this.setProject(id, Object.assign({ venue: l.venue || '', setupDate: l.setupDate || '', pax: l.pax || 0 }, l.v > 0 ? { val: l.v } : {}));
+    this.setState(x => ({ leads: x.leads.map(y => (y.id === l.id ? Object.assign({}, y, { job: id }) : y)) }));
+    return id;
+  },
+  // A won lead becomes a client (if new) and a job, and Operations, the GM and Management are told.
+  // If the lead already has a project (pushed before it was won), no second one is made.
+  wonToJob(l) {
+    this.customerFromLead(l);
+    if (l.job) { this.toast('Won · ' + l.c + ' · project ' + l.job); return; }
+    const id = this.projectFromLead(l);
     [this.ROLES.gm.k, this.ROLES.ceo.k].filter(k => k !== this.me().k).forEach(k => this.remind(k, 'New job won · ' + l.c, 'project', 'trendUp', l.t + ' · ' + id));
     this.toast('Won · ' + l.c + ' · project ' + id + ' created · next: send the design brief');
+  },
+  // At any stage: the lead's client becomes a client (if new) and a project opens for it. The lead stays
+  // at its stage. Returns the project id, or an error message.
+  pushLead(lid) {
+    const l = (this.state.leads || []).find(x => x.id === lid);
+    if (!l) return 'This lead no longer exists.';
+    if (!this.canMoveLead(l)) return 'Only ' + this.av(l.owner).n + ' or the Client Service Manager can do this.';
+    if (l.job) { this.go('project', { projectId: l.job }); return l.job; }
+    this.customerFromLead(l);
+    const id = this.projectFromLead(l);
+    if (typeof id !== 'string' || id.indexOf('PRJ') !== 0) return id;
+    this.setState(x => ({ leads: x.leads.map(y => (y.id === l.id ? Object.assign({}, y, { hist: [...(y.hist || []), { s: this.leadStage(y), by: this.me().k, at: dayKey(0), note: 'Client & project created · ' + id }] }) : y)) }));
+    this.toast(l.c + ' · client & project ' + id + ' created');
+    this.log('folder', 'purple', 'Lead pushed to a project · ' + l.c, l.t + ' · ' + id);
+    this.go('project', { projectId: id });
+    return id;
   },
   setLeadOwner(id, k) {
     const l = this.state.leads.find(x => x.id === id); if (!l || l.owner === k) return;
@@ -217,7 +264,7 @@ export function crmVals(s) {
   const row = l => {
     const stale = l.st < WON && daysSince(l.at) >= 7, a = this.av(l.owner);
     const files = leadFiles(l), last = files[files.length - 1];
-    return { id: l.id, c: l.c, t: l.t, v: fmtM(l.v), st: l.st, stage: LEAD_STAGES[l.st], owner: a.n, oi: a.i, oc: a.c, next: l.next || '', stale, days: daysSince(l.at), hasProposal: !!l.proposal, hasFile: !!last, fileL: last ? kindL(last.kind) : '', lost: l.lost || '', open: () => this.setState({ leadSel: l.id }) };
+    return { id: l.id, c: l.c, t: l.t, v: fmtM(l.v), st: l.st, stage: LEAD_STAGES[l.st], owner: a.n, oi: a.i, oc: a.c, next: l.next || '', stale, days: daysSince(l.at), hasProposal: !!l.proposal, hasFile: !!last, fileL: last ? kindL(last.kind) : '', lost: l.lost || '', event: eventLine(l), open: () => this.setState({ leadSel: l.id }) };
   };
   const open = leads.filter(l => l.st < WON);
   const cust = (s.customers || []).filter(c => !mine || c.owner === mine || s.leads.some(l => l.owner === mine && (l.c || '').toLowerCase() === (c.n || '').toLowerCase())).map(c => {
@@ -249,7 +296,8 @@ export function crmVals(s) {
       files: leadFiles(sel).map(f => ({ name: f.name, kind: f.kind || 'proposal', kindL: kindL(f.kind), label: kindL(f.kind) + ' · ' + f.name, at: f.at || '', size: this.fmtSize(f.size || 0), byN: this.av(f.by).n, open: () => this.openDoc({ n: f.name, url: f.url, path: f.path, mime: f.mime }) })),
       attach: (info, kind) => this.attachLeadFile(sel.id, info, kind),
       hist: (sel.hist || []).slice().reverse().map(h => ({ stage: LEAD_STAGES[h.s], by: this.av(h.by).n, at: h.at, note: h.note || '' })),
-      job: sel.job || '', goJob: () => this.go('project', { projectId: sel.job }),
+      job: sel.job || '', goJob: () => this.go('project', { projectId: sel.job }), push: () => this.pushLead(sel.id),
+      venue: sel.venue || '', setup: fmtSetup(sel.setupDate), pax: sel.pax > 0 ? String(sel.pax) : '',
       canEdit: can, edit: () => this.editLead(sel.id),
       close: () => this.setState({ leadSel: null }), setOwner: k => this.setLeadOwner(sel.id, k), setNext: t => this.setLeadNext(sel.id, t),
       move: (to, extra) => this.moveLead(sel.id, to, extra), store: f => this.storeFile(f),

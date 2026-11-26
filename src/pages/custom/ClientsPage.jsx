@@ -8,6 +8,7 @@ function LeadCard({ l }) {
     <button type="button" className={'cr-card' + (l.stale ? ' is-stale' : '')} onClick={l.open} data-lead={l.id}>
       <span className="cr-card-top"><b>{l.c}</b>{l.v ? <em>{l.v}</em> : null}</span>
       <span className="cr-card-t">{l.t}</span>
+      {l.event ? <span className="cr-card-ev">{l.event}</span> : null}
       <span className="cr-card-foot">
         <span className="cr-face" style={{ background: l.oc }} title={l.owner}>{l.oi}</span>
         <span>{l.stale ? l.days + ' days without update' : l.next ? 'Next: ' + l.next : l.stage}</span>
@@ -27,6 +28,7 @@ function LeadPanel({ L, reasons }) {
   const [lost, setLost] = useState(false);
   const [reason, setReason] = useState('');
   const [err, setErr] = useState('');
+  const [pushErr, setPushErr] = useState('');
   useEffect(() => { const k = e => { if (e.key === 'Escape') L.close(); }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k); }, [L]);
 
   const pick = async e => {
@@ -56,6 +58,9 @@ function LeadPanel({ L, reasons }) {
           <dl className="cr-facts">
             <div><dt>Follow-up by</dt><dd>{L.owner}</dd></div>
             <div><dt>Came in by</dt><dd>{L.src || '—'}</dd></div>
+            <div><dt>Venue</dt><dd>{L.venue || '—'}</dd></div>
+            <div><dt>Setup</dt><dd>{L.setup || '—'}</dd></div>
+            <div><dt>Pax</dt><dd>{L.pax || '—'}</dd></div>
             {L.contact ? <div><dt>Contact</dt><dd>{L.contact}</dd></div> : null}
             {L.lost ? <div><dt>Lost because</dt><dd>{L.lost}</dd></div> : null}
           </dl>
@@ -67,7 +72,13 @@ function LeadPanel({ L, reasons }) {
             </button>
           ))}
 
-          {L.job ? <Btn kind="ghost" onClick={L.goJob}>Open job {L.job}</Btn> : null}
+          {L.job ? <Btn kind="ghost" onClick={L.goJob}>Open project {L.job}</Btn> : L.can ? (
+            <div className="cr-push">
+              <Btn kind="primary" onClick={() => { const r = L.push(); setPushErr(r && r.indexOf('PRJ') !== 0 ? r : ''); }}>Make client &amp; open project</Btn>
+              <small>Adds {L.c} to clients and opens a project now. The lead stays at {L.stage}.</small>
+              {pushErr ? <div className="fm-err" role="alert">{pushErr}</div> : null}
+            </div>
+          ) : null}
 
           {L.can && L.next1 != null ? (
             <section className="cr-step">

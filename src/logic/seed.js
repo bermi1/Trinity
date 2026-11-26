@@ -45,11 +45,11 @@ function targetSeed() {
 export function seed() {
   return {
   projects:[
-    {id:'PRJ-0231',flow:'execution',cs:'NL',po:{no:'PO-55821',vendor:'V-2219',date:'2026-11-02',file:null,by:'UK',at:'2026-11-03'},name:'Lake Zone Roadshow',client:'Serengeti Telecom',pm:'SK',st:'on',prog:58,val:168,bud:116,spent:71.4,stage:9,due:'10 Oct',team:['SK','MM','JM','GM','AJ']},
+    {id:'PRJ-0231',flow:'execution',cs:'NL',venue:'Rock City Mall grounds, Mwanza',setupDate:'2026-12-12',pax:1200,po:{no:'PO-55821',vendor:'V-2219',date:'2026-11-02',file:null,by:'UK',at:'2026-11-03'},name:'Lake Zone Roadshow',client:'Serengeti Telecom',pm:'SK',st:'on',prog:58,val:168,bud:116,spent:71.4,stage:9,due:'10 Oct',team:['SK','MM','JM','GM','AJ']},
     {id:'PRJ-0228',flow:'execution',cs:'KM',name:'Outlet Branding · 8 outlets',client:'Pwani Beverages',pm:'SK',st:'risk',prog:72,val:94,bud:62,spent:69.4,stage:10,due:'23 Sep',team:['SK','JM','AJ']},
-    {id:'PRJ-0233',flow:'execution',cs:'NL',po:{no:'MB/PO/2026/0418',vendor:'TMS-07',date:'2026-10-28',file:null,by:'DK',at:'2026-10-29'},name:'Expo Stand 2026',client:'Mlimani Bank',pm:'NL',st:'late',prog:44,val:126,bud:88,spent:41.2,stage:7,due:'25 Sep',team:['NL','MM','AJ','JA']},
+    {id:'PRJ-0233',flow:'execution',cs:'NL',venue:'Mlimani City Expo Hall',setupDate:'2026-12-03',pax:600,po:{no:'MB/PO/2026/0418',vendor:'TMS-07',date:'2026-10-28',file:null,by:'DK',at:'2026-10-29'},name:'Expo Stand 2026',client:'Mlimani Bank',pm:'NL',st:'late',prog:44,val:126,bud:88,spent:41.2,stage:7,due:'25 Sep',team:['NL','MM','AJ','JA']},
     {id:'PRJ-0226',flow:'execution',cs:'KM',name:'Product Activation',client:'Kivuko Foods',pm:'MM',st:'on',prog:86,val:58,bud:39,spent:31.8,stage:12,due:'30 Sep',team:['MM','JM','FH']},
-    {id:'PRJ-0235',flow:'design',cs:'NL',name:'Brand Launch Gala',client:'Safari Mobile',pm:'',st:'on',prog:15,val:0,bud:0,spent:0,due:'14 Dec',team:[]},
+    {id:'PRJ-0235',flow:'design',cs:'NL',venue:'Serena Hotel ballroom',setupDate:'2026-12-13',pax:350,name:'Brand Launch Gala',client:'Safari Mobile',pm:'',st:'on',prog:15,val:0,bud:0,spent:0,due:'14 Dec',team:[]},
     {id:'PRJ-0219',flow:'closed',cs:'NL',name:'Staff Uniforms · 1,200 pcs',client:'Bahari Logistics',pm:'MM',st:'done',prog:100,val:42,bud:28,spent:26.1,stage:15,due:'12 Sep',team:['MM','JA']},
     {id:'PRJ-0230',flow:'execution',cs:'KM',name:'Billboard Campaign · 12 sites',client:'Kilimo Bank',pm:'SK',st:'risk',prog:51,val:132,bud:90,spent:58.3,stage:8,due:'06 Oct',team:['SK','AJ','GM','PL']},
     {id:'PRJ-0224',flow:'approval',cs:'KM',name:'Corporate Calendar 2027',client:'Nyota Insurance',pm:'MM',st:'on',prog:40,val:0,bud:0,spent:0,due:'20 Dec',team:['MM','RS'],proposal:{name:'Nyota calendar proposal.pdf',url:'',by:'KM',at:dayKey(-6)},

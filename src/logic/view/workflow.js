@@ -1,5 +1,6 @@
 // Ported from the Claude Design file (design/project/Trinity Mark 360 App.dc.html).
 // Values for the briefing, projects, tasks and money requests pages.
+import { eventLine } from '../flow';
 export function pageVals(s, IC, ST, narrow) {
   const V = {};
   const pill = (a) => ({stl:a[0], stbg:a[1], stfg:a[2]});
@@ -40,7 +41,7 @@ export function pageVals(s, IC, ST, narrow) {
   const vis = this.visibleProjects(), seeMoney = ['ceo','gm','finance'].includes(s.role || 'ceo') || this.isManagerOf('operations');
   V.projMoney = seeMoney;
   V.projChips = [['all','All'],['on','On track'],['risk','At risk'],['late','Delayed'],['done','Completed']].map(([k,l]) => ({l:l + ' · ' + (k === 'all' ? vis.length : vis.filter(p => p.st === k).length), on:() => this.setState({projFilter:k}), bg:pf === k ? '#2B1459' : '#fff', c:pf === k ? '#fff' : '#17152A', bd:pf === k ? '#2B1459' : '#E8E4EF'}));
-  V.projRows = vis.filter(p => pf === 'all' || p.st === pf).map(p => { const pm = this.av(p.pm), u = p.bud ? p.spent / p.bud : 0; return Object.assign({id:p.id, name:p.name, client:p.client, pmName:pm.n, pmC:pm.c, pmI:pm.i, prog:p.prog + '%', progW:p.prog + '%', progC:ST[p.st].c, used:Math.round(u*100) + '%', usedC:u > 1 ? '#B23A46' : u > .85 ? '#8A6414' : '#17152A', val:this.fmtM(p.val), due:p.due, on:() => this.go('project',{projectId:p.id})}, pill([ST[p.st].l, ST[p.st].bg, ST[p.st].fg])); });
+  V.projRows = vis.filter(p => pf === 'all' || p.st === pf).map(p => { const pm = this.av(p.pm), u = p.bud ? p.spent / p.bud : 0; return Object.assign({id:p.id, name:p.name, client:p.client, pmName:pm.n, pmC:pm.c, pmI:pm.i, prog:p.prog + '%', progW:p.prog + '%', progC:ST[p.st].c, used:Math.round(u*100) + '%', usedC:u > 1 ? '#B23A46' : u > .85 ? '#8A6414' : '#17152A', val:this.fmtM(p.val), due:p.due, ev:eventLine(p), on:() => this.go('project',{projectId:p.id})}, pill([ST[p.st].l, ST[p.st].bg, ST[p.st].fg])); });
   V.projEmpty = V.projRows.length === 0;
   V.newProject = () => this.openModal('project');
 

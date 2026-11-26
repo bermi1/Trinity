@@ -17,6 +17,30 @@ export const FLOW_OWNER = { brief: 'Client Service', design: 'Creative', proposa
 
 const sumLines = lines => (lines || []).reduce((a, l) => a + (+l.qty || 0) * (+l.cost || 0), 0);
 
+// The event's details, shared with leads (same names on both): where it is held, the setup date and
+// how many people. Normalised: trimmed venue, a real 'YYYY-MM-DD' date or '', pax a whole number ≥ 0.
+export const validDay = d => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d || '')) return false;
+  const [y, m, n] = d.split('-').map(Number), t = new Date(Date.UTC(y, m - 1, n));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === n;
+};
+export function eventFields(f) {
+  f = f || {};
+  const venue = String(f.venue == null ? '' : f.venue).replace(/\s+/g, ' ').trim().slice(0, 200);
+  const d = String(f.setupDate == null ? '' : f.setupDate).trim();
+  const n = parseFloat(String(f.pax == null ? '' : f.pax).replace(/[,\s]/g, ''));
+  return { venue, setupDate: validDay(d) ? d : '', pax: Number.isFinite(n) && n > 0 ? Math.floor(n) : 0 };
+}
+// '2026-12-12' → '12 Dec 2026'.
+export const fmtDay = d => {
+  if (!validDay(d)) return '';
+  const [y, m, n] = d.split('-').map(Number);
+  return new Date(y, m - 1, n).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+// Venue · setup date · pax, for cards and notifications ('' when nothing is set).
+export const eventLine = p => { const e = eventFields(p); return [e.venue, fmtDay(e.setupDate), e.pax ? e.pax.toLocaleString('en-US') + ' pax' : ''].filter(Boolean).join(' · '); };
+const said = c => String(c == null ? '' : c).replace(/\s+/g, ' ').trim().slice(0, 500);
+
 export const flowMethods = {
   flowOf(p) {
     if (p.flow && FLOW.includes(p.flow)) return p.flow;
@@ -32,7 +56,38 @@ export const flowMethods = {
     if (!on && k !== this.me().k) this.notify({ to: k, ic: 'users', t: 'You are on the team · ' + p.client, s: p.name + ' · added by ' + this.me().n, go: 'project:' + pid });
     this.toast((on ? 'Removed ' : 'Added ') + this.av(k).n.split(' ')[0]);
   },
-  pnote(id, t) { this.setProject(id, p => ({ notes: [...(p.notes || []), { by: this.me().k, at: dayKey(0), t, sys: true }] })); },
+  pnote(id, t, extra) { this.setProject(id, p => ({ notes: [...(p.notes || []), Object.assign({ by: this.me().k, at: dayKey(0), t, sys: true }, extra || {})] })); },
+  // A step change goes in the project's notes: "Moved to Design · what happened · comment · by Name".
+  // Returns the comment, cleaned, so the caller can pass it on in the notification.
+  stepNote(id, to, what, comment) {
+    const c = said(comment), back = FLOW.indexOf(to) < FLOW.indexOf(this.flowOf(this.state.projects.find(p => p.id === id) || {}));
+    this.pnote(id, [(back ? 'Moved back to ' : 'Moved to ') + FLOW_L[FLOW.indexOf(to)], what, c, 'by ' + this.me().n].filter(Boolean).join(' · '), { step: to, comment: c });
+    return c;
+  },
+  // Who may change a project's details: Management, the Operations and Client Service managers, the
+  // project's PM and its Client Service owner.
+  canEditProject(p) {
+    const me = this.me().k;
+    return !!p && (this.isTop() || this.isManagerOf('operations') || this.isManagerOf('clientservice') || (!!p.pm && p.pm === me) || (!!p.cs && p.cs === me));
+  },
+  // Venue, setup date and pax: saved, and the change noted on the project.
+  editProjectEvent(pid, f) {
+    const p = this.state.projects.find(x => x.id === pid); if (!p) return 'Project not found';
+    if (!this.canEditProject(p)) return 'Only Management, the PM or the project’s Client Service can change the event details';
+    const raw = String((f || {}).setupDate == null ? '' : f.setupDate).trim();
+    if (raw && !validDay(raw)) return 'Enter the setup date as a date';
+    const pax = String((f || {}).pax == null ? '' : f.pax).replace(/[,\s]/g, '');
+    if (pax && !(/^\d+$/.test(pax))) return 'Pax is a whole number of people';
+    const e = eventFields(f), was = eventFields(p), ch = [];
+    if (e.venue !== was.venue) ch.push('Venue: ' + (e.venue || '—'));
+    if (e.setupDate !== was.setupDate) ch.push('Setup: ' + (fmtDay(e.setupDate) || '—'));
+    if (e.pax !== was.pax) ch.push('Pax: ' + (e.pax || '—'));
+    if (!ch.length) { this.toast('No changes'); return ''; }
+    this.setProject(pid, e);
+    this.pnote(pid, 'Event details changed · ' + ch.join(' · ') + ' · by ' + this.me().n);
+    this.toast('Event details saved');
+    return '';
+  },
   canCS() { return this.isTop() || this.myDept() === 'clientservice'; },
   canOps() { return this.isTop() || this.isManagerOf('operations'); },
 
@@ -41,7 +96,7 @@ export const flowMethods = {
     const client = (f.client || '').trim(), name = (f.name || '').trim();
     if (!client || !name) return 'Enter the client and the project name';
     const id = this.nextId('PRJ', this.state.projects);
-    const p = { id, name, client, pm: '', st: 'on', prog: 0, val: 0, bud: 0, spent: 0, flow: 'brief', due: f.due || 'TBC', team: [], cs: f.cs || this.me().k, lead: f.lead || '', at: dayKey(0) };
+    const p = Object.assign({ id, name, client, pm: '', st: 'on', prog: 0, val: 0, bud: 0, spent: 0, flow: 'brief', due: f.due || 'TBC', team: [], cs: f.cs || this.me().k, lead: f.lead || '', at: dayKey(0) }, eventFields(f));
     this.setState(x => ({ projects: [p, ...x.projects] }));
     if (p.cs !== this.me().k) this.remind(p.cs, 'New project: send the design brief · ' + client, 'project', 'folder', name);
     this.toast('Project ' + id + ' created · next: send the design brief to Creative');
@@ -49,17 +104,17 @@ export const flowMethods = {
     return id;
   },
   // Brief sent: the project moves to Design.
-  afterBrief(pid) {
+  afterBrief(pid, comment) {
     const p = this.state.projects.find(x => x.id === pid); if (!p) return;
-    if (this.flowOf(p) === 'brief') { this.setProject(pid, { flow: 'design' }); this.pnote(pid, 'Design brief sent to Creative'); }
+    if (this.flowOf(p) === 'brief') { this.stepNote(pid, 'design', 'Design brief sent to Creative', comment); this.setProject(pid, { flow: 'design' }); }
   },
   // Every brief of the project approved: Client Service uploads the proposal.
   afterDesignApproved(pid) {
     const p = this.state.projects.find(x => x.id === pid); if (!p || this.flowOf(p) !== 'design') return;
     const briefs = this.state.tasks.filter(t => t.kind === 'brief' && t.p === pid);
     if (briefs.length && briefs.every(b => b.st === 'done')) {
+      this.stepNote(pid, 'proposal', 'All designs approved · Client Service to upload the proposal');
       this.setProject(pid, { flow: 'proposal' });
-      this.pnote(pid, 'All designs approved · Client Service to upload the proposal');
       const cs = p.cs || this.managerOf('clientservice');
       if (cs && cs !== this.me().k) this.remind(cs, 'Designs approved: upload the proposal · ' + p.client, 'project', 'fileText', p.name);
     }
@@ -70,10 +125,10 @@ export const flowMethods = {
     if (this.flowOf(p) !== 'proposal') return 'The proposal comes after the designs are approved';
     if (!file) return 'Attach the proposal file';
     let info; try { info = await this.storeFile(file); } catch (e) { return 'Upload failed · ' + (e.message || e); }
-    this.setProject(pid, { flow: 'budget', proposal: Object.assign({ by: this.me().k, at: dayKey(0), note: (note || '').trim() }, info) });
-    this.pnote(pid, 'Proposal uploaded · ' + file.name + ' · sent to Operations for the budget');
+    const c = this.stepNote(pid, 'budget', 'Proposal uploaded · ' + file.name + ' · sent to Operations for the budget', note);
+    this.setProject(pid, { flow: 'budget', proposal: Object.assign({ by: this.me().k, at: dayKey(0), note: c }, info) });
     const om = this.managerOf('operations');
-    if (om && om !== this.me().k) this.remind(om, 'Budget needed: choose the PM and prepare the internal budget · ' + p.client, 'project', 'wallet', p.name);
+    if (om && om !== this.me().k) this.remind(om, 'Budget needed: choose the PM and prepare the internal budget · ' + p.client, 'project', 'wallet', p.name + (c ? ' · ' + c : ''));
     this.toast('Proposal uploaded · sent to Operations for the budget');
     return '';
   },
@@ -94,15 +149,15 @@ export const flowMethods = {
     this.setProject(pid, x => ({ pm: b.pm != null ? b.pm : x.pm, team: b.pm ? [...new Set([b.pm, ...(x.team || [])])] : x.team, budget: Object.assign({}, x.budget || {}, { lines, value: Math.round(+b.value || 0), st: 'draft', by: this.me().k, at: dayKey(0) }) }));
     return '';
   },
-  submitBudget(pid, b) {
+  submitBudget(pid, b, comment) {
     const e = this.saveBudget(pid, b); if (e) return e;
     const p = this.state.projects.find(x => x.id === pid), lines = (b.lines || []).filter(l => (l.item || '').trim() && +l.cost > 0);
     if (!b.pm) return 'Choose the Project Manager';
     if (!lines.length) return 'Add at least one budget line';
     if (!(+b.value > 0)) return 'Enter the project value (what the client pays)';
+    const c = this.stepNote(pid, 'approval', 'Budget submitted · internal ' + this.fmtT(sumLines(lines)) + ' · value ' + this.fmtT(+b.value) + ' · waiting for the GM', comment);
     this.setProject(pid, x => ({ flow: 'approval', budget: Object.assign({}, x.budget, { st: 'gm', note: '' }) }));
-    this.pnote(pid, 'Budget submitted · internal ' + this.fmtT(sumLines(lines)) + ' · value ' + this.fmtT(+b.value) + ' · waiting for the GM');
-    this.remind(this.ROLES.gm.k, 'Budget to approve · ' + p.client, 'project', 'wallet', p.name + ' · ' + this.fmtT(+b.value));
+    this.remind(this.ROLES.gm.k, 'Budget to approve · ' + p.client, 'project', 'wallet', p.name + ' · ' + this.fmtT(+b.value) + (c ? ' · ' + c : ''));
     if (b.pm !== this.me().k) this.remind(b.pm, 'You are Project Manager · ' + p.client, 'project', 'folder', p.name);
     this.toast('Budget sent to the GM for approval');
     return '';
@@ -111,32 +166,68 @@ export const flowMethods = {
     const b = p.budget || {}, role = this.state.role || 'ceo';
     return this.flowOf(p) === 'approval' && ((b.st === 'gm' && (role === 'gm' || role === 'ceo')) || (b.st === 'mgmt' && role === 'ceo'));
   },
-  approveBudget(pid) {
+  approveBudget(pid, comment) {
     const p = this.state.projects.find(x => x.id === pid); if (!p || !this.canApproveBudget(p)) return 'Not waiting for you';
     const b = p.budget, role = this.state.role || 'ceo', me = this.me().k, at = dayKey(0);
     if (b.st === 'gm' && role === 'gm') {
+      const c = said(comment);
       this.setProject(pid, x => ({ budget: Object.assign({}, x.budget, { st: 'mgmt', gm: { by: me, at } }) }));
-      this.pnote(pid, 'Budget approved by the GM · waiting for Management');
-      this.remind(this.ROLES.ceo.k, 'Budget to approve · ' + p.client, 'project', 'wallet', p.name + ' · approved by the GM');
+      this.pnote(pid, ['Budget approved by the GM · waiting for Management', c, 'by ' + this.me().n].filter(Boolean).join(' · '), c ? { comment: c } : null);
+      this.remind(this.ROLES.ceo.k, 'Budget to approve · ' + p.client, 'project', 'wallet', p.name + ' · approved by the GM' + (c ? ' · ' + c : ''));
       this.toast('Approved · sent to Management');
       return '';
     }
     // Management's approval (it also covers the GM step when Management acts first).
     const internal = sumLines(b.lines);
+    const c = this.stepNote(pid, 'execution', 'Budget approved by Management · project is in execution', comment);
     this.setProject(pid, x => ({ flow: 'execution', val: +(b.value / 1e6).toFixed(2), bud: +(internal / 1e6).toFixed(2), budget: Object.assign({}, x.budget, { st: 'approved', gm: x.budget.gm || { by: me, at }, mgmt: { by: me, at } }) }));
-    this.pnote(pid, 'Budget approved by Management · project is in execution');
     [p.pm, this.managerOf('operations'), p.cs, this.ROLES.finance.k, this.ROLES.gm.k].filter((k, i, a) => k && k !== me && a.indexOf(k) === i)
-      .forEach(k => this.remind(k, 'Approved, start execution · ' + p.client, 'project', 'check', p.name + (k === this.ROLES.finance.k ? ' · value ' + this.fmtT(b.value) + ', ready to invoice' : '')));
+      .forEach(k => this.remind(k, 'Approved, start execution · ' + p.client, 'project', 'check', p.name + (k === this.ROLES.finance.k ? ' · value ' + this.fmtT(b.value) + ', ready to invoice' : '') + (c ? ' · ' + c : '')));
     this.toast('Budget approved · project moves to execution');
     return '';
   },
   returnBudget(pid, note) {
     const p = this.state.projects.find(x => x.id === pid); if (!p || !this.canApproveBudget(p)) return 'Not waiting for you';
     if (!(note || '').trim()) return 'Say what should change';
+    this.stepNote(pid, 'budget', 'Budget sent back', note);
     this.setProject(pid, x => ({ flow: 'budget', budget: Object.assign({}, x.budget, { st: 'returned', note: note.trim(), gm: null }) }));
-    this.pnote(pid, 'Budget sent back: ' + note.trim());
     const om = this.managerOf('operations'); if (om && om !== this.me().k) this.remind(om, 'Budget sent back · ' + p.client, 'project', 'wallet', note.trim());
     this.toast('Sent back to Operations');
+    return '';
+  },
+
+  // "Move to <next step>" from the project page, with an optional comment. Brief and Design can be moved
+  // by hand (a brief given in a meeting, designs done outside the system); the later steps keep their
+  // own action, because each needs something (the proposal file, the budget, the approvals, tasks done).
+  flowNext(p) { const i = FLOW.indexOf(this.flowOf(p)); return i >= 0 && i < FLOW.length - 1 ? FLOW[i + 1] : ''; },
+  canMoveOn(p) {
+    const f = this.flowOf(p);
+    if (f === 'brief') return this.canCS();
+    if (f === 'design') return this.canCS() || this.isManagerOf('creative');
+    if (f === 'approval') return this.canApproveBudget(p);
+    if (f === 'execution') return this.canClose(p);
+    return false;
+  },
+  advanceProject(pid, comment) {
+    const p = this.state.projects.find(x => x.id === pid); if (!p) return 'Project not found';
+    const f = this.flowOf(p), to = this.flowNext(p);
+    if (!to) return 'This project is closed';
+    if (f === 'proposal') return 'Upload the proposal to move to Budget';
+    if (f === 'budget') return 'Submit the budget to move to Approval';
+    if (f === 'approval') return this.approveBudget(pid, comment);
+    if (f === 'execution') return this.closeProject(pid, comment);
+    if (!this.canMoveOn(p)) return f === 'brief' ? 'Client Service moves the project to Design' : 'Client Service or the Creative Manager moves the project to Proposal';
+    if (f === 'design') {
+      const open = this.state.tasks.filter(t => t.kind === 'brief' && t.p === pid && t.st !== 'done').length;
+      if (open) return open + ' design(s) not approved yet';
+    }
+    const c = this.stepNote(pid, to, '', comment);
+    this.setProject(pid, { flow: to });
+    const sub = p.name + (c ? ' · ' + c : '') + ' · by ' + this.me().n;
+    if (to === 'design') { const cm = this.managerOf('creative'); if (cm && cm !== this.me().k) this.remind(cm, 'Project moved to Design · ' + p.client, 'project:' + pid, 'clipboard', sub); }
+    if (to === 'proposal') { const cs = p.cs || this.managerOf('clientservice'); if (cs && cs !== this.me().k) this.remind(cs, 'Designs done: upload the proposal · ' + p.client, 'project:' + pid, 'fileText', sub); }
+    this.toast('Moved to ' + FLOW_L[FLOW.indexOf(to)]);
+    this.log('folder', 'purple', p.client + ' · moved to ' + FLOW_L[FLOW.indexOf(to)], p.name + (c ? ' · ' + c : ''));
     return '';
   },
 
@@ -169,13 +260,16 @@ export const flowMethods = {
     this.toast('Done · ' + t.t);
     this.log('check', 'green', this.me().first + ' finished a task', t.t + (r ? ' · ' + r : ''));
   },
-  closeProject(pid) {
+  canClose(p) { const me = this.me().k; return !!p && (this.isTop() || p.pm === me || this.isManagerOf('operations')); },
+  closeProject(pid, comment) {
     const p = this.state.projects.find(x => x.id === pid); if (!p) return 'Project not found';
+    if (this.flowOf(p) !== 'execution') return 'Only a project in execution can be closed';
+    if (!this.canClose(p)) return 'The PM, the Operations Manager or Management closes the project';
     const open = this.state.tasks.filter(t => t.p === pid && t.kind !== 'brief' && t.st !== 'done').length;
     if (open) return open + ' task(s) still open';
+    const c = this.stepNote(pid, 'closed', 'Project closed', comment);
     this.setProject(pid, { flow: 'closed', st: 'done', prog: 100, closedAt: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) });
-    this.pnote(pid, 'Project closed');
-    [this.ROLES.ceo.k, this.ROLES.gm.k, this.ROLES.finance.k].filter(k => k !== this.me().k).forEach(k => this.remind(k, 'Project closed · ' + p.client, 'project', 'check', p.name));
+    [this.ROLES.ceo.k, this.ROLES.gm.k, this.ROLES.finance.k].filter(k => k !== this.me().k).forEach(k => this.remind(k, 'Project closed · ' + p.client, 'project', 'check', p.name + (c ? ' · ' + c : '')));
     this.toast(p.name + ' closed');
     return '';
   }
