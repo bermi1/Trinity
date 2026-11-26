@@ -11,7 +11,7 @@ function LeadCard({ l }) {
       <span className="cr-card-foot">
         <span className="cr-face" style={{ background: l.oc }} title={l.owner}>{l.oi}</span>
         <span>{l.stale ? l.days + ' days without update' : l.next ? 'Next: ' + l.next : l.stage}</span>
-        {l.hasProposal ? <span className="cr-doc" title="Proposal attached">PDF</span> : null}
+        {l.hasFile ? <span className="cr-doc" title={l.fileL + ' attached'}>{l.fileL === 'Proposal' ? 'PDF' : l.fileL === 'Artwork' ? 'ART' : 'FILE'}</span> : null}
       </span>
     </button>
   );
@@ -22,6 +22,7 @@ function LeadPanel({ L, reasons }) {
   const [note, setNote] = useState('');
   const [value, setValue] = useState('');
   const [file, setFile] = useState(null);
+  const [kind, setKind] = useState('proposal');
   const [busy, setBusy] = useState(false);
   const [lost, setLost] = useState(false);
   const [reason, setReason] = useState('');
@@ -34,7 +35,9 @@ function LeadPanel({ L, reasons }) {
     try { setFile(await L.store(f)); } catch (x) { setErr('Upload failed · ' + (x.message || x)); }
     setBusy(false);
   };
-  const go = (to, extra) => { const e = L.move(to, Object.assign({ note }, extra)); if (e) setErr(e); };
+  const go = (to, extra) => { const e = L.move(to, Object.assign({ note }, extra)); if (e) setErr(e); else { setFile(null); setKind('proposal'); setErr(''); } };
+  // Attach the chosen file now, without moving the lead.
+  const attachOnly = () => { const e = L.attach(file, kind); if (e) setErr(e); else { setFile(null); setKind('proposal'); setErr(''); } };
 
   return (
     <div className="cr-back" onClick={L.close}>
@@ -56,24 +59,34 @@ function LeadPanel({ L, reasons }) {
             {L.lost ? <div><dt>Lost because</dt><dd>{L.lost}</dd></div> : null}
           </dl>
 
-          {L.proposal ? (
-            <button type="button" className="cr-file" onClick={L.proposal.open}>
-              <span className="cr-doc">PDF</span>
-              <span><b>{L.proposal.name}</b><small>Sent by {L.proposal.byN} · {L.proposal.at} · {L.proposal.size}</small></span>
+          {L.files.map((f, i) => (
+            <button key={i} type="button" className="cr-file" onClick={f.open} aria-label={'Open ' + f.label}>
+              <span className="cr-doc">{f.kind === 'proposal' ? 'PDF' : f.kind === 'artwork' ? 'ART' : 'FILE'}</span>
+              <span><b>{f.label}</b><small>Added by {f.byN}{f.at ? ' · ' + f.at : ''} · {f.size}</small></span>
             </button>
-          ) : null}
+          ))}
 
           {L.job ? <Btn kind="ghost" onClick={L.goJob}>Open job {L.job}</Btn> : null}
 
           {L.can && L.next1 != null ? (
             <section className="cr-step">
               <h3>Next step</h3>
-              {L.needsFile ? (
-                <label className={'ff-file' + (file ? ' is-done' : '')}>
-                  <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,image/*" onChange={pick} aria-label="Proposal file" />
-                  <span className="ff-file-ic" aria-hidden="true">{file ? '✓' : '↑'}</span>
-                  <span>{file ? file.name : busy ? 'Uploading…' : 'Attach the proposal you sent'}<small>Required · PDF, Word or PowerPoint</small></span>
-                </label>
+              {L.offerFile && !lost ? (
+                <>
+                  <label className={'ff-file' + (file ? ' is-done' : '')}>
+                    <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.ai,.psd,.eps,.svg,image/*" onChange={pick} aria-label="Lead file" />
+                    <span className="ff-file-ic" aria-hidden="true">{file ? '✓' : '↑'}</span>
+                    <span>{file ? file.name : busy ? 'Uploading…' : 'Attach a file (optional)'}<small>Optional · the proposal, artwork or another file you sent</small></span>
+                  </label>
+                  {file ? (
+                    <div className="ff"><span className="ff-l">This file is</span>
+                      <div className="ff-chips" role="radiogroup" aria-label="File type">
+                        {L.kinds.map(k => <button key={k.v} type="button" role="radio" aria-checked={kind === k.v} className={kind === k.v ? 'is-on' : ''} onClick={() => setKind(k.v)}>{k.l}</button>)}
+                      </div>
+                      <button type="button" className="td-link" onClick={attachOnly}>Attach without moving the lead</button>
+                    </div>
+                  ) : null}
+                </>
               ) : null}
               {L.needsValue && !lost ? (
                 <label className="ff"><span className="ff-l">Agreed value (TZS M)</span><input inputMode="decimal" value={value} onChange={e => setValue(e.target.value)} placeholder={L.v ? L.v.replace(/[^\d.]/g, '') : 'e.g. 120'} /></label>
@@ -95,7 +108,7 @@ function LeadPanel({ L, reasons }) {
                   </>
                 ) : (
                   <>
-                    <Btn kind="dark" disabled={busy} onClick={() => go(L.next1, L.needsFile ? { proposal: file } : L.needsValue ? { value } : {})}>{L.nextLabel}</Btn>
+                    <Btn kind="dark" disabled={busy} onClick={() => go(L.next1, Object.assign(file && L.offerFile ? { proposal: file, kind } : {}, L.needsValue ? { value } : {}))}>{L.nextLabel}</Btn>
                     <Btn kind="ghost" onClick={() => setLost(true)}>Lost</Btn>
                   </>
                 )}

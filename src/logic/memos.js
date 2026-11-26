@@ -10,6 +10,10 @@ const ORDER = ['sent', 'seen', 'assigned', 'prog', 'done'];
 export const MEMO_DEPT_L = { clientservice: 'Client Service', creative: 'Creative', operations: 'Operations', finance: 'Finance', production: 'Printing', reception: 'Reception', gm: 'General Manager', management: 'Management' };
 // Memos can also go straight to the General Manager or to Management (the MD), not only to a department.
 export const MEMO_TOP = { gm: 'gm', management: 'ceo' };
+// A memo straight to one person (not to a department): dept 'person', `to` and `who` are that person.
+// It is private: only the sender, the person and Management / the GM see it (not the department head).
+export const MEMO_PERSON = 'person';
+const isPersonMemo = m => !!m && m.dept === MEMO_PERSON;
 const catL = c => (MEMO_CATS.find(x => x[0] === c) || MEMO_CATS[0])[1];
 
 export const memoMethods = {
@@ -19,19 +23,48 @@ export const memoMethods = {
     if (!role) return this.managerOf(dept);
     return (this.roleHolder || {})[role] || (this.state.workspaceLive ? null : (this.ROLES[role] || {}).k) || null;
   },
+  // Where a memo went, in words: the department, or the person for a direct memo.
+  memoToL(m) { return isPersonMemo(m) ? this.av(m.to).n : MEMO_DEPT_L[m.dept] || m.dept; },
+  // Everyone a memo can go to directly: the staff list, the department heads, the GM and Management; not me.
+  memoPeople() {
+    const me = this.me().k, heads = ['clientservice', 'creative', 'operations', 'finance', 'production', 'reception'].map(d => this.managerOf(d));
+    const ks = [...new Set([...(this.state.staff || []).map(p => p.k), ...heads, this.memoHead('gm'), this.memoHead('management')].filter(k => k && k !== me))];
+    return ks.map(k => ({ v: k, l: this.av(k).n })).sort((a, b) => a.l.localeCompare(b.l));
+  },
+  // The memo written out for WhatsApp, sent to whoever has it (the person, or the department head).
+  memoWaSend(id) {
+    const m = this.memoById(id); if (!m) return 'Memo not found';
+    const k = m.who || m.to; if (!k || k === this.me().k) return 'No one to send it to';
+    const a = this.av(k), link = (typeof location !== 'undefined' ? location.origin : '') + '/?go=memo:' + id;
+    const text = 'Habari ' + a.first + ', ' + catL(m.cat).toLowerCase() + ' memo from ' + this.me().n + (isPersonMemo(m) ? '' : ' to ' + (MEMO_DEPT_L[m.dept] || m.dept)) + ':\n"' + m.text.slice(0, 400) + '"\nPlease open it in Trinity Mark 360: ' + link;
+    if (!this.waOpen(k, text)) return a.first + ' has not added a WhatsApp number yet';
+    this.memoPatch(id, {}, 'Sent on WhatsApp to ' + a.n);
+    return '';
+  },
   memoById(id) { return (this.state.memos || []).find(m => m.id === id) || null; },
   memoPatch(id, patch, t) {
     const at = dayKey(0) + ' ' + this.now();
     this.setState(x => ({ memos: (x.memos || []).map(m => (m.id === id ? Object.assign({}, m, typeof patch === 'function' ? patch(m) : patch, { log: [...(m.log || []), { by: this.me().k, at, t }] }) : m)) }));
   },
-  canRunMemo(m) { return !!m && (this.isTop() || this.isManagerOf(m.dept) || m.to === this.me().k); },
+  canRunMemo(m) { return !!m && (this.isTop() || (!isPersonMemo(m) && this.isManagerOf(m.dept)) || m.to === this.me().k); },
+  // Who may open a memo: the sender, the person it went to or is assigned to, Management and the GM;
+  // for a department memo also its head and the PA. A direct memo to a person stays between them.
+  canSeeMemo(m) {
+    if (!m) return false;
+    const me = this.me().k;
+    if (m.from === me || m.to === me || m.who === me || this.isTop()) return true;
+    return !isPersonMemo(m) && (this.isManagerOf(m.dept) || (this.state.role || 'ceo') === 'pa');
+  },
   openMemo(id) {
     const m = this.memoById(id); if (!m) return;
     const me = this.me().k;
     if (m.st === 'sent' && this.canRunMemo(m) && m.from !== me) {
       this.memoPatch(id, { st: 'seen' }, 'Opened');
       this.notify({ to: m.from, ic: 'check', t: 'Memo seen by ' + this.me().n, s: m.text.slice(0, 90), go: 'memo:' + id });
-    } else if (m.who === me && m.st === 'assigned' && !(m.log || []).some(l => l.by === me && /Opened by assignee/.test(l.t))) this.memoPatch(id, {}, 'Opened by assignee');
+    } else if (m.who === me && m.st === 'assigned' && !(m.log || []).some(l => l.by === me && /Opened by assignee/.test(l.t))) {
+      this.memoPatch(id, {}, 'Opened by assignee');
+      if (isPersonMemo(m) && m.from !== me) this.notify({ to: m.from, ic: 'check', t: 'Memo seen by ' + this.me().n, s: m.text.slice(0, 90), go: 'memo:' + id });
+    }
     this.go('memo', { memoId: id });
   },
   skipMemoPop(id) { this.setState(x => ({ memoSkip: [...(x.memoSkip || []), id] })); },
@@ -63,7 +96,7 @@ export const memoMethods = {
     // The work also goes on the project, so the project shows it.
     if (m.project) {
       this.setProject(m.project, p => ({ files: [...(p.files || []), Object.assign({ memo: id, dept: m.dept }, entry)] }));
-      this.pnote(m.project, MEMO_DEPT_L[m.dept] + ' attached ' + file.name + ' (memo)');
+      this.pnote(m.project, (isPersonMemo(m) ? this.me().n : MEMO_DEPT_L[m.dept]) + ' attached ' + file.name + ' (memo)');
     }
     [m.from, m.to || this.managerOf(m.dept)].filter(k => k && k !== this.me().k).forEach(k => this.notify({ to: k, ic: 'paperclip', t: 'File attached to memo · ' + file.name, s: this.me().n + ' · ' + m.text.slice(0, 70), go: 'memo:' + id }));
     this.toast('Attached · ' + file.name);
@@ -75,7 +108,7 @@ export const memoMethods = {
     const m = this.memoById(id); if (!m) return 'Memo not found';
     if (!k || k === this.me().k) return 'Choose who to remind';
     const a = this.av(k), link = (typeof location !== 'undefined' ? location.origin : '') + '/?go=memo:' + id;
-    const text = 'Habari ' + a.first + ', reminder about the ' + catL(m.cat).toLowerCase() + ' memo from ' + this.av(m.from).n + ' to ' + (MEMO_DEPT_L[m.dept] || m.dept) + ':\n"' + m.text.slice(0, 200) + '"\nStatus: ' + (MEMO_ST[m.st] || 'Sent') + '. Please open it in Trinity Mark 360: ' + link;
+    const text = 'Habari ' + a.first + ', reminder about the ' + catL(m.cat).toLowerCase() + ' memo from ' + this.av(m.from).n + ' to ' + this.memoToL(m) + ':\n"' + m.text.slice(0, 200) + '"\nStatus: ' + (MEMO_ST[m.st] || 'Sent') + '. Please open it in Trinity Mark 360: ' + link;
     if (!this.waOpen(k, text)) return a.first + ' has not added a WhatsApp number yet';
     this.memoPatch(id, {}, 'WhatsApp reminder to ' + a.n);
     this.notify({ to: k, ic: 'message', t: 'Reminder · memo from ' + this.av(m.from).n, s: m.text.slice(0, 90), go: 'memo:' + id });
@@ -85,8 +118,8 @@ export const memoMethods = {
     const m = this.memoById(id); if (!m) return 'Memo not found';
     this.memoPatch(id, { st: 'done', reply: (reply || '').trim() }, 'Done' + (reply ? ': ' + reply.trim() : ''));
     if (m.task) this.setState(x => ({ tasks: x.tasks.map(t => (t.id === m.task ? Object.assign({}, t, { st: 'done', report: (reply || '').trim() || 'Done' }) : t)) }));
-    if (m.from !== this.me().k) this.notify({ to: m.from, ic: 'check', t: 'Memo done · ' + MEMO_DEPT_L[m.dept], s: (reply || '').trim() || m.text.slice(0, 80), go: 'memo:' + id });
-    if (m.project) this.pnote(m.project, 'Memo done by ' + MEMO_DEPT_L[m.dept] + (reply ? ': ' + reply.trim() : ''));
+    if (m.from !== this.me().k) this.notify({ to: m.from, ic: 'check', t: 'Memo done · ' + (isPersonMemo(m) ? this.me().n : MEMO_DEPT_L[m.dept]), s: (reply || '').trim() || m.text.slice(0, 80), go: 'memo:' + id });
+    if (m.project) this.pnote(m.project, 'Memo done by ' + (isPersonMemo(m) ? this.me().n : MEMO_DEPT_L[m.dept]) + (reply ? ': ' + reply.trim() : ''));
     this.toast('Memo done · ' + this.av(m.from).n + ' told');
     return '';
   }
@@ -100,12 +133,13 @@ function memoRow(m) {
   return {
     id: m.id, cat: m.cat || 'project', catL: catL(m.cat), st: m.st, stL: MEMO_ST[m.st] || 'Sent', urgent: m.cat === 'emergency',
     steps: ORDER.map((k, i) => ({ k, l: MEMO_ST[k], done: ORDER.indexOf(m.st) >= i })),
-    from: face(m.from), to: face(m.to), dept: MEMO_DEPT_L[m.dept] || m.dept, who: m.who ? face(m.who) : null, text: m.text, reply: m.reply || '', at: m.at,
+    from: face(m.from), to: face(m.to), dept: this.memoToL(m), direct: isPersonMemo(m), who: m.who ? face(m.who) : null, text: m.text, reply: m.reply || '', at: m.at,
     about: P ? P.client + ' · ' + P.name : L ? L.c + ' · ' + L.t : '', goAbout: P ? () => this.go('project', { projectId: P.id }) : L ? () => this.setState({ page: 'clients', leadSel: L.id }) : null,
     file: m.file ? { name: m.file.name, open: () => this.openDoc({ n: m.file.name, url: m.file.url, path: m.file.path, mime: m.file.mime }) } : null,
     files: (m.files || []).map(f => ({ name: f.name, by: this.av(f.by).n, at: f.at, img: /^image\//.test(f.mime || '') && f.url ? f.url : '', open: () => this.openDoc({ n: f.name, url: f.url, path: f.path, mime: f.mime }) })),
     log: (m.log || []).slice().reverse().map(l => ({ t: l.t, by: this.av(l.by).n, at: l.at })),
-    canAssign: run && m.st !== 'done', team: run ? (MEMO_TOP[m.dept] ? [...new Set([...(s.staff || []).map(p => p.k), ...['clientservice', 'creative', 'operations', 'finance', 'production', 'reception'].map(d => this.managerOf(d))].filter(k => k && k !== me))] : this.teamOf(m.dept)).map(face) : [],
+    // A direct memo is already with its person; only Management / the GM may hand it to someone else.
+    canAssign: run && m.st !== 'done' && (!isPersonMemo(m) || this.isTop()), team: run ? (MEMO_TOP[m.dept] || isPersonMemo(m) ? [...new Set([...(s.staff || []).map(p => p.k), ...['clientservice', 'creative', 'operations', 'finance', 'production', 'reception'].map(d => this.managerOf(d))].filter(k => k && k !== me))] : this.teamOf(m.dept)).map(face) : [],
     canWork: (mine || run) && m.st !== 'done', canStart: (mine || run) && ['seen', 'assigned'].includes(m.st),
     isSender: m.from === me,
     remind: memoRemindees.call(this, m, me, run).map(k => { const a = this.av(k); return { k, n: a.n, first: a.first, has: !!this.waNumber(k), wa: () => this.memoRemindWa(m.id, k) }; }),
@@ -128,22 +162,22 @@ function memoRemindees(m, me, run) {
 
 export function memoVals(s) {
   const me = this.me().k, all = s.memos || [], role = s.role || 'ceo';
-  const mineIn = all.filter(m => m.to === me || m.who === me || this.isManagerOf(m.dept) || (this.isTop() && m.cat === 'management'));
+  const mineIn = all.filter(m => m.to === me || m.who === me || (!isPersonMemo(m) && this.isManagerOf(m.dept)) || (this.isTop() && m.cat === 'management'));
   // A new memo pops up for the head who receives it, and for the person it is assigned to.
   const skip = s.memoSkip || [];
-  const pop = all.find(m => !skip.includes(m.id) && m.from !== me && ((m.st === 'sent' && (m.to === me || this.isManagerOf(m.dept))) || (m.st === 'assigned' && m.who === me && !(m.log || []).some(l => l.by === me && /Opened by assignee/.test(l.t)))));
+  const pop = all.find(m => !skip.includes(m.id) && m.from !== me && ((m.st === 'sent' && (m.to === me || (!isPersonMemo(m) && this.isManagerOf(m.dept)))) || (m.st === 'assigned' && m.who === me && !(m.log || []).some(l => l.by === me && /Opened by assignee/.test(l.t)))));
   const cur = s.memoId ? this.memoById(s.memoId) : null;
-  const visible = m => m && (m.from === me || m.to === me || m.who === me || this.isManagerOf(m.dept) || this.isTop() || role === 'pa');
+  const visible = m => this.canSeeMemo(m);
   return {
     MEMO: {
       cats: MEMO_CATS.map(([v, l]) => ({ v, l })),
       cur: visible(cur) ? memoRow.call(this, cur) : null, back: () => this.go('memos'),
       inbox: mineIn.map(m => memoRow.call(this, m)), sent: all.filter(m => m.from === me).map(m => memoRow.call(this, m)),
-      all: this.isTop() || role === 'pa' ? all.map(m => memoRow.call(this, m)) : null,
+      all: this.isTop() || role === 'pa' ? all.filter(visible).map(m => memoRow.call(this, m)) : null,
       tab: s.memoTab || 'in', setTab: t => this.setState({ memoTab: t }), goList: () => this.go('memos', { memoTab: 'in' }),
       pop: pop ? memoRow.call(this, pop) : null, skip: id => this.skipMemoPop(id),
-      forProject: pid => all.filter(m => m.project === pid).map(m => memoRow.call(this, m)),
-      send: f => this.sendMemo(f),
+      forProject: pid => all.filter(m => m.project === pid && (!isPersonMemo(m) || visible(m))).map(m => memoRow.call(this, m)),
+      send: f => this.sendMemo(f), people: this.memoPeople(),
       depts: ['creative', 'operations', 'finance', 'production', 'clientservice', 'gm', 'management']
         .filter(d => d !== this.myDept() && !(MEMO_TOP[d] && this.memoHead(d) === me)).map(d => ({ v: d, l: MEMO_DEPT_L[d] }))
     }

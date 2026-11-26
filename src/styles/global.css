@@ -43,6 +43,7 @@ a:hover { color: #2B1459; }
 .mm-remind { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
 .mm-remind .wa-btn { color: #128C4A; border-color: #BFE3CD; }
 .mm-remind .wa-btn:hover { border-color: #25D366; background: #F3FBF6; }
+.mm-wa { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2, #555); margin: 8px 0; cursor: pointer; }
 .mm-remind.is-small { margin: 6px 0 0 14px; }
 .mm-card .mm-remind button.wa-btn { width: auto; height: 30px; padding: 0 12px; border-radius: 16px; border: 1px solid #BFE3CD; background: #fff; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #128C4A; }
 .mm-card .mm-remind button.wa-btn:hover { border-color: #25D366; background: #F3FBF6; }
