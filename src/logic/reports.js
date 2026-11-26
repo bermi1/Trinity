@@ -30,8 +30,17 @@ export const reportChannel = {
     this.toast('Report sent to ' + to.map(k => this.av(k).first).join(' and '));
     return '';
   },
-  // Management also sees every report sent to the GM.
-  reportVisibleTo(r, k) { return r.to.includes(k) || ((this.state.role || 'ceo') === 'ceo' && r.to.includes(this.ROLES.gm.k)); },
+  // Who reads reports: Management, the GM and the PA see every report; a head of department sees the reports
+  // of their own department's staff (and anything sent to them); everyone else only sends and sees what they sent.
+  seesAllReports() { return ['ceo', 'gm', 'pa'].includes(this.state.role || 'ceo'); },
+  headOfDept() { const d = this.myDept(); return d && this.isManagerOf(d) ? d : null; },
+  canReceiveReports() { return this.seesAllReports() || !!this.headOfDept(); },
+  reportVisibleTo(r, k) {
+    if (r.by === k) return false;
+    if (this.seesAllReports()) return true;
+    const d = this.headOfDept();
+    return !!d && (r.to.includes(k) || this.deptOf(r.by) === d || r.dept === d);
+  },
   readReport(id) {
     const me = this.me().k, r = (this.state.reports || []).find(x => x.id === id);
     if (!r || r.by === me || (r.readBy || {})[me]) return;
@@ -66,8 +75,10 @@ export function reportingVals(s) {
   };
   const inbox = all.filter(r => r.by !== me && this.reportVisibleTo(r, me)).map(row), sent = all.filter(r => r.by === me).map(row);
   const targets = this.reportTargets().map(k => { const a = this.av(k); return { v: k, l: a.n, i: a.i, c: a.c, ph: a.ph }; });
-  return { RPT: { inbox, sent, unread: inbox.filter(r => r.unread).length, targets, kinds: REPORT_KINDS, canSend: targets.length > 0, send: f => this.sendReport(f),
-    tab: s.rptTab || (targets.length && !inbox.length ? 'new' : 'inbox'), setTab: k => this.setState({ rptTab: k }),
+  const canReceive = this.canReceiveReports();
+  const tab = s.rptTab && (canReceive || s.rptTab !== 'inbox') ? s.rptTab : !canReceive ? (targets.length ? 'new' : 'sent') : (targets.length && !inbox.length ? 'new' : 'inbox');
+  return { RPT: { inbox: canReceive ? inbox : [], sent, unread: canReceive ? inbox.filter(r => r.unread).length : 0, canReceive, targets, kinds: REPORT_KINDS, canSend: targets.length > 0, send: f => this.sendReport(f),
+    tab, setTab: k => this.setState({ rptTab: k }),
     draft: s.rptDraft || null, clearDraft: () => this.setState({ rptDraft: null }),
     defaultKind: (s.role || 'ceo') === 'finance' ? 'monthly' : (s.role || 'ceo') === 'gm' ? 'daily' : 'weekly' } };
 }

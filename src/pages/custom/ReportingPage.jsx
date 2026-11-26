@@ -55,7 +55,8 @@ function Report({ r, sent }) {
 // Reports: send yours up the line, read what was sent to you.
 export default function ReportingPage({ v }) {
   const R = v.RPT;
-  const tabs = [['inbox', 'Received' + (R.unread ? ' · ' + R.unread + ' new' : '')], ...(R.canSend ? [['sent', 'Sent'], ['new', 'New report']] : [])];
+  // Staff only send reports: their page has Sent and New report, no Received.
+  const tabs = [...(R.canReceive ? [['inbox', 'Received' + (R.unread ? ' · ' + R.unread + ' new' : '')]] : []), ...(R.canSend ? [['sent', 'Sent'], ['new', 'New report']] : [])];
   return (
     <>
       <PageHead kicker="Reporting" title="Reports" sub="Daily, weekly and monthly reports go up the line: staff to their head, heads and Finance to the GM and Management, the GM to Management." />
