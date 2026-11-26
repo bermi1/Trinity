@@ -1365,3 +1365,15 @@
 .att-regact { display: grid; gap: 8px; margin-top: 12px; max-width: 420px; } .att-regact small { font-size: 13px; font-weight: 600; color: #2B1459; }
 .att-consent { display: flex; gap: 8px; align-items: center; font-size: 13.5px; font-weight: 600; }
 .att-capmsg { margin: 10px 0 0; font-size: 13px; font-weight: 700; color: #2B1459; }
+
+/* Install-the-app banner (all devices) */
+.inst { position: fixed; z-index: 90; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom)); width: min(560px, calc(100% - 24px)); display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px; background: #1B1036; color: #fff; box-shadow: 0 18px 40px rgba(27,16,54,.35); animation: instup .35s ease both; }
+.inst img { width: 44px; height: 44px; border-radius: 11px; flex: none; }
+.inst-t { display: grid; gap: 2px; min-width: 0; font-size: 12.5px; line-height: 1.4; } .inst-t > b { font-size: 14.5px; } .inst-t span { opacity: .85; } .inst-t svg { vertical-align: -2px; }
+.inst-b { display: flex; gap: 6px; flex: none; margin-left: auto; }
+.inst-go { height: 38px; padding: 0 16px; border: none; border-radius: 10px; background: #E3C27A; color: #1B1036; font: inherit; font-weight: 800; font-size: 13.5px; cursor: pointer; }
+.inst-later { height: 38px; padding: 0 12px; border: 1px solid rgba(255,255,255,.3); border-radius: 10px; background: transparent; color: #fff; font: inherit; font-weight: 700; font-size: 13px; cursor: pointer; }
+.m-app ~ .inst, body:has(.m-tabbar) .inst { bottom: calc(84px + env(safe-area-inset-bottom)); }
+@keyframes instup { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (max-width: 480px) { .inst { flex-wrap: wrap; } .inst-b { width: 100%; justify-content: flex-end; } }
+@media (max-width: 480px) { .inst:not(.is-prompt) { flex-wrap: nowrap; } .inst:not(.is-prompt) .inst-b { width: auto; } }

@@ -11,13 +11,15 @@ if (typeof window !== 'undefined') {
 }
 
 export const isIOS = () => typeof navigator !== 'undefined' && /iphone|ipad|ipod/i.test(navigator.userAgent);
+// Safari on a Mac installs web apps from File → Add to Dock (it has no install prompt).
+export const isMacSafari = () => typeof navigator !== 'undefined' && /Macintosh/.test(navigator.userAgent) && /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Edg|Firefox/.test(navigator.userAgent) && !('ontouchend' in document);
 export const isStandalone = () => typeof window !== 'undefined' &&
   (window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true);
 
 // What the "Install app" button can do here: 'prompt' (Android/Chrome), 'ios' (show steps), or null.
 export function useInstall() {
   const prompt = useSyncExternalStore(fn => { listeners.add(fn); return () => listeners.delete(fn); }, () => deferredPrompt, () => null);
-  const mode = isStandalone() ? null : prompt ? 'prompt' : isIOS() ? 'ios' : null;
+  const mode = isStandalone() ? null : prompt ? 'prompt' : isIOS() ? 'ios' : isMacSafari() ? 'mac' : null;
   const install = async () => {
     if (!deferredPrompt) return false;
     deferredPrompt.prompt();

@@ -4,18 +4,24 @@
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const TEXTIFY = "https://portal.textify.africa/api/v1/messages";
-const SENDER = Deno.env.get("TEXTIFY_SENDER") || "Textify";
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
 const local = (p: string) => { const d = String(p || "").replace(/\D/g, ""); return d.startsWith("255") && d.length === 12 ? "0" + d.slice(3) : d.length === 9 ? "0" + d : d; };
 const gsm = (s: string) => String(s || "").replace(/[·•–—]/g, "-").replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/[^\x20-\x7E\n]/g, "");
 
+// The Textify key and sender name: an Edge Function secret if set, else the locked server_secrets table.
+async function setting(db: ReturnType<typeof createClient>, name: string, fallback = "") {
+  const v = Deno.env.get(name); if (v) return v;
+  const { data } = await db.from("server_secrets").select("value").eq("name", name).maybeSingle();
+  return (data && data.value) || fallback;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
-  const key = Deno.env.get("TEXTIFY_API_KEY");
-  if (!key) return json({ ok: false, error: "SMS is not set up (TEXTIFY_API_KEY missing)" }, 503);
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
+  const key = await setting(db, "TEXTIFY_API_KEY"), SENDER = await setting(db, "TEXTIFY_SENDER", "Textify");
+  if (!key) return json({ ok: false, error: "SMS is not set up (TEXTIFY_API_KEY missing)" }, 503);
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   const { data: who } = token ? await db.auth.getUser(token) : { data: { user: null } };
   if (!who || !who.user) return json({ ok: false, error: "Sign in first" }, 401);
