@@ -40,3 +40,27 @@ describe('memo WhatsApp reminders', () => {
     open.mockRestore();
   });
 });
+
+describe('memos to the GM and Management', () => {
+  it('a staff member can send a memo to the GM or to Management, and they receive it', async () => {
+    const a = app('staff'), gm = a.ROLES.gm.k, md = a.ROLES.ceo.k;
+    const targets = a.renderVals().MEMO.depts.map(d => d.v);
+    expect(targets).toContain('gm');
+    expect(targets).toContain('management');
+    expect(await a.sendMemo({ dept: 'gm', cat: 'internal', text: 'Please approve leave for Friday' })).toBe('');
+    expect(await a.sendMemo({ dept: 'management', cat: 'management', text: 'Proposal for a new client event' })).toBe('');
+    const [toMd, toGm] = a.state.memos;
+    expect(toGm).toMatchObject({ dept: 'gm', to: gm, st: 'sent' });
+    expect(toMd).toMatchObject({ dept: 'management', to: md });
+    expect(a.state.notes.some(n => n.to === gm && /Memo from/.test(n.t))).toBe(true);
+
+    // The GM sees it, can assign it to someone, and nobody is offered "send to myself".
+    a.setState({ role: 'gm' });
+    const M = a.renderVals().MEMO;
+    expect(M.depts.map(d => d.v)).not.toContain('gm');
+    const mine = M.inbox.find(m => m.id === toGm.id);
+    expect(mine.dept).toBe('General Manager');
+    expect(mine.canAssign).toBe(true);
+    expect(mine.team.length).toBeGreaterThan(0);
+  });
+});

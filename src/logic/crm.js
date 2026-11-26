@@ -99,8 +99,9 @@ export const crmMethods = {
   // A memo to a department (for a lead that needs work without a full project). The head acts on it.
   async sendMemo(f) {
     const text = (f.text || '').trim(); if (!f.dept) return 'Choose the department'; if (text.length < 5) return 'Write the memo';
+    if (!this.memoHead(f.dept)) return 'No one leads that department yet · set it in Company setup';
     let file = null; if (f.file) { try { file = await this.storeFile(f.file); } catch (e) { return 'Upload failed · ' + (e.message || e); } }
-    const to = this.managerOf(f.dept), id = 'MEMO' + Date.now().toString(36), at = dayKey(0);
+    const to = this.memoHead(f.dept), id = 'MEMO' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), at = dayKey(0);
     const cat = ['project', 'internal', 'emergency', 'management'].includes(f.cat) ? f.cat : 'project';
     const m = { id, cat, from: this.me().k, dept: f.dept, to, text, file, lead: f.lead || '', project: f.project || '', st: 'sent', at, files: [], log: [{ by: this.me().k, at, t: 'Sent' }] };
     this.setState(x => ({ memos: [m, ...(x.memos || [])] }));

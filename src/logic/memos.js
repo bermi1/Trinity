@@ -7,10 +7,18 @@ import { dayKey } from './seed';
 export const MEMO_CATS = [['project', 'Project request'], ['internal', 'Internal office request'], ['emergency', 'Emergency request'], ['management', 'Management request']];
 export const MEMO_ST = { sent: 'Sent', seen: 'Seen', assigned: 'Assigned', prog: 'In progress', done: 'Done' };
 const ORDER = ['sent', 'seen', 'assigned', 'prog', 'done'];
-export const MEMO_DEPT_L = { clientservice: 'Client Service', creative: 'Creative', operations: 'Operations', finance: 'Finance', production: 'Printing', reception: 'Reception' };
+export const MEMO_DEPT_L = { clientservice: 'Client Service', creative: 'Creative', operations: 'Operations', finance: 'Finance', production: 'Printing', reception: 'Reception', gm: 'General Manager', management: 'Management' };
+// Memos can also go straight to the General Manager or to Management (the MD), not only to a department.
+export const MEMO_TOP = { gm: 'gm', management: 'ceo' };
 const catL = c => (MEMO_CATS.find(x => x[0] === c) || MEMO_CATS[0])[1];
 
 export const memoMethods = {
+  // Who receives a memo sent to this department: its head, or the GM / the MD for memos to them.
+  memoHead(dept) {
+    const role = MEMO_TOP[dept];
+    if (!role) return this.managerOf(dept);
+    return (this.roleHolder || {})[role] || (this.state.workspaceLive ? null : (this.ROLES[role] || {}).k) || null;
+  },
   memoById(id) { return (this.state.memos || []).find(m => m.id === id) || null; },
   memoPatch(id, patch, t) {
     const at = dayKey(0) + ' ' + this.now();
@@ -57,7 +65,7 @@ export const memoMethods = {
       this.setProject(m.project, p => ({ files: [...(p.files || []), Object.assign({ memo: id, dept: m.dept }, entry)] }));
       this.pnote(m.project, MEMO_DEPT_L[m.dept] + ' attached ' + file.name + ' (memo)');
     }
-    [m.from, this.managerOf(m.dept)].filter(k => k && k !== this.me().k).forEach(k => this.notify({ to: k, ic: 'paperclip', t: 'File attached to memo · ' + file.name, s: this.me().n + ' · ' + m.text.slice(0, 70), go: 'memo:' + id }));
+    [m.from, m.to || this.managerOf(m.dept)].filter(k => k && k !== this.me().k).forEach(k => this.notify({ to: k, ic: 'paperclip', t: 'File attached to memo · ' + file.name, s: this.me().n + ' · ' + m.text.slice(0, 70), go: 'memo:' + id }));
     this.toast('Attached · ' + file.name);
     return '';
   },
@@ -97,7 +105,7 @@ function memoRow(m) {
     file: m.file ? { name: m.file.name, open: () => this.openDoc({ n: m.file.name, url: m.file.url, path: m.file.path, mime: m.file.mime }) } : null,
     files: (m.files || []).map(f => ({ name: f.name, by: this.av(f.by).n, at: f.at, img: /^image\//.test(f.mime || '') && f.url ? f.url : '', open: () => this.openDoc({ n: f.name, url: f.url, path: f.path, mime: f.mime }) })),
     log: (m.log || []).slice().reverse().map(l => ({ t: l.t, by: this.av(l.by).n, at: l.at })),
-    canAssign: run && m.st !== 'done', team: run ? this.teamOf(m.dept).map(face) : [],
+    canAssign: run && m.st !== 'done', team: run ? (MEMO_TOP[m.dept] ? [...new Set([...(s.staff || []).map(p => p.k), ...['clientservice', 'creative', 'operations', 'finance', 'production', 'reception'].map(d => this.managerOf(d))].filter(k => k && k !== me))] : this.teamOf(m.dept)).map(face) : [],
     canWork: (mine || run) && m.st !== 'done', canStart: (mine || run) && ['seen', 'assigned'].includes(m.st),
     isSender: m.from === me,
     remind: memoRemindees.call(this, m, me, run).map(k => { const a = this.av(k); return { k, n: a.n, first: a.first, has: !!this.waNumber(k), wa: () => this.memoRemindWa(m.id, k) }; }),
@@ -136,7 +144,8 @@ export function memoVals(s) {
       pop: pop ? memoRow.call(this, pop) : null, skip: id => this.skipMemoPop(id),
       forProject: pid => all.filter(m => m.project === pid).map(m => memoRow.call(this, m)),
       send: f => this.sendMemo(f),
-      depts: ['creative', 'operations', 'finance', 'production', 'clientservice'].filter(d => d !== this.myDept()).map(d => ({ v: d, l: MEMO_DEPT_L[d] }))
+      depts: ['creative', 'operations', 'finance', 'production', 'clientservice', 'gm', 'management']
+        .filter(d => d !== this.myDept() && !(MEMO_TOP[d] && this.memoHead(d) === me)).map(d => ({ v: d, l: MEMO_DEPT_L[d] }))
     }
   };
 }
