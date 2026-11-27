@@ -68,7 +68,7 @@ export const TABS = {
   operations:[['dept','Home','home'],['projects','Projects','folder'],['today','My work','checkSquare'],['requests','Requests','banknote']],
   // Staff quick buttons: Requests, Reports and Calendar; everything else is under More.
   staff:[['requests','Requests','banknote'],['reporting','Reports','fileText'],['meetings','Calendar','calendar']],
-  finance:[['financeportal','Queue','wallet'],['finance','Finance','chart'],['requests','Requests','banknote'],['today','My work','checkSquare']],
+  finance:[['financeportal','Queue','wallet'],['float','Float','wallet'],['requests','Requests','banknote'],['finance','Finance','chart']],
   reception:[['reception','Desk','message'],['today','My work','checkSquare'],['clients','Clients','users'],['requests','Requests','banknote']],
   store:[['storekeeper','Store','home'],['today','My work','checkSquare'],['requests','Requests','banknote'],['projects','Projects','folder']],
   pa:[['meetings','Calendar','calendar'],['projects','Projects','folder'],['today','My work','checkSquare'],['clients','Clients','users']],

@@ -22,7 +22,7 @@ describe('transaction charges', () => {
     expect(a.addEntry({ dir: 'out', amt: 1000000, cat: 'Rent', party: 'Landlord', fee: '5000' })).toBe('');
     expect(a.addEntry({ dir: 'in', amt: 2000000, cat: 'Client payment', party: 'TCRA', fee: '3000' })).toBe('');
     expect(a.addEntry({ dir: 'out', amt: 50000, cat: 'Fuel & transport' })).toBe('');
-    const charges = a.cashEntries().filter(e => e.cat === 'Transaction charges');
+    const charges = a.cashEntries().filter(e => e.cat === 'Transaction charges' && e.src === 'ledger');
     expect(charges.map(e => [e.dir, e.amt]).sort()).toEqual([['out', 3000], ['out', 5000]]);
     expect(a.addEntry({ dir: 'out', amt: 1, cat: 'Rent', fee: 'x' })).toMatch(/number/);
   });

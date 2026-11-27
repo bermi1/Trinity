@@ -139,6 +139,8 @@ export function todayVals(s) {
   const company = Object.assign({ smallLimit: 200000, off: [] }, s.company || {});
   return {
     TD: {
+      // Money you received for a request and still have to account for (what you spent, receipts, change).
+      advances: (s.reqs || []).filter(r => r.who === me && r.st === 'paid' && (!r.rec || r.rec.st === 'back')).map(r => { const A = this.accountInfo(r); return { id: r.id, amt: A.paidT, due: A.dueLabel, overdue: A.overdue, back: !!A.backNote, what: this.reqWhat(r), go: () => this.go('requests', { reqSel: r.id }) }; }),
       dayLabel: dayName(today), isTeam: s.todoTab === 'team', canTeam: this.isTop() || mgr, canDayReport: mgr, dayReport: () => this.deptDayReport(),
       showMine: () => this.setState({ todoTab: 'mine' }), showTeam: () => this.setState({ todoTab: 'team' }),
       done: [...myTasks.filter(t => t.st === 'done' && t.doneOn === today).map(taskItem), ...mine.filter(i => i.st === 'done' && i.doneOn === today).map(item)],

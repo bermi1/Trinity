@@ -3,6 +3,7 @@ import { Fragment } from 'react';
 import MyRequests from './custom/MyRequests';
 import FixRequest from './custom/FixRequest';
 import ReqItems from '../components/ReqItems';
+import { RecCheck } from '../components/AccountForm';
 
 export default function RequestsPage({ v }) {
   if (v.MR) return <MyRequests M={v.MR} />;
@@ -113,13 +114,7 @@ export default function RequestsPage({ v }) {
                   {v.R.waWho ? <button type="button" className="td-start wa-btn" style={{ justifySelf: 'start', width: 'fit-content' }} onClick={v.R.waWho} aria-label={'WhatsApp ' + v.R.who}><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11 11 0 0 0 3.2 17.4L2 22l4.7-1.2A11 11 0 1 0 20.5 3.5zM12 20a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.7.7-2.7-.2-.3A8 8 0 1 1 12 20z" /></svg>WhatsApp {v.R.who}</button> : null}
                   {v.R.canFix ? <FixRequest key={v.R.id + (v.R.isRej ? 'r' : '')} R={v.R} /> : null}
                   {(v.R.thread || []).length ? <ul className="mr-thread">{v.R.thread.map((m, i) => <li key={i}><b>{m.who}</b> · <small>{m.at}</small><p>{m.t}</p></li>)}</ul> : null}
-                  {v.R.rec ? (
-                    <div className="mr-rec">
-                      <span><b>Spent {v.R.rec.spent}</b> · returns {v.R.rec.back} · {v.R.rec.st === 'ok' ? 'Reconciled' : 'Receipts submitted'}</span>
-                      {v.R.rec.file ? <button type="button" className="td-start" onClick={v.R.rec.file}>View receipt</button> : null}
-                      {v.R.rec.canOk ? <button type="button" className="td-start" onClick={v.R.rec.ok}>Confirm receipts</button> : null}
-                    </div>
-                  ) : null}
+                  {v.R.rec ? <RecCheck key={v.R.id + v.R.rec.st} c={v.R.rec} /> : null}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: "14px", fontSize: "13px" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
@@ -199,6 +194,9 @@ export default function RequestsPage({ v }) {
                 {v.R.canPay ? (
                   <>
                     <label className="rq-payamt"><span>Amount paid (TZS)</span><input value={v.R.payAmt} onChange={v.R.setPayAmt} inputMode="numeric" aria-label="Amount paid" /></label>
+                    <div className="rq-payamt"><span>Paid by</span><div className="ff-chips" role="radiogroup" aria-label="Paid by">{v.R.payMethods.map(m => <button key={m} type="button" role="radio" aria-checked={v.R.payVia === m} className={v.R.payVia === m ? 'is-on' : ''} onClick={() => v.R.setPayVia(m)}>{m}</button>)}</div></div>
+                    <label className="rq-payamt"><span>Date paid</span><input type="date" value={v.R.payDate} min={v.R.payDateMin} max={v.R.payDateMax} onChange={v.R.setPayDate} aria-label="Date paid" /></label>
+                    {v.R.floatLeft != null && v.R.floatLeft - (Number(String(v.R.payAmt || '').replace(/[^0-9]/g, '')) || 0) < 0 ? <p className="bi-ret" role="status">This takes the float below zero (balance TZS {Math.round(v.R.floatLeft).toLocaleString('en-US')}). It is still recorded and Management is told.</p> : null}
                     <label className="rq-payamt"><span>Transaction charges (TZS) · bank or mobile money fee</span><input value={v.R.payFee} onChange={v.R.setPayFee} inputMode="numeric" placeholder="0" aria-label="Transaction charges" /></label>
                     <button className="tm-h2" onClick={v.R.pay} style={{ alignSelf: "flex-start", height: "44px", padding: "0 20px", border: "none", borderRadius: "10px", background: "#2B1459", color: "#fff", fontSize: "14px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

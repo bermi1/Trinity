@@ -12,6 +12,34 @@ export const COMPANY = {
   bank: 'CRDB Bank', acc: '0150000YPBS00', accName: 'TRINITY MARK SOLUTIONS LIMITED',
   line: 'Experiential Marketing | Events Management | Media Investment Management | PR'
 };
+// Dar es Salaam time (EAT, UTC+3 all year, no daylight saving): the float's days and times use it,
+// whatever the phone's own clock zone is.
+const EAT = 3 * 36e5;
+export const tzDay = (d = new Date()) => new Date(d.getTime() + EAT).toISOString().slice(0, 10);
+export const tzTime = (d = new Date()) => new Date(d.getTime() + EAT).toISOString().slice(11, 16);
+export const tzHour = (d = new Date()) => new Date(d.getTime() + EAT).getUTCHours();
+// The branded one-A4 look shared by the invoice and the daily float report: logo, band, boxes, tables,
+// footer, and a script that scales the content down when it is taller than one page.
+export const DOC_CSS = `*{box-sizing:border-box}body{margin:0;font:13px/1.5 Inter,Arial,sans-serif;color:#17152A;background:#EEEAF4}
+.page{width:210mm;height:297mm;margin:16px auto;background:#fff;padding:12mm 13mm 18mm;position:relative;overflow:hidden}
+.fit{transform-origin:top left}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}.top img{height:54px}
+.band{height:5px;background:linear-gradient(90deg,#2B1459,#6D3CC2 60%,#B49A5A);border-radius:3px;margin:14px 0 20px}
+.grid{display:grid;grid-template-columns:1.2fr 1fr;gap:18px}.box{background:#F7F5FB;border-radius:10px;padding:12px 14px}
+.lbl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A7239;font-weight:700;margin-bottom:4px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 12px}.kv span{color:#6E6A7C}
+table{width:100%;border-collapse:collapse;margin-top:6px}th{background:#2B1459;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:9px 8px;text-align:left}
+th:first-child{border-radius:8px 0 0 8px}th:last-child{border-radius:0 8px 8px 0}td{padding:9px 8px;border-bottom:1px solid #EEEAF4}.r{text-align:right}
+.foot{position:absolute;left:13mm;right:13mm;bottom:7mm;padding-top:8px;display:flex;justify-content:space-between;gap:14px;border-top:1px solid #EEEAF4;font-size:10.5px;color:#6E6A7C}
+.bar{position:fixed;top:12px;right:12px}.bar button{font:600 13px Inter;padding:9px 16px;border:none;border-radius:9px;background:#2B1459;color:#fff;cursor:pointer}
+@page{size:A4;margin:0}
+@media print{html,body{background:#fff;width:210mm;height:297mm}.page{margin:0;box-shadow:none;page-break-after:avoid;break-after:avoid}.bar{display:none}}`;
+export const FIT_JS = `// One A4 page, always: when the content is taller than the page (many items), it is scaled down to fit.
+function fit(){var p=document.querySelector('.page'),f=document.querySelector('.fit');if(!p||!f)return;f.style.transform='';f.style.width='';
+var cs=getComputedStyle(p),avail=p.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom),h=f.scrollHeight;
+if(h>avail){var z=Math.max(.4,avail/h);f.style.width=(100/z).toFixed(2)+'%';h=f.scrollHeight;z=Math.max(.4,avail/h);f.style.width=(100/z).toFixed(2)+'%';f.style.transform='scale('+z.toFixed(4)+')';f.dataset.scale=z.toFixed(3);}}
+fit();addEventListener('load',fit);addEventListener('beforeprint',fit);if(document.fonts)document.fonts.ready.then(fit);
+`;
 export const SIGNERS = { ED: { role: 'ceo', t: 'Executive Director' }, GM: { role: 'gm', t: 'General Manager' } };
 
 // Totals of an invoice in TZS. Invoices saved before lines existed carry only a total (in TZS M).
@@ -68,8 +96,45 @@ export const financeMethods = {
   // Money requested against an allocation: project requests for that project, office requests for office purposes.
   allocUse(a) {
     const reqs = (this.state.reqs || []).filter(r => (a.to.indexOf('PRJ') === 0 ? r.p === a.to : r.alloc === a.to));
-    const used = reqs.filter(r => r.st === 'paid').reduce((x, r) => x + r.amt, 0), waiting = reqs.filter(r => r.st === 'pending' || r.st === 'approved').reduce((x, r) => x + r.amt, 0);
+    const used = reqs.filter(r => r.st === 'paid').reduce((x, r) => x + (r.paidAmt || r.amt), 0), waiting = reqs.filter(r => r.st === 'pending' || r.st === 'approved').reduce((x, r) => x + r.amt, 0);
     return { used, waiting, left: a.amt - used - waiting };
+  },
+
+  // ---- The float book: every shilling of the float, derived from the records (nothing stored twice).
+  // In: float given by Management, change returned on accepted advances. Out: paid requests (what was
+  // actually paid), daily expenses and the transaction charges on both. Voided expenses stay in the list,
+  // struck through, but do not count. The book starts on the day of the first float: what was paid
+  // before that came from elsewhere. Old petty cash top-ups, its opening balance and cash counts are not
+  // part of it (there is no separate cash box: the float is the money Finance spends).
+  floatBook() {
+    const s = this.state, f = this.fl(), L = [], name = k => (k ? this.av(k).n : '');
+    if (!f.grants.length) return L;
+    // Lists are stored newest first; the book reads them oldest first (ties keep that order).
+    f.grants.slice().reverse().forEach(g => L.push({ id: g.id, at: g.at, time: g.time || '', dir: 'in', amt: g.amt, kind: 'float', p: '', cat: 'Float from Management', who: g.from || 'Management', method: g.method || '', ref: g.note || '', by: g.by, src: 'grant' }));
+    (s.reqs || []).forEach(r => {
+      if (r.st !== 'paid' || !r.paidOn) return;
+      const paid = r.paidAmt || r.amt, cat = r.cat || (r.alloc ? String(r.alloc).replace(/^office:/, '') : 'Request');
+      L.push({ id: r.id, at: r.paidOn, time: r.paidAt || '', dir: 'out', amt: paid, asked: r.amt, kind: 'request', p: r.p || '', cat, who: name(r.who), whoK: r.who, method: r.paidVia || (r.pay && r.pay.by) || '', ref: r.id, by: r.paidBy || '', src: 'req' });
+      if (r.payFee > 0) L.push({ id: r.id + '-fee', at: r.paidOn, time: r.paidAt || '', dir: 'out', amt: r.payFee, kind: 'charge', p: r.p || '', cat: CHARGES, who: (r.pay && r.pay.by) || 'Bank / mobile money', method: r.paidVia || (r.pay && r.pay.by) || '', ref: r.id, by: r.paidBy || '', src: 'req' });
+      const rc = r.rec;
+      if (rc && rc.st === 'ok' && rc.back > 0) L.push({ id: r.id + '-back', at: rc.okAt || rc.at || r.paidOn, time: rc.okTime || '', dir: 'in', amt: rc.back, kind: 'returned', p: r.p || '', cat: 'Change returned', who: name(r.who), whoK: r.who, method: rc.backVia || 'Cash', ref: r.id, by: rc.by || '', src: 'req', paid, spent: rc.spent });
+    });
+    ((s.petty || {}).entries || []).slice().reverse().forEach(e => {
+      if (e.dir !== 'out') return;
+      const v = !!e.void;
+      L.push({ id: e.id, at: e.at, time: e.time || '', dir: 'out', amt: e.amt, kind: 'expense', p: e.p || '', cat: e.cat, what: e.what || '', who: e.who || '', method: e.method || 'Cash', ref: e.voucher || '', by: e.by, src: 'petty', void: v, fee: e.fee || 0, photo: e.photo || null });
+      if (e.fee > 0) L.push({ id: e.id + '-fee', at: e.at, time: e.time || '', dir: 'out', amt: e.fee, kind: 'charge', p: e.p || '', cat: CHARGES, who: e.method || '', method: e.method || '', ref: e.voucher || '', by: e.by, src: 'petty', void: v });
+    });
+    const start = f.grants.reduce((m, g) => (g.at < m ? g.at : m), f.grants[0].at);
+    return L.filter(l => l.at >= start).sort((a, b) => (a.at + ' ' + a.time).localeCompare(b.at + ' ' + b.time));
+  },
+  // One day of the float: opening (carried down from the day before), in, out and closing.
+  floatDay(D, book) {
+    const L = book || this.floatBook(), ok = L.filter(l => !l.void), sg = l => (l.dir === 'in' ? 1 : -1) * l.amt;
+    const open = ok.filter(l => l.at < D).reduce((a, l) => a + sg(l), 0), day = ok.filter(l => l.at === D);
+    const sum = (k, d) => day.filter(l => (!k || l.kind === k) && (!d || l.dir === d)).reduce((a, l) => a + l.amt, 0);
+    const inn = sum('', 'in'), out = sum('', 'out');
+    return { D, open, in: inn, out, close: open + inn - out, lines: L.filter(l => l.at === D), float: sum('float'), returned: sum('returned'), requests: sum('request'), expenses: sum('expense'), charges: sum('charge') };
   },
 
   // ---- Invoices
@@ -195,28 +260,15 @@ export const financeMethods = {
     const html = `<!doctype html><html><head><meta charset=utf-8><title>${esc(NO)} · ${esc(i.c)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@600&display=swap" rel=stylesheet>
 <style>
-*{box-sizing:border-box}body{margin:0;font:13px/1.5 Inter,Arial,sans-serif;color:#17152A;background:#EEEAF4}
-.page{width:210mm;height:297mm;margin:16px auto;background:#fff;padding:12mm 13mm 18mm;position:relative;overflow:hidden}
-.fit{transform-origin:top left}
-.top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}.top img{height:54px}
+${DOC_CSS}
 .inv{text-align:right}.inv h1{margin:0;font-size:30px;letter-spacing:.18em;color:#2B1459}.inv b{color:#8A7239}
-.band{height:5px;background:linear-gradient(90deg,#2B1459,#6D3CC2 60%,#B49A5A);border-radius:3px;margin:14px 0 20px}
-.grid{display:grid;grid-template-columns:1.2fr 1fr;gap:18px}.box{background:#F7F5FB;border-radius:10px;padding:12px 14px}
-.lbl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8A7239;font-weight:700;margin-bottom:4px}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 12px}.kv span{color:#6E6A7C}
 .title{margin:18px 0 8px;font-size:16px;font-weight:700}
-table{width:100%;border-collapse:collapse;margin-top:6px}th{background:#2B1459;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:9px 8px;text-align:left}
-th:first-child{border-radius:8px 0 0 8px}th:last-child{border-radius:0 8px 8px 0}td{padding:9px 8px;border-bottom:1px solid #EEEAF4}.r{text-align:right}
 .tot{margin-left:auto;width:390px;margin-top:12px}.tot div{display:flex;justify-content:space-between;gap:16px;padding:5px 0}.tot span,.tot b{white-space:nowrap}.tot .g{border-top:2px solid #2B1459;margin-top:4px;padding-top:9px;font-size:16px;font-weight:800;color:#2B1459}
 .sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:28px;align-items:end}.sig{border-top:1px solid #CFC8DD;padding-top:6px;font-size:11.5px;color:#6E6A7C;min-height:96px;position:relative;display:flex;flex-direction:column;justify-content:flex-end}
 .sigimg{max-height:56px;max-width:190px;object-fit:contain;margin-bottom:4px}.sigline{display:block;height:46px}.po{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px;padding:10px 14px;border:1px solid #E4DFEE;border-radius:10px}.po span{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8A7239;font-weight:700}.stamp{position:absolute;right:-6px;bottom:18px;width:118px;opacity:.88;transform:rotate(-8deg)}
 .void{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:110px;font-weight:800;color:rgba(178,58,70,.22);transform:rotate(-24deg);letter-spacing:.08em;z-index:2}
 .cnote{margin:-2px 0 10px;padding:8px 12px;border:1.5px solid #B23A46;border-radius:8px;background:#FBEDEE;color:#8E2A35;font-size:12.5px}.cnote b{color:#B23A46;letter-spacing:.08em}
 .draft{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:88px;font-weight:800;color:rgba(178,58,70,.09);transform:rotate(-24deg);letter-spacing:.1em}
-.foot{position:absolute;left:13mm;right:13mm;bottom:7mm;padding-top:8px;display:flex;justify-content:space-between;gap:14px;border-top:1px solid #EEEAF4;font-size:10.5px;color:#6E6A7C}
-.bar{position:fixed;top:12px;right:12px}.bar button{font:600 13px Inter;padding:9px 16px;border:none;border-radius:9px;background:#2B1459;color:#fff;cursor:pointer}
-@page{size:A4;margin:0}
-@media print{html,body{background:#fff;width:210mm;height:297mm}.page{margin:0;box-shadow:none;page-break-after:avoid;break-after:avoid}.bar{display:none}}
 </style></head><body><div class=bar><button onclick="print()">Print / Save PDF</button></div><div class=page>
 ${CX ? '<div class=void>CANCELLED</div>' : i.signed ? '' : '<div class=draft>DRAFT</div>'}<div class=fit>
 <div class=top><img src="${origin}/brand/trinity-logo-full.png" alt="Trinity Mark"><div class=inv><h1>INVOICE</h1><div><b>${esc(NO)}</b></div><div>Date: ${esc(i.at || dayKey(0))}</div></div></div>
@@ -238,13 +290,7 @@ ${paid ? `<div><span>Paid</span><b>${n(paid)}</b></div><div><span>Balance due</s
 </div>
 <div class=foot><span>${COMPANY.box}</span><span>${COMPANY.line}</span></div>
 </div>
-<script>
-// One A4 page, always: when the content is taller than the page (many items), it is scaled down to fit.
-function fit(){var p=document.querySelector('.page'),f=document.querySelector('.fit');if(!p||!f)return;f.style.transform='';f.style.width='';
-var cs=getComputedStyle(p),avail=p.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom),h=f.scrollHeight;
-if(h>avail){var z=Math.max(.4,avail/h);f.style.width=(100/z).toFixed(2)+'%';h=f.scrollHeight;z=Math.max(.4,avail/h);f.style.width=(100/z).toFixed(2)+'%';f.style.transform='scale('+z.toFixed(4)+')';f.dataset.scale=z.toFixed(3);}}
-fit();addEventListener('load',fit);addEventListener('beforeprint',fit);if(document.fonts)document.fonts.ready.then(fit);
-</script></body></html>`;
+<script>${FIT_JS}</script></body></html>`;
     const w = window.open('', '_blank'); if (!w) { this.toast('Allow pop-ups to open the invoice'); return; }
     w.document.open(); w.document.write(html); w.document.close();
   }
@@ -268,12 +314,12 @@ export function financeVals(s) {
   const month = dayKey(0).slice(0, 7);
   const collected = (s.invoices || []).reduce((a, i) => a + (i.payments || []).filter(p => p.ok && (p.at || '').slice(0, 7) === month).reduce((x, p) => x + p.amt, 0), 0);
   const F = {
-    tab: ({ invoices: 'invoices', cashbook: 'cash', freports: 'reports', float: 'float', petty: 'petty' })[s.page] || (role === 'finance' ? 'overview' : s.finTab || 'overview'), showTabs: role !== 'finance', setTab: k => this.setState({ finTab: k, invSel: null }), moneyTop, isCeo: role === 'ceo', isFin: role === 'finance',
+    tab: ({ invoices: 'invoices', cashbook: 'cash', freports: 'reports', float: 'float', petty: 'float' })[s.page] || (role === 'finance' ? 'overview' : s.finTab || 'overview'), showTabs: role !== 'finance', setTab: k => this.setState({ finTab: k, invSel: null }), moneyTop, isCeo: role === 'ceo', isFin: role === 'finance',
     kpis: [
       { l: 'Owed by clients', v: this.fmtT(unpaid.reduce((a, b) => a + b.due, 0)), n: unpaid.length + ' invoices open', tone: 'dark', pct: Math.round(unpaid.reduce((a, b) => a + b.paid, 0) / Math.max(1, unpaid.reduce((a, b) => a + b.total, 0)) * 100) },
       { l: 'Overdue', v: this.fmtT(inv.filter(i => i.st === 'overdue').reduce((a, b) => a + b.due, 0)), n: inv.filter(i => i.st === 'overdue').length + ' invoices', tone: 'red', pct: Math.round(inv.filter(i => i.st === 'overdue').length / Math.max(1, unpaid.length) * 100) },
       { l: 'Collected this month', v: this.fmtT(collected), n: 'confirmed payments', tone: 'green', pct: Math.min(100, Math.round(collected / Math.max(1, collected + unpaid.reduce((a, b) => a + b.due, 0)) * 100)) },
-      ...(moneyTop ? [{ l: 'Float not allocated', v: this.fmtT(this.floatLeft()), n: 'of ' + this.fmtT(this.floatTotal()) + ' given', tone: 'gold', pct: this.floatTotal() ? Math.round(this.floatLeft() / this.floatTotal() * 100) : 0 }] : [{ l: 'Waiting for signature', v: String(inv.filter(i => i.needsSign).length), n: 'invoices', tone: 'gold' }])
+      ...(moneyTop ? [(d => ({ l: 'Float balance', v: (d.close < 0 ? '−' : '') + this.fmtT(Math.abs(d.close)), n: 'Opened today ' + this.fmtT(d.open) + ' · out ' + this.fmtT(d.out), tone: d.close < 0 ? 'red' : 'gold' }))(this.floatDay(tzDay(this.nowDate())))] : [{ l: 'Waiting for signature', v: String(inv.filter(i => i.needsSign).length), n: 'invoices', tone: 'gold' }])
     ],
     attention: [
       ...inv.filter(i => i.canSign).map(i => ({ t: 'Sign ' + i.id + ' · ' + i.c, s: i.totalT, act: 'Sign', on: i.sign })),
@@ -293,18 +339,6 @@ export function financeVals(s) {
     projects: s.projects.filter(p => p.st !== 'done').map(p => ({ v: p.id, l: p.client + ' · ' + p.name, c: p.client })),
     totals: invTotals
   };
-  if (moneyTop) {
-    const f = this.fl();
-    F.float = {
-      total: this.fmtT(this.floatTotal()), left: this.fmtT(this.floatLeft()), leftN: this.floatLeft(), allocated: this.fmtT(this.floatTotal() - this.floatLeft()),
-      pct: this.floatTotal() ? Math.round((this.floatTotal() - this.floatLeft()) / this.floatTotal() * 100) : 0,
-      grants: f.grants.map(g => ({ id: g.id, amt: this.fmtT(g.amt), at: g.at, note: g.note, by: this.av(g.by).n })),
-      asks: f.asks.filter(a => a.st === 'open').map(a => ({ id: a.id, amt: this.fmtT(a.amt), raw: a.amt, note: a.note, at: a.at })),
-      allocs: f.allocs.map(a => { const u = this.allocUse(a); return { id: a.id, name: this.allocName(a.to), office: a.to.indexOf('office:') === 0, amt: this.fmtT(a.amt), used: this.fmtT(u.used), waiting: this.fmtT(u.waiting), left: this.fmtT(u.left), over: u.left < 0, pct: a.amt ? Math.min(100, Math.round((u.used + u.waiting) / a.amt * 100)) : 0 }; }),
-      give: (a, n) => this.giveFloat(a, n), ask: (a, n) => this.askFloat(a, n), allocate: (to, a) => this.allocate(to, a),
-      targets: [...s.projects.filter(p => p.st !== 'done').map(p => ({ v: p.id, l: p.client, s: p.name })), ...['Office running', 'Transport', 'Utilities', 'Staff welfare'].map(o => ({ v: 'office:' + o, l: o, s: 'Office' }))]
-    };
-  }
   return { FH: F };
 }
 
@@ -346,8 +380,14 @@ export const reportMethods = {
       out.push(Object.assign({ src: 'ledger' }, l));
       if (l.fee > 0) out.push({ id: l.id + '-fee', at: l.at, dir: 'out', amt: l.fee, cat: CHARGES, party: l.method || 'Bank', p: l.p || '', ref: 'Charges · ' + (l.ref || l.party || l.cat), src: 'ledger' });
     });
-    // Petty cash payments are company spending too (top-ups are only cash moving from the bank to the box).
-    ((s.petty || {}).entries || []).filter(e => e.dir === 'out').forEach(e => out.push({ id: e.id, at: e.at, dir: 'out', amt: e.amt, cat: 'Petty cash · ' + e.cat, party: e.who, p: '', ref: e.voucher, src: 'petty' }));
+    // Daily expenses paid from the float are company spending too (old petty cash top-ups were only cash
+    // moving from the bank to the box). Voided expenses do not count.
+    ((s.petty || {}).entries || []).filter(e => e.dir === 'out' && !e.void).forEach(e => {
+      out.push({ id: e.id, at: e.at, dir: 'out', amt: e.amt, cat: 'Daily expense · ' + e.cat, party: e.who || e.what || '', p: e.p || '', ref: e.voucher, src: 'petty' });
+      if (e.fee > 0) out.push({ id: e.id + '-fee', at: e.at, dir: 'out', amt: e.fee, cat: CHARGES, party: e.method || 'Mobile money', p: e.p || '', ref: 'Charges · ' + e.voucher, src: 'petty' });
+    });
+    // Change brought back on an accepted advance: money back in (a project's spending is what was really spent).
+    (s.reqs || []).filter(r => r.st === 'paid' && r.rec && r.rec.st === 'ok' && r.rec.back > 0).forEach(r => out.push({ id: r.id + '-back', at: r.rec.okAt || r.rec.at || r.paidOn, dir: 'in', amt: r.rec.back, cat: 'Change returned', party: this.av(r.who).n, p: r.p || '', ref: 'Change · ' + r.id, src: 'return' }));
     return out.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
   },
   // Money in or out recorded by Finance. Transaction charges (bank or mobile money fee) are optional and
@@ -400,11 +440,11 @@ export function reportVals(s) {
   const step = (() => { const raw = peak / 4, p = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 5, 10].map(m => m * p).find(v => v >= raw); })(), max = step * 4;
   const short = v => (v >= 1e6 ? (v / 1e6).toFixed(v % 1e6 ? 1 : 0) + 'M' : v >= 1e3 ? Math.round(v / 1e3) + 'K' : String(v));
   const group = (l, d, f) => { const m = {}; l.filter(e => e.dir === d).forEach(e => { const k = f(e); m[k] = (m[k] || 0) + e.amt; }); return Object.keys(m).map(k => ({ l: k, v: m[k] })).sort((a, b) => b.v - a.v); };
-  const outCat = group(rows, 'out', e => e.cat.replace(/^Staff requests · .*/, 'Staff requests (floats)')), inCli = group(rows, 'in', e => e.party || e.cat);
+  const outCat = group(rows, 'out', e => e.cat.replace(/^Staff requests · .*/, 'Staff requests (floats)')), inCli = group(rows.filter(e => e.src !== 'return'), 'in', e => e.party || e.cat);
   // Projects: what each brought in and cost, all time.
   const projects = (s.projects || []).map(p => {
     const inv = (s.invoices || []).filter(i => i.p === p.id && !isCancelled(i)), invoiced = inv.reduce((a, i) => a + invTotals(i).total, 0);
-    const got = all.filter(e => e.p === p.id && e.dir === 'in').reduce((a, e) => a + e.amt, 0), spent = all.filter(e => e.p === p.id && e.dir === 'out').reduce((a, e) => a + e.amt, 0);
+    const got = all.filter(e => e.p === p.id && e.dir === 'in' && e.src !== 'return').reduce((a, e) => a + e.amt, 0), spent = all.filter(e => e.p === p.id && e.dir === 'out').reduce((a, e) => a + e.amt, 0) - all.filter(e => e.p === p.id && e.src === 'return').reduce((a, e) => a + e.amt, 0);
     return { id: p.id, n: p.name, c: p.client, value: Math.round((p.val || 0) * 1e6), invoiced, got, spent, profit: got - spent };
   }).filter(p => p.invoiced || p.got || p.spent).sort((a, b) => b.value - a.value);
   // How long clients have owed us.

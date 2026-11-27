@@ -1,5 +1,6 @@
 import FixRequest from './FixRequest';
 import ReqItems from '../../components/ReqItems';
+import { AccountForm } from '../../components/AccountForm';
 import { useState } from 'react';
 import { PageHead, Card, Btn, Pill, Chips, Empty } from '../../ui/kit';
 
@@ -9,25 +10,12 @@ function Reply({ r }) {
   const [t, setT] = useState(''); const [e, setE] = useState('');
   return <div className="mr-reply"><input className="ff-search" value={t} onChange={x => setT(x.target.value)} placeholder="Your answer" aria-label="Your answer" /><Btn kind="dark" onClick={() => { const m = r.answer(t); if (m) setE(m); else setT(''); }}>Send</Btn>{e ? <span className="fm-err">{e}</span> : null}</div>;
 }
-function Reconcile({ r }) {
-  const [a, setA] = useState(''); const [f, setF] = useState(null); const [e, setE] = useState(''); const [busy, setBusy] = useState(false);
-  return (
-    <div className="mr-reconcile">
-      <b>Reconcile: what did you spend?</b>
-      <label className="fh-amt"><span>TZS</span><input inputMode="numeric" value={a ? Number(a).toLocaleString('en-US') : ''} onChange={x => setA(x.target.value.replace(/\D/g, ''))} placeholder="0" aria-label="Amount spent" /></label>
-      <label className="bi-up"><input type="file" accept="image/*,.pdf" onChange={x => setF(x.target.files[0] || null)} aria-label="Receipt" />{f ? '✓ ' + f.name : '↑ Photo of receipt'}</label>
-      <Btn kind="dark" disabled={busy} onClick={async () => { setBusy(true); const m = await r.reconcile(a, f); setBusy(false); if (m) setE(m); }}>{busy ? 'Sending…' : 'Send to Finance'}</Btn>
-      {e ? <span className="fm-err">{e}</span> : null}
-    </div>
-  );
-}
-
 function Req({ r, showWho }) {
   return (
     <li className={'mr-item' + (r.sel ? ' is-open' : '')} data-req={r.id}>
       <button type="button" className="mr-row" onClick={r.toggle} aria-expanded={r.sel}>
         <span className="mr-left"><b>{r.what}</b><small>{showWho ? r.who + ' · ' : ''}{r.where}{r.need ? ' · needed ' + r.need : ''}</small></span>
-        <span className="mr-right"><b>{r.amt}</b><Pill l={r.asked ? 'Question for you' : r.canRec ? 'Reconcile' : r.status} bg={r.asked || r.canRec ? '#FBF1DD' : TONE[r.tone][0]} fg={r.asked || r.canRec ? '#8A6414' : TONE[r.tone][1]} /></span>
+        <span className="mr-right"><b>{r.amt}</b><Pill l={r.asked ? 'Question for you' : r.canRec ? (r.account && r.account.overdue ? 'Account for it · overdue' : 'Account for it') : r.status} bg={r.asked || r.canRec ? '#FBF1DD' : TONE[r.tone][0]} fg={r.asked || r.canRec ? '#8A6414' : TONE[r.tone][1]} /></span>
       </button>
       {r.sel ? (
         <div className="mr-detail">
@@ -40,7 +28,7 @@ function Req({ r, showWho }) {
           {r.thread.length ? <ul className="mr-thread">{r.thread.map((m, i) => <li key={i} className={m.mine ? 'is-mine' : ''}><b>{m.who}</b> · <small>{m.at}</small><p>{m.t}</p></li>)}</ul> : null}
           {r.payTo ? <p className="mr-pay"><b>Pay to</b> {r.payTo}</p> : null}
           {r.canFix ? <FixRequest key={r.id + (r.isRej ? 'r' : '')} R={r} /> : r.asked ? <Reply r={r} /> : null}
-          {r.rec ? <p className="mr-recline">Spent {r.rec.spent} · returns {r.rec.back} · {r.rec.st}</p> : r.canRec ? <Reconcile r={r} /> : null}
+          {r.rec ? <p className="mr-recline">Spent {r.rec.spent}{r.rec.over ? ' · spent more than given (' + r.rec.over + ')' : ' · returns ' + r.rec.back} · {r.rec.st}</p> : r.canRec && r.account ? <AccountForm key={r.id + (r.account.backNote ? 'b' : '')} r={r} /> : null}
           <div className="mr-acts">
             <span className="k-sub">{r.id}</span>
             {r.nudge ? <Btn kind="ghost" onClick={r.nudge}>Remind approver</Btn> : null}

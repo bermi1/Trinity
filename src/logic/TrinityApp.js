@@ -19,7 +19,8 @@ import { todoMethods, todayVals } from './todos';
 import { deptMethods, deptVals } from './depts';
 import { crmMethods, crmVals, SOURCES } from './crm';
 import { projectMethods, projectVals, reqFlowMethods } from './projectview';
-import { financeMethods, financeVals, reportMethods, reportVals, parseFee } from './finance';
+import { financeMethods, financeVals, reportMethods, reportVals, parseFee, tzDay, tzTime } from './finance';
+import { floatMethods, floatVals, METHODS } from './float';
 import { homeVals } from './home';
 import { targetVals, targetMethods } from './targets';
 import { teamVals, teamMethods } from './team';
@@ -113,6 +114,8 @@ export default class TrinityApp extends Logic {
       else if (history.state && history.state.overlay) { this._ignorePop = true; this._depth = Math.max(0, (this._depth || 1) - 1); history.back(); }
     }
     this._overlayWas = now;
+    // Advances not accounted for after 3 days: a reminder once a day (see accountReminders).
+    if (s.auth && !s.booting && !s.embed && (s.reqs || []).length && this._remDay !== this.fToday()) { this._remDay = this.fToday(); setTimeout(() => { try { this.accountReminders(); } catch (e) { /* not ready */ } }, 0); }
     if (s.auth && this._afterAuth && !this._afterAuthRunning) { this._afterAuthRunning = true; const f = this._afterAuth; this._afterAuth = null; setTimeout(() => { this._afterAuthRunning = false; f(); }, 0); }
     if (!s.embed) { try { localStorage.setItem('tm360', JSON.stringify({auth:s.auth,role:s.role,page:s.page,projectId:s.projectId,jobId:s.jobId,pinUser:s.pinUser,prefs:s.prefs,remember:s.remember,navMore:!!s.navMore})); } catch (e) {} }
     const dk = this.dataKeys(), prev = this._prevData || {}, diff = {}; let n = 0;
@@ -397,7 +400,7 @@ export default class TrinityApp extends Logic {
         ['More',[['calendar','Calendar','calendar'],['notifications','Notifications','bell',unread],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['procurement','Procurement','cart'],['store','Store & Inventory','package'],['requisitions','Store requisitions','clipboard',srqN],['movements','Stock ledger','receipt'],['logistics','Logistics','truck'],['staff','Staff & Reports','user'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['ceomobile','Mobile apps','phone',0,{mobileRole:'ceo'}],['field','Field capture app','camera'],...(this.canSetup() ? [['company','Company setup','settings']] : []),...(this.canManageStaff() ? [['users','Users & access','shield']] : []),['settings','Settings','settings']], true]],
       staff:[['My work',[['staffportal','My Day','home'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['payslips','My payslips','wallet'],['today','My work','checkSquare',myOpen],['requests','My requests','banknote'],['field','Field capture','camera']]],
         ['More',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
-      finance:[['Finance',[['financeportal','My queue','wallet',finQ],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['briefing','Monday Briefing','presentation'],['today','My work','checkSquare',myOpen],['finance','Finance','chart'],['invoices','Invoices','fileText'],['cashbook','Cash book','receipt'],['petty','Petty cash','wallet'],['freports','Finance reports','pie'],['float','Float','wallet'],['requests','Requests & Floats','banknote']]],
+      finance:[['Finance',[['financeportal','My queue','wallet',finQ],['float','Float','wallet'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['briefing','Monday Briefing','presentation'],['today','My work','checkSquare',myOpen],['finance','Finance','chart'],['invoices','Invoices','fileText'],['cashbook','Cash book','receipt'],['freports','Finance reports','pie'],['requests','Requests & Floats','banknote']]],
         ['More',[['proposals','Proposals','clipboard'],['procurement','Procurement','cart'],...company], true]],
       reception:[['Front office',[['reception','Front desk','message'],['attendance','Staff check-in','clock'],['event','Event registration','clipboard'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['payslips','My payslips','wallet'],['today','My work','checkSquare',myOpen],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['clients','Client enquiries','users']]],
         ['More',[['staff','Staff directory','user'],['briefing','Monday Briefing','presentation'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
@@ -461,6 +464,8 @@ export default class TrinityApp extends Logic {
   // Pages a portal may open: parked sections and (outside Management, the GM and Finance) the company dashboard send people to their own home.
   allowedPage(role, page) {
     const home = (this.ROLES[role] || ROLES.ceo).home;
+    // The old Petty cash page is the Float page now.
+    if (page === 'petty') page = 'float';
     if (!page || PARKED.includes(page) || (this.state && this.isOff(page))) return home;
     if (page === 'dashboard' && !['ceo','gm','finance','pa'].includes(role)) return home;
     if (page === 'crm') return 'clients';
@@ -480,7 +485,7 @@ export default class TrinityApp extends Logic {
   }
   // Opens a finance tool: its own page in the Finance portal, a tab on Finance for Management and the GM.
   finGo(tab, extra) {
-    if ((this.state.role || 'ceo') === 'finance') this.go({ invoices: 'invoices', cash: 'cashbook', reports: 'freports', float: 'float', petty: 'petty' }[tab] || 'finance', extra);
+    if ((this.state.role || 'ceo') === 'finance') this.go({ invoices: 'invoices', cash: 'cashbook', reports: 'freports', float: 'float', petty: 'float' }[tab] || 'finance', extra);
     else this.go('finance', Object.assign({ finTab: tab }, extra || {}));
   }
   go(page, extra) {
@@ -729,7 +734,7 @@ export default class TrinityApp extends Logic {
     const id = this.nextId('REQ', s.reqs), draft = {type, amt};
     const step = this.nextStep(draft, 0), log = [this.now()];
     for (let i = 1; i < step; i++) log.push('Not needed');
-    const r = {id, type, who, ...(who !== this.me().k ? {by:this.me().k} : {}), amt, ...(it ? {items:it.items} : {}), pay:(this.payInfo(f).pay || null), cat:type === 'project' ? (f.cat || 'Operations') : type === 'internal' && f.cat ? f.cat : REQ_TYPES[type].l.replace(' request', ''), title:(f.title || '').trim(), purpose:(f.purpose || '').trim(), p:f.p || '', alloc:f.alloc || '', need:f.need || (type === 'emergency' ? 'Today' : 'This week'), step, st:step >= 5 ? 'approved' : 'pending', log};
+    const r = {id, type, who, at:tzDay(this.nowDate()), ...(who !== this.me().k ? {by:this.me().k} : {}), amt, ...(it ? {items:it.items} : {}), pay:(this.payInfo(f).pay || null), cat:type === 'project' ? (f.cat || 'Operations') : type === 'internal' && f.cat ? f.cat : REQ_TYPES[type].l.replace(' request', ''), title:(f.title || '').trim(), purpose:(f.purpose || '').trim(), p:f.p || '', alloc:f.alloc || '', need:f.need || (type === 'emergency' ? 'Today' : 'This week'), step, st:step >= 5 ? 'approved' : 'pending', log};
     this.setState(x => ({reqs:[r, ...x.reqs], reqSel:id}));
     const to = step >= 5 ? this.roleKey('finance', 'RT') : this.approverAt(r, step);
     this.remind(to, step >= 5 ? id + ' is ready to pay' : id + ' needs your approval', 'requests', 'banknote', this.av(who).n + ' · ' + this.fmtT(amt));
@@ -756,20 +761,28 @@ export default class TrinityApp extends Logic {
     this.toast(ok ? r.id + (last ? ' approved · sent to Finance for payment' : (r.step === 3 ? ' verified' : ' approved') + ' · sent to ' + this.CHAIN[n]) : r.id + ' rejected · ' + this.av(r.who).first + ' notified');
     this.log(ok ? 'check' : 'x', ok ? 'green' : 'red', this.me().n + (ok ? ' approved ' : ' rejected ') + this.fmtT(r.amt), this.reqWhat(r) + ' · ' + r.id, r.id);
   }
-  // Finance records what was actually paid (the full amount unless they enter less), and the transaction
-  // charges of sending it (bank or mobile money fee). Charges are a company cost: they go in the cash book
-  // as "Transaction charges" and are not added to the person's float.
-  payReq(r, paid, charges) {
-    const t = this.now(), amt = paid == null || String(paid).trim() === '' ? r.amt : Math.round(+String(paid).replace(/[^0-9.]/g, '') || 0);
+  // Finance records what was actually paid (the full amount unless they enter less), how it was paid
+  // (pre-filled from how the person asked to be paid), the day (today, or up to 7 days back) and the
+  // transaction charges of sending it (bank or mobile money fee). Charges are a company cost: they go in
+  // the cash book as "Transaction charges" and are not added to the person's float. The money comes out
+  // of the float; a payment that takes it below zero is still recorded, and Management is told.
+  payReq(r, paid, charges, opts) {
+    const o = opts || {}, amt = paid == null || String(paid).trim() === '' ? r.amt : Math.round(+String(paid).replace(/[^0-9.]/g, '') || 0);
     if (!(amt > 0)) { this.toast('Enter the amount paid'); return 'Enter the amount paid'; }
     if (amt > r.amt) { this.toast('More than was requested (' + this.fmtT(r.amt) + ')'); return 'More than was requested'; }
     const fee = parseFee(charges);
     if (fee < 0) { this.toast('Transaction charges must be a number'); return 'Transaction charges must be a number'; }
-    this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, {step:6,st:'paid',paidOn:dayKey(0),paidAmt:amt,paidBy:this.me().k,log:[...q.log,t]}, fee ? {payFee:fee} : {}) : q), staff:x.staff.map(p => p.k === r.who ? Object.assign({}, p, {fl:p.fl + amt}) : p)}));
-    this.toast('Paid ' + this.fmtT(amt) + ' · float opened for ' + this.av(r.who).n + (fee ? ' · charges ' + this.fmtT(fee) : ''));
-    this.remind(r.who, r.id + ' paid · ' + this.fmtT(amt), 'requests', 'wallet', (amt < r.amt ? 'Part of ' + this.fmtT(r.amt) + ' · ' : '') + 'bring the receipts within 3 days');
-    this.smsTo(r.who, 'Your request ' + r.id + ' has been paid: ' + this.fmtT(amt) + (amt < r.amt ? ' of ' + this.fmtT(r.amt) : '') + (r.pay && r.pay.by ? ' by ' + r.pay.by : '') + '. Please bring the receipts within 3 days.');
-    this.log('wallet','green','Float opened · ' + this.fmtT(amt), this.av(r.who).n + ' · receipts due in 3 days', r.id);
+    const d = this.floatDate(o.date); if (d.error) { this.toast(d.error); return d.error; }
+    const via = METHODS.includes(o.method) ? o.method : (r.pay && r.pay.by) || '';
+    const t = tzTime(this.nowDate());
+    this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, {step:6,st:'paid',paidOn:d.at,paidAt:t,paidAmt:amt,paidBy:this.me().k,log:[...q.log,this.now()]}, via ? {paidVia:via} : {}, fee ? {payFee:fee} : {}) : q), staff:x.staff.map(p => p.k === r.who ? Object.assign({}, p, {fl:(p.fl || 0) + amt}) : p)}));
+    const warn = this.fl().grants.length ? this.floatCheckBelowZero('Paid ' + r.id + ' · ' + this.fmtT(amt)) : '';
+    if (d.at !== this.fToday()) this.floatRevised(d.at, r.id + ' paid ' + this.fmtT(amt));
+    this.toast('Paid ' + this.fmtT(amt) + ' · float opened for ' + this.av(r.who).n + (fee ? ' · charges ' + this.fmtT(fee) : '') + warn);
+    const due = this.accountDays();
+    this.remind(r.who, 'Account for ' + r.id + ' · ' + this.fmtT(amt) + ' paid', 'requests', 'wallet', (amt < r.amt ? 'Part of ' + this.fmtT(r.amt) + ' · ' : '') + 'within ' + due + ' days: what you spent, the receipts and the change');
+    this.smsTo(r.who, 'Your request ' + r.id + ' has been paid: ' + this.fmtT(amt) + (amt < r.amt ? ' of ' + this.fmtT(r.amt) : '') + (via ? ' by ' + via : '') + '. Please account for it (receipts and change) within ' + due + ' days.');
+    this.log('wallet','green','Float opened · ' + this.fmtT(amt), this.av(r.who).n + ' · receipts due in ' + due + ' days', r.id);
     return '';
   }
   answer(q) {
@@ -797,4 +810,4 @@ export default class TrinityApp extends Logic {
   rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, targetVals, teamVals, attendanceVals, myCheckinVals, memoVals, officeVals, reportingVals, pettyVals, briefingVals, payrollVals }, storeMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods, briefingMethods, payrollMethods, targetMethods, teamMethods, attendanceMethods, memoMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, targetVals, teamVals, attendanceVals, myCheckinVals, memoVals, officeVals, reportingVals, pettyVals, floatVals, briefingVals, payrollVals }, storeMethods, floatMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods, briefingMethods, payrollMethods, targetMethods, teamMethods, attendanceMethods, memoMethods);

@@ -37,7 +37,7 @@ function People({ f }) {
   );
 }
 
-function Pick({ f }) {
+export function Pick({ f }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const cur = f.opts.find(o => String(o.v) === String(f.v));

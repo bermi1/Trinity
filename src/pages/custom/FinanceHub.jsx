@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { PageHead, Btn, Pill, Empty } from '../../ui/kit';
 import { Reports, CashBook, CashChart, Periods } from './FinanceReports';
-import { PettyCash, Obligations } from './PettyCash';
+import { Obligations } from './Obligations';
+import FloatPage from './FloatPage';
 
 const ST = { draft: ['Draft', '#F1EEF6', '#6E6A7C'], sent: ['Sent', '#E9EFFA', '#3559A8'], partial: ['Part paid', '#FBF1DD', '#8A6414'], overdue: ['Overdue', '#FBEDEE', '#B23A46'], paid: ['Paid', '#E6F4EC', '#1F7549'], cancelled: ['Cancelled', '#EDEBF0', '#6E6A7C'] };
 const n = v => Math.round(+v || 0).toLocaleString('en-US');
@@ -171,68 +172,10 @@ function Editor({ F }) {
   );
 }
 
-function FloatTab({ F }) {
-  const L = F.float;
-  const [amt, setAmt] = useState(''); const [note, setNote] = useState(''); const [to, setTo] = useState(''); const [aAmt, setAAmt] = useState(''); const [err, setErr] = useState(''); const [ok, setOk] = useState('');
-  const run = (fn, reset) => { const m = fn(); setErr(m); setOk(m ? '' : 'Done'); if (!m) reset(); };
-  return (
-    <div className="fh-float">
-      <section className="fh-card fh-floathead">
-        <div className="fh-ring" style={{ '--p': L.pct }}><b>{L.pct}%</b><small>allocated</small></div>
-        <dl>
-          <div><dt>Float given by Management</dt><dd>{L.total}</dd></div>
-          <div><dt>Allocated</dt><dd>{L.allocated}</dd></div>
-          <div><dt>Not yet allocated</dt><dd className="is-gold">{L.left}</dd></div>
-        </dl>
-      </section>
-
-      <section className="fh-card">
-        <h3>{F.isCeo ? 'Give float to Finance' : 'Ask Management for float'}</h3>
-        {F.isCeo && L.asks.length ? <div className="fh-asks">{L.asks.map(a => <button key={a.id} type="button" onClick={() => { setAmt(String(a.raw)); setNote(a.note); }}><b>Finance asks {a.amt}</b>{a.note ? <span>{a.note}</span> : null}<small>{a.at} · tap to fill in</small></button>)}</div> : null}
-        <Amount value={amt} set={setAmt} label="Float amount" />
-        <div className="ff-quick">{[1e6, 5e6, 10e6, 20e6].map(v => <button key={v} type="button" onClick={() => setAmt(String(v))}>{v / 1e6}M</button>)}</div>
-        {F.isCeo ? <input className="ff-search" value={note} onChange={e => setNote(e.target.value)} placeholder="Note (e.g. December float)" aria-label="Float note" />
-          : <label className="ff"><span className="ff-l">What is it for?<em>*</em></span><textarea rows={3} value={note} onChange={e => setNote(e.target.value)} placeholder="e.g. December float: Lake Zone roadshow transport and crew allowances, office running costs" aria-label="Float description" /></label>}
-        <Btn kind="dark" onClick={() => run(() => (F.isCeo ? L.give(amt, note) : L.ask(amt, note)), () => { setAmt(''); setNote(''); })}>{F.isCeo ? 'Give float' : 'Send request'}</Btn>
-      </section>
-
-      {F.isFin || F.isCeo ? (
-        <section className="fh-card fh-wide">
-          <h3>Allocate to a project or office purpose</h3>
-          <div className="ff-chips fh-targets">{L.targets.map(t => <button key={t.v} type="button" className={to === t.v ? 'is-on' : ''} onClick={() => setTo(t.v)}><b>{t.l}</b><small>{t.s}</small></button>)}</div>
-          <div className="fh-row"><Amount value={aAmt} set={setAAmt} label="Allocation amount" /><Btn kind="dark" onClick={() => run(() => L.allocate(to, aAmt), () => setAAmt(''))}>Allocate</Btn></div>
-          <span className="k-sub">{L.left} not yet allocated. Staff request money against these amounts.</span>
-        </section>
-      ) : null}
-      {err ? <div className="fm-err fh-wide" role="alert">{err}</div> : ok ? <div className="td-sent fh-wide">✓ Saved</div> : null}
-
-      <section className="fh-card fh-wide">
-        <h3>Allocations</h3>
-        {L.allocs.length ? (
-          <ul className="fh-allocs">
-            {L.allocs.map(a => (
-              <li key={a.id}>
-                <span className="fh-al-name"><b>{a.name}</b><small>{a.office ? 'Office' : 'Project'} · {a.amt}</small></span>
-                <span className="fh-al-bar"><i style={{ width: a.pct + '%', background: a.over ? '#D9535F' : undefined }} /></span>
-                <span className="fh-al-nums"><small>Paid {a.used} · waiting {a.waiting}</small><b className={a.over ? 'is-red' : ''}>{a.left} left</b></span>
-              </li>
-            ))}
-          </ul>
-        ) : <Empty>Nothing allocated yet.</Empty>}
-      </section>
-
-      <section className="fh-card fh-wide">
-        <h3>Float received</h3>
-        {L.grants.length ? <ul className="mr-list">{L.grants.map(g => <li key={g.id}><button type="button"><span><b>{g.amt}</b><small>{g.note || 'Float'} · {g.by}</small></span><span className="k-sub">{g.at}</span></button></li>)}</ul> : <Empty>No float given yet.</Empty>}
-      </section>
-    </div>
-  );
-}
-
 // Finance: the overview, invoices (create, sign, send, payments) and the float ledger.
 export default function FinanceHub({ v }) {
   const F = v.FH, R = v.REP;
-  const HEAD = { overview: ['Finance', 'Money in and out, who owes us and what needs attention.'], invoices: ['Invoices', 'Create, sign, send and record payments.'], cash: ['Cash book', 'Every shilling in and out, with a running balance.'], reports: ['Reports', 'Income and spending by period, category, client and project.'], float: ['Float', 'The float from Management, allocated to projects and office purposes.'], petty: ['Petty cash', 'The office cash box: vouchers, top-ups and cash counts.'] }[F.tab];
+  const HEAD = { overview: ['Finance', 'Money in and out, who owes us and what needs attention.'], invoices: ['Invoices', 'Create, sign, send and record payments.'], cash: ['Cash book', 'Every shilling in and out, with a running balance.'], reports: ['Reports', 'Income and spending by period, category, client and project.'], float: ['Float', 'The money from Management: what was paid from it, what is left, and the daily report.'] }[F.tab];
   const openInv = F.invoices.filter(i => i.st !== 'paid' && !i.cancelled).slice(0, 6);
   // Cancelled invoices have their own filter; in "All" they come last, greyed.
   const list = F.invoices.filter(i => (F.filter === 'open' ? i.st !== 'paid' && !i.cancelled : F.filter === 'paid' ? i.st === 'paid' : F.filter === 'sign' ? i.needsSign : F.filter === 'cancelled' ? i.cancelled : true))
@@ -242,8 +185,9 @@ export default function FinanceHub({ v }) {
       <PageHead kicker="Finance" title={F.showTabs ? 'Finance & Invoices' : HEAD[0]} sub={F.showTabs ? 'Money in and out, invoices, the cash book, reports and the float.' : HEAD[1]}>
         {F.canInvoice && (F.tab === 'overview' || F.tab === 'invoices') ? <Btn kind="dark" onClick={F.newInvoice}>New invoice</Btn> : null}
       </PageHead>
-      {F.showTabs ? <div className="rc-smart fh-tabs" role="tablist">{[['overview', 'Overview'], ...(R ? [['cash', 'Cash book'], ['reports', 'Reports']] : []), ['invoices', 'Invoices'], ...(F.float ? [['float', 'Float']] : []), ...(v.PT ? [['petty', 'Petty cash']] : [])].map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={F.tab === k} className={F.tab === k ? 'is-on' : ''} onClick={() => F.setTab(k)}><span>{l}</span></button>)}</div> : null}
+      {F.showTabs ? <div className="rc-smart fh-tabs" role="tablist">{[['overview', 'Overview'], ['invoices', 'Invoices'], ...(R ? [['cash', 'Cash book'], ['reports', 'Reports']] : []), ...(v.FL ? [['float', 'Float']] : [])].map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={F.tab === k} className={F.tab === k ? 'is-on' : ''} onClick={() => F.setTab(k)}><span>{l}</span></button>)}</div> : null}
 
+      {v.floatNudge && F.tab !== 'float' ? <button type="button" className="fl-nudge" onClick={v.floatNudge.go}><b>{v.floatNudge.t}</b><small>{v.floatNudge.s}</small></button> : null}
       {F.tab === 'overview' ? (
         <>
           <Kpis items={F.kpis} />
@@ -269,8 +213,7 @@ export default function FinanceHub({ v }) {
         </section>
       ) : null}
 
-      {F.tab === 'float' && F.float ? <FloatTab F={F} /> : null}
-      {F.tab === 'petty' && v.PT ? <PettyCash P={v.PT} /> : null}
+      {F.tab === 'float' && v.FL ? <FloatPage v={v} /> : null}
       {F.editing ? <Editor key={F.editing} F={F} /> : null}
     </>
   );
