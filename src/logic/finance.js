@@ -22,6 +22,10 @@ export function invTotals(i) {
   return { direct, admin, net, vat, total: net + vat };
 }
 const paidOf = i => (i.payments || []).filter(p => p.ok).reduce((a, p) => a + p.amt, 0);
+// A cancelled invoice keeps its number (it is not reused) but no longer counts anywhere:
+// not owed, not overdue, not in reports or the company goal; it cannot be signed, sent, edited or paid.
+export const isCancelled = i => !!i && i.st === 'cancelled';
+const ST_NAME = { draft: 'Draft', sent: 'Sent', partial: 'Part paid', overdue: 'Overdue', paid: 'Paid' };
 
 export const financeMethods = {
   isMoneyTop() { return ['ceo', 'finance'].includes(this.state.role || 'ceo'); },
@@ -70,6 +74,7 @@ export const financeMethods = {
 
   // ---- Invoices
   saveInvoice(d) {
+    if (d.id && isCancelled((this.state.invoices || []).find(x => x.id === d.id))) return 'This invoice is cancelled and cannot be edited';
     if (!d.c) return 'Choose the client';
     const no = String(d.no || '').trim();
     if (no.length > 40) return 'The invoice number is too long';
@@ -94,7 +99,7 @@ export const financeMethods = {
     this.log('fileText', 'blue', 'Invoice created · ' + d.c, id);
     return '';
   },
-  canSign(i) { const r = this.state.role || 'ceo'; return !i.signed && SIGNERS[i.signer || 'ED'].role === r; },
+  canSign(i) { const r = this.state.role || 'ceo'; return !isCancelled(i) && !i.signed && SIGNERS[i.signer || 'ED'].role === r; },
   signInvoice(id) {
     const i = this.state.invoices.find(x => x.id === id); if (!i || !this.canSign(i)) return;
     this.setState(x => ({ invoices: x.invoices.map(y => (y.id === id ? Object.assign({}, y, { signed: { by: this.me().k, name: this.me().n, at: dayKey(0) } }) : y)) }));
@@ -103,6 +108,7 @@ export const financeMethods = {
   },
   sendInvoice(id) {
     const i = this.state.invoices.find(x => x.id === id); if (!i) return;
+    if (isCancelled(i)) { this.toast('This invoice is cancelled'); return; }
     if (i.lines && !i.signed) { this.toast('The invoice must be signed first'); return; }
     this.setState(x => ({ invoices: x.invoices.map(y => (y.id === id ? Object.assign({}, y, { st: 'sent', sentAt: dayKey(0) }) : y)) }));
     this.toast(invNo(i) + ' marked as sent to ' + i.c);
@@ -111,6 +117,7 @@ export const financeMethods = {
   recordPayment(id, amt, ref) {
     amt = Math.round(+amt || 0); if (amt <= 0) return 'Enter the amount received';
     const i = this.state.invoices.find(x => x.id === id); if (!i) return 'Invoice not found';
+    if (isCancelled(i)) return 'This invoice is cancelled · no payments can be recorded on it';
     const due = invTotals(i).total - paidOf(i); if (amt > due) return 'Only ' + this.fmtT(due) + ' is still due';
     const p = { id: 'PY' + Date.now().toString(36), amt, ref: (ref || '').trim(), at: dayKey(0), rec: this.me().k, ok: null };
     if (this.state.role === 'ceo') p.ok = this.me().k; // Management recording also confirms; Finance still sees it
@@ -122,8 +129,47 @@ export const financeMethods = {
   },
   confirmPayment(id, pid) {
     if ((this.state.role || 'ceo') !== 'ceo') return;
+    if (isCancelled((this.state.invoices || []).find(x => x.id === id))) { this.toast('This invoice is cancelled'); return; }
     this.setState(x => ({ invoices: x.invoices.map(y => (y.id === id ? this.withPayState(Object.assign({}, y, { payments: (y.payments || []).map(p => (p.id === pid ? Object.assign({}, p, { ok: this.me().k }) : p)) })) : y)) }));
     this.toast('Payment confirmed');
+  },
+  // Cancel an invoice (Management, the GM, Finance), with a reason. Refused once money was confirmed on it:
+  // that needs a refund or a credit note. Unconfirmed payment entries stay on it but no longer count.
+  // Its number stays used. The previous status is kept so Management can restore it.
+  cancelBlock(i) {
+    if (!i) return 'Invoice not found';
+    if (isCancelled(i)) return 'This invoice is already cancelled';
+    const paid = paidOf(i);
+    if (paid > 0) return this.fmtT(paid) + ' has been received and confirmed on this invoice. Record a refund / credit note first';
+    return '';
+  },
+  cancelInvoice(id, reason) {
+    if (!this.canInvoice()) return 'Only Management, the GM and Finance can cancel invoices';
+    const i = (this.state.invoices || []).find(x => x.id === id);
+    const b = this.cancelBlock(i); if (b) return b;
+    reason = String(reason || '').trim(); if (!reason) return 'Give the reason for cancelling';
+    if (!this.confirm('Cancel invoice ' + invNo(i) + ' (' + i.c + ')? It will no longer count as owed or in the reports. Its number stays used.')) return 'Not cancelled';
+    const me = this.me(), c = { by: me.k, at: dayKey(0), reason, prevSt: i.st };
+    this.setState(x => ({ invoices: x.invoices.map(y => (y.id === id ? Object.assign({}, y, { st: 'cancelled', cancelled: c }) : y)) }));
+    const tell = new Set();
+    if (i.by && i.by !== me.k) tell.add(i.by);
+    if ((this.state.role || 'ceo') === 'finance' && this.ROLES.ceo.k !== me.k) tell.add(this.ROLES.ceo.k);
+    tell.forEach(k => this.remind(k, 'Invoice cancelled · ' + invNo(i), 'finance', 'x', i.c + ' · ' + reason + ' · by ' + me.n));
+    this.log('x', 'red', 'Invoice cancelled · ' + i.c, invNo(i) + ' · ' + reason);
+    this.toast('Invoice ' + invNo(i) + ' cancelled');
+    return '';
+  },
+  // Management can undo a cancellation: the invoice goes back to its previous status.
+  restoreInvoice(id) {
+    if ((this.state.role || 'ceo') !== 'ceo') return 'Only Management can restore a cancelled invoice';
+    const i = (this.state.invoices || []).find(x => x.id === id);
+    if (!isCancelled(i)) return 'This invoice is not cancelled';
+    const st = (i.cancelled && i.cancelled.prevSt) || (i.lines && !i.signed ? 'draft' : 'sent');
+    this.setState(x => ({ invoices: x.invoices.map(y => (y.id === id ? Object.assign({}, y, { st, cancelled: null, restored: { by: this.me().k, at: dayKey(0), was: y.cancelled || null } }) : y)) }));
+    if (i.by && i.by !== this.me().k) this.remind(i.by, 'Invoice restored · ' + invNo(i), 'finance', 'fileText', i.c + ' · back to ' + (ST_NAME[st] || st));
+    this.log('fileText', 'blue', 'Invoice restored · ' + i.c, invNo(i));
+    this.toast('Invoice ' + invNo(i) + ' restored · ' + (ST_NAME[st] || st));
+    return '';
   },
   withPayState(i) {
     const paid = paidOf(i), total = invTotals(i).total;
@@ -145,6 +191,7 @@ export const financeMethods = {
       .map((l, k) => `<tr><td>${k + 1}</td><td>${esc(l.item)}</td><td class=r>${l.n}</td><td class=r>${n(l.rate)}</td><td class=r>${l.days}</td><td class=r>${l.events}</td><td class=r>${n(l.n * l.rate * l.days * l.events)}</td></tr>`).join('');
     const paid = paidOf(i);
     const NO = invNo(i);
+    const CX = isCancelled(i) ? (i.cancelled || {}) : null;
     const html = `<!doctype html><html><head><meta charset=utf-8><title>${esc(NO)} · ${esc(i.c)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Caveat:wght@600&display=swap" rel=stylesheet>
 <style>
@@ -160,25 +207,28 @@ export const financeMethods = {
 .title{margin:18px 0 8px;font-size:16px;font-weight:700}
 table{width:100%;border-collapse:collapse;margin-top:6px}th{background:#2B1459;color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:9px 8px;text-align:left}
 th:first-child{border-radius:8px 0 0 8px}th:last-child{border-radius:0 8px 8px 0}td{padding:9px 8px;border-bottom:1px solid #EEEAF4}.r{text-align:right}
-.tot{margin-left:auto;width:300px;margin-top:12px}.tot div{display:flex;justify-content:space-between;padding:5px 0}.tot .g{border-top:2px solid #2B1459;margin-top:4px;padding-top:9px;font-size:16px;font-weight:800;color:#2B1459}
+.tot{margin-left:auto;width:390px;margin-top:12px}.tot div{display:flex;justify-content:space-between;gap:16px;padding:5px 0}.tot span,.tot b{white-space:nowrap}.tot .g{border-top:2px solid #2B1459;margin-top:4px;padding-top:9px;font-size:16px;font-weight:800;color:#2B1459}
 .sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:28px;align-items:end}.sig{border-top:1px solid #CFC8DD;padding-top:6px;font-size:11.5px;color:#6E6A7C;min-height:96px;position:relative;display:flex;flex-direction:column;justify-content:flex-end}
 .sigimg{max-height:56px;max-width:190px;object-fit:contain;margin-bottom:4px}.sigline{display:block;height:46px}.po{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px;padding:10px 14px;border:1px solid #E4DFEE;border-radius:10px}.po span{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#8A7239;font-weight:700}.stamp{position:absolute;right:-6px;bottom:18px;width:118px;opacity:.88;transform:rotate(-8deg)}
+.void{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:110px;font-weight:800;color:rgba(178,58,70,.22);transform:rotate(-24deg);letter-spacing:.08em;z-index:2}
+.cnote{margin:-2px 0 10px;padding:8px 12px;border:1.5px solid #B23A46;border-radius:8px;background:#FBEDEE;color:#8E2A35;font-size:12.5px}.cnote b{color:#B23A46;letter-spacing:.08em}
 .draft{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;font-size:88px;font-weight:800;color:rgba(178,58,70,.09);transform:rotate(-24deg);letter-spacing:.1em}
 .foot{position:absolute;left:13mm;right:13mm;bottom:7mm;padding-top:8px;display:flex;justify-content:space-between;gap:14px;border-top:1px solid #EEEAF4;font-size:10.5px;color:#6E6A7C}
 .bar{position:fixed;top:12px;right:12px}.bar button{font:600 13px Inter;padding:9px 16px;border:none;border-radius:9px;background:#2B1459;color:#fff;cursor:pointer}
 @page{size:A4;margin:0}
 @media print{html,body{background:#fff;width:210mm;height:297mm}.page{margin:0;box-shadow:none;page-break-after:avoid;break-after:avoid}.bar{display:none}}
 </style></head><body><div class=bar><button onclick="print()">Print / Save PDF</button></div><div class=page>
-${i.signed ? '' : '<div class=draft>DRAFT</div>'}<div class=fit>
+${CX ? '<div class=void>CANCELLED</div>' : i.signed ? '' : '<div class=draft>DRAFT</div>'}<div class=fit>
 <div class=top><img src="${origin}/brand/trinity-logo-full.png" alt="Trinity Mark"><div class=inv><h1>INVOICE</h1><div><b>${esc(NO)}</b></div><div>Date: ${esc(i.at || dayKey(0))}</div></div></div>
 <div class=band></div>
 <div class=grid><div class=box><div class=lbl>Bill to</div><b style="font-size:15px">${esc(i.c)}</b>${i.addr ? `<div style="color:#6E6A7C;margin-top:2px">${esc(i.addr)}</div>` : ''}<div class=kv style="margin-top:4px">${i.tin ? `<span>TIN</span><b>${esc(i.tin)}</b>` : ''}${i.vrn ? `<span>VRN</span><b>${esc(i.vrn)}</b>` : ''}</div></div>
 <div class=box><div class=lbl>From</div><b>${COMPANY.name}</b><div class=kv style="margin-top:4px"><span>TIN</span><b>${COMPANY.tin}</b><span>VRN</span><b>${COMPANY.vrn}</b></div></div></div>
 ${PO.no ? `<div class=po><div><span>PO number</span><b>${esc(PO.no)}</b></div><div><span>PO date</span><b>${esc(PO.date || '')}</b></div><div><span>Vendor number</span><b>${esc(PO.vendor || '')}</b></div></div>` : ''}
 <div class=title>${esc(i.title || P.name || '')}</div>
+${CX ? `<div class=cnote><b>CANCELLED</b> · ${esc(CX.at || '')}${CX.by ? ' · by ' + esc(this.av(CX.by).n) : ''}${CX.reason ? ' · Reason: ' + esc(CX.reason) : ''}</div>` : ''}
 <table><thead><tr><th>No</th><th>Item</th><th class=r>Number</th><th class=r>Rate (TZS)</th><th class=r>Days</th><th class=r>Events</th><th class=r>Total (TZS)</th></tr></thead><tbody>${rows}</tbody></table>
-<div class=tot>${T.legacy ? '' : `<div><span>Total direct costs</span><b>${n(T.direct)}</b></div><div><span>Administrative cost ${i.admin == null ? 15 : i.admin}%</span><b>${n(T.admin)}</b></div>`}
-<div><span>Total VAT exclusive</span><b>${n(T.net)}</b></div><div><span>VAT 18%</span><b>${n(T.vat)}</b></div><div class=g><span>Total VAT inclusive</span><span>TZS ${n(T.total)}</span></div>
+<div class=tot>${T.legacy ? '' : `<div><span>Total direct cost</span><b>${n(T.direct)}</b></div><div><span>Administrative cost ${i.admin == null ? 15 : i.admin}%</span><b>${n(T.admin)}</b></div>`}
+<div><span>Total direct cost VAT exclusive</span><b>${n(T.net)}</b></div><div><span>VAT amount ${i.vat == null ? 18 : i.vat}%</span><b>${n(T.vat)}</b></div><div class=g><span>Total direct cost VAT inclusive</span><span>TZS ${n(T.total)}</span></div>
 ${paid ? `<div><span>Paid</span><b>${n(paid)}</b></div><div><span>Balance due</span><b>${n(T.total - paid)}</b></div>` : ''}</div>
 <div class=box style="margin-top:18px"><div class=lbl>Payment details</div><div class=kv><span>Bank</span><b>${COMPANY.bank}</b><span>Account name</span><b>${COMPANY.accName}</b><span>Account no</span><b>${COMPANY.acc}</b></div></div>
 <div class=sign>
@@ -204,15 +254,17 @@ fit();addEventListener('load',fit);addEventListener('beforeprint',fit);if(docume
 export function financeVals(s) {
   const role = s.role || 'ceo', moneyTop = ['ceo', 'finance'].includes(role);
   const inv = (s.invoices || []).map(i => {
-    const T = invTotals(i), paid = paidOf(i), wait = (i.payments || []).filter(p => !p.ok);
-    return { id: i.id, no: invNo(i), c: i.c, proj: this.proj(i.p).name || '', st: i.st, total: T.total, totalT: this.fmtT(T.total), paid, paidT: this.fmtT(paid), due: T.total - paid, dueT: this.fmtT(T.total - paid), dueOn: i.due, at: i.at || '',
-      pct: T.total ? Math.round(paid / T.total * 100) : 0, signer: SIGNERS[i.signer || 'ED'].t, signed: !!i.signed || !i.lines, needsSign: !!i.lines && !i.signed,
+    const T = invTotals(i), paid = paidOf(i), wait = (i.payments || []).filter(p => !p.ok), cx = isCancelled(i), C = i.cancelled || {};
+    return { cancelled: cx, cancelInfo: cx ? { reason: C.reason || '', by: C.by ? this.av(C.by).n : '', at: C.at || '', was: ST_NAME[C.prevSt] || '' } : null,
+      canCancel: !cx && this.canInvoice(), cancelBlock: cx ? '' : this.cancelBlock(i), doCancel: r => this.cancelInvoice(i.id, r),
+      canRestore: cx && role === 'ceo', restore: () => this.restoreInvoice(i.id), canEdit: !cx && i.st !== 'paid' && this.canInvoice(), id: i.id, no: invNo(i), c: i.c, proj: this.proj(i.p).name || '', st: i.st, total: T.total, totalT: this.fmtT(T.total), paid, paidT: this.fmtT(paid), due: T.total - paid, dueT: this.fmtT(T.total - paid), dueOn: i.due, at: i.at || '',
+      pct: T.total ? Math.round(paid / T.total * 100) : 0, signer: SIGNERS[i.signer || 'ED'].t, signed: !!i.signed || !i.lines, needsSign: !cx && !!i.lines && !i.signed,
       canSign: !!i.lines && this.canSign(i), sign: () => this.signInvoice(i.id), send: () => this.sendInvoice(i.id), print: () => this.printInvoice(i.id),
-      canPay: moneyTop && i.st !== 'paid' && i.st !== 'draft', pay: (a, r) => this.recordPayment(i.id, a, r),
-      payments: (i.payments || []).map(p => ({ id: p.id, amt: this.fmtT(p.amt), at: p.at, ref: p.ref, rec: this.av(p.rec).n, ok: !!p.ok, okBy: p.ok ? this.av(p.ok).n : '', canOk: !p.ok && role === 'ceo', confirm: () => this.confirmPayment(i.id, p.id) })),
+      canPay: moneyTop && !cx && i.st !== 'paid' && i.st !== 'draft', pay: (a, r) => this.recordPayment(i.id, a, r),
+      payments: (i.payments || []).map(p => ({ id: p.id, amt: this.fmtT(p.amt), at: p.at, ref: p.ref, rec: this.av(p.rec).n, ok: !!p.ok, okBy: p.ok ? this.av(p.ok).n : '', canOk: !cx && !p.ok && role === 'ceo', confirm: () => this.confirmPayment(i.id, p.id) })),
       waitOk: wait.length, edit: () => this.setState({ invEdit: i.id }), open: () => this.setState({ invSel: s.invSel === i.id ? null : i.id }), sel: s.invSel === i.id };
   });
-  const unpaid = inv.filter(i => i.st !== 'paid' && i.st !== 'draft');
+  const unpaid = inv.filter(i => i.st !== 'paid' && i.st !== 'draft' && !i.cancelled);
   const month = dayKey(0).slice(0, 7);
   const collected = (s.invoices || []).reduce((a, i) => a + (i.payments || []).filter(p => p.ok && (p.at || '').slice(0, 7) === month).reduce((x, p) => x + p.amt, 0), 0);
   const F = {
@@ -351,14 +403,14 @@ export function reportVals(s) {
   const outCat = group(rows, 'out', e => e.cat.replace(/^Staff requests · .*/, 'Staff requests (floats)')), inCli = group(rows, 'in', e => e.party || e.cat);
   // Projects: what each brought in and cost, all time.
   const projects = (s.projects || []).map(p => {
-    const inv = (s.invoices || []).filter(i => i.p === p.id), invoiced = inv.reduce((a, i) => a + invTotals(i).total, 0);
+    const inv = (s.invoices || []).filter(i => i.p === p.id && !isCancelled(i)), invoiced = inv.reduce((a, i) => a + invTotals(i).total, 0);
     const got = all.filter(e => e.p === p.id && e.dir === 'in').reduce((a, e) => a + e.amt, 0), spent = all.filter(e => e.p === p.id && e.dir === 'out').reduce((a, e) => a + e.amt, 0);
     return { id: p.id, n: p.name, c: p.client, value: Math.round((p.val || 0) * 1e6), invoiced, got, spent, profit: got - spent };
   }).filter(p => p.invoiced || p.got || p.spent).sort((a, b) => b.value - a.value);
   // How long clients have owed us.
   const today = parse(dayKey(0)), ageOf = i => { if (i.at) return Math.round((today - parse(i.at)) / 864e5); const m = /(\d+) days late/.exec(i.due || ''); return m ? 30 + +m[1] : 10; };
   const aging = [['0–30 days', 0, 30], ['31–60 days', 31, 60], ['61–90 days', 61, 90], ['Over 90 days', 91, 1e9]].map(([l, a, b]) => {
-    const list = (s.invoices || []).filter(i => i.st !== 'paid' && i.st !== 'draft' && ageOf(i) >= a && ageOf(i) <= b);
+    const list = (s.invoices || []).filter(i => i.st !== 'paid' && i.st !== 'draft' && !isCancelled(i) && ageOf(i) >= a && ageOf(i) <= b);
     return { l, n: list.length, v: list.reduce((x, i) => x + invTotals(i).total - (i.payments || []).filter(p => p.ok).reduce((y, p) => y + p.amt, 0), 0) };
   });
   let run = 0;

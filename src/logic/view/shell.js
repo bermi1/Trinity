@@ -37,7 +37,7 @@ export function renderVals() {
 
   const active = s.projects.filter(p => p.st !== 'done');
   const cnt = k => s.projects.filter(p => p.st === k).length;
-  const unpaid = s.invoices.filter(i => i.st !== 'paid' && i.st !== 'draft'), overdue = s.invoices.filter(i => i.st === 'overdue');
+  const unpaid = s.invoices.filter(i => i.st !== 'paid' && i.st !== 'draft' && i.st !== 'cancelled'), overdue = s.invoices.filter(i => i.st === 'overdue');
   const mk = (l,v,u,dd,dc,n,ic,go,sp,spc) => { const k = this.spark(sp); return {l,v,u,d:dd,dc,n,ic:IC[ic],go:() => this.go(go),sp:k.l,spf:k.f,spc}; };
   const pend = vreqs.filter(r => r.st === 'pending').length;
   const kpis = [

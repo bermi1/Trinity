@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 // Form fields shared by the desktop form and the phone sheet. No plain dropdowns:
 // short choices are chips, people are faces, long lists open a searchable list,
-// amounts get thousands separators and quick amounts.
+// amounts get thousands separators and quick amounts, money requests get a list of items.
 
 const QUICK = [50000, 100000, 250000, 500000, 1000000];
 const short = n => (n >= 1e6 ? n / 1e6 + 'M' : n / 1e3 + 'K');
@@ -77,6 +77,43 @@ function Money({ f, last, onEnter }) {
   );
 }
 
+// Items of a money request: a description and an amount per row, "+ Add item", remove, and a live total.
+// One row is the quick case: type the amount (or tap a quick amount); the description may stay blank.
+export function Items({ f, onEnter }) {
+  const [added, setAdded] = useState(false);
+  const rows = f.rows;
+  const put = (i, k, val) => f.set(rows.map((x, j) => (j === i ? Object.assign({}, x, { [k]: val }) : x)));
+  const add = () => { setAdded(true); f.set([...rows, { d: '', amt: '' }]); };
+  const remove = i => f.set(rows.filter((x, j) => j !== i));
+  return (
+    <div className="ff-items">
+      {rows.map((x, i) => (
+        <div key={i} className="ff-item" data-field={'Item ' + (i + 1)}>
+          <input className="ff-item-d" value={x.d || ''} onChange={e => put(i, 'd', e.target.value)} placeholder={i === 0 ? (rows.length > 1 ? 'e.g. Transport to Mwanza' : 'What for? (optional)') : 'e.g. Crew lunch'} aria-label={'Item ' + (i + 1) + ' description'} autoFocus={added && i === rows.length - 1} enterKeyHint="next" />
+          <div className="ff-item-a" data-field={'Item ' + (i + 1) + ' amount'}>
+            <span>TZS</span>
+            <input inputMode="numeric" value={groupDigits(x.amt)} onChange={e => put(i, 'amt', e.target.value.replace(/\D/g, ''))} placeholder={i === 0 ? groupDigits(f.ph) || '0' : '0'} aria-label={'Item ' + (i + 1) + ' amount'} enterKeyHint="next" onKeyDown={onEnter} />
+          </div>
+          {rows.length > 1 ? (
+            <button type="button" className="ff-item-x" onClick={() => remove(i)} aria-label={'Remove item ' + (i + 1)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            </button>
+          ) : null}
+        </div>
+      ))}
+      {rows.length === 1 ? (
+        <div className="ff-quick" aria-label="Quick amounts">
+          {QUICK.map(n => <button key={n} type="button" onClick={() => put(0, 'amt', String(n))}>{short(n)}</button>)}
+        </div>
+      ) : null}
+      <div className="ff-items-foot">
+        <button type="button" className="ff-item-add" onClick={add}>+ Add item</button>
+        <span className="ff-items-total" aria-live="polite">{rows.length > 1 ? rows.length + ' items · ' : ''}Total <b>{f.total}</b></span>
+      </div>
+    </div>
+  );
+}
+
 function FileDrop({ f }) {
   return (
     <label className={'ff-file' + (f.attached ? ' is-done' : '')}>
@@ -103,7 +140,7 @@ export default function FormFields({ fields, onEnter }) {
     return (
       <div key={f.k || i} className="ff" data-field={f.l}>
         <span className="ff-l">{f.l}{f.req ? <em>*</em> : null}</span>
-        {f.kind === 'chips' ? <Chips f={f} /> : f.kind === 'people' ? <People f={f} /> : f.kind === 'pick' ? <Pick f={f} /> : f.kind === 'money' ? <Money f={f} last={last} onEnter={onEnter} /> : <FileDrop f={f} />}
+        {f.kind === 'chips' ? <Chips f={f} /> : f.kind === 'people' ? <People f={f} /> : f.kind === 'pick' ? <Pick f={f} /> : f.kind === 'money' ? <Money f={f} last={last} onEnter={onEnter} /> : f.kind === 'items' ? <Items f={f} onEnter={onEnter} /> : <FileDrop f={f} />}
       </div>
     );
   });

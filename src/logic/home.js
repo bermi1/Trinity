@@ -6,13 +6,13 @@ export function homeVals(s) {
   if (!['ceo', 'gm', 'finance', 'pa'].includes(role)) return { HD: null };
   const me = this.me(), open = (s.leads || []).filter(l => this.leadStage(l) < 5), live = s.projects.filter(p => p.st !== 'done');
   const myAppr = this.visibleReqs(s).filter(r => r.st === 'pending' && this.canAct(r) && (role !== 'ceo' || r.step === 4));
-  const unpaid = (s.invoices || []).filter(i => i.st !== 'paid' && i.st !== 'draft');
+  const unpaid = (s.invoices || []).filter(i => i.st !== 'paid' && i.st !== 'draft' && i.st !== 'cancelled');
   const owed = unpaid.reduce((a, i) => a + i.v * 1e6 - (i.payments || []).filter(p => p.ok).reduce((x, p) => x + p.amt, 0), 0);
   const att = [
     ...live.filter(p => this.canApproveBudget(p)).map(p => ({ tag: 'Budget', tone: 'purple', t: 'Approve budget · ' + p.client, s: p.name + ' · ' + this.fmtT((p.budget || {}).value || 0), on: () => this.go('project', { projectId: p.id }) })),
     ...myAppr.slice(0, 4).map(r => ({ tag: 'Approve', tone: 'amber', t: this.reqWhat(r) + ' · ' + this.fmtT(r.amt), s: this.av(r.who).n, on: () => this.go('requests', { reqSel: r.id, reqFilter: 'me' }) })),
     ...(s.invoices || []).filter(i => i.lines && !i.signed && this.canSign(i)).map(i => ({ tag: 'Sign', tone: 'purple', t: 'Invoice ' + i.id + ' · ' + i.c, s: this.fmtM(i.v), on: () => this.finGo('invoices', { invSel: i.id }) })),
-    ...(role === 'ceo' ? (s.invoices || []).filter(i => (i.payments || []).some(p => !p.ok)).map(i => ({ tag: 'Confirm', tone: 'green', t: 'Payment received · ' + i.c, s: i.id, on: () => this.finGo('invoices', { invSel: i.id }) })) : []),
+    ...(role === 'ceo' ? (s.invoices || []).filter(i => i.st !== 'cancelled' && (i.payments || []).some(p => !p.ok)).map(i => ({ tag: 'Confirm', tone: 'green', t: 'Payment received · ' + i.c, s: i.id, on: () => this.finGo('invoices', { invSel: i.id }) })) : []),
     ...unpaid.filter(i => i.st === 'overdue').map(i => ({ tag: 'Overdue', tone: 'red', t: i.c + ' · ' + this.fmtM(i.v), s: i.id + ' · ' + i.due, on: () => this.finGo('invoices', { invSel: i.id }) })),
     ...live.filter(p => p.st === 'late' || p.st === 'risk').map(p => ({ tag: p.st === 'late' ? 'Delayed' : 'At risk', tone: 'red', t: p.client + ' · ' + p.name, s: 'Due ' + p.due + ' · PM ' + (p.pm ? this.av(p.pm).n : 'not chosen'), on: () => this.go('project', { projectId: p.id }) })),
     ...live.filter(p => this.flowOf(p) === 'budget').map(p => ({ tag: 'Budget', tone: 'amber', t: p.client + ' · ' + p.name, s: 'With Operations for the budget', on: () => this.go('project', { projectId: p.id }) }))

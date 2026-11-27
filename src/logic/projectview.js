@@ -116,13 +116,13 @@ export function projectVals(s) {
   // Money requests on this project, as far as this person may see them (see canSeeReq): all of them for
   // Management, the GM and the PA; otherwise your own and the ones waiting for you (Finance: what it handles).
   const reqs = this.visibleReqs(s).filter(r => r.p === P.id);
-  V.reqs = reqs.map(r => ({ id: r.id, what: this.reqWhat(r), who: this.av(r.who).n, amt: this.fmtT(r.amt), status: this.moneyStatus(r), tone: this.reqTone(r),
+  V.reqs = reqs.map(r => ({ id: r.id, what: this.reqWhat(r), who: this.av(r.who).n, amt: this.fmtT(r.amt), items: this.reqItemsView(r).map(x => x.d + ' ' + x.amt).join(' · '), status: this.moneyStatus(r), tone: this.reqTone(r),
     open: () => this.go('requests', { reqSel: r.id, reqFilter: 'all' }) }));
   V.reqsTitle = can.allReqs ? 'Money requests' : 'Your requests on this project';
   V.reqMoney = () => this.openModal('reqProject', { p: P.id });
 
   if (can.money) {
-    const inv = (s.invoices || []).filter(i => i.p === P.id), invoiced = inv.reduce((a, b) => a + b.v, 0);
+    const inv = (s.invoices || []).filter(i => i.p === P.id), invoiced = inv.filter(i => i.st !== 'cancelled').reduce((a, b) => a + b.v, 0);
     V.money = { val: this.fmtM(P.val), invoiced: this.fmtM(invoiced), margin: can.profit ? (P.val ? Math.round((P.val - Math.max(P.bud, P.spent)) / P.val * 100) : 0) + '%' : '',
       invoices: inv.map(i => ({ id: i.id, v: this.fmtM(i.v), st: i.st, due: i.due })), invoice: () => this.openModal('invoice', { p: P.id }) };
   }
@@ -201,14 +201,19 @@ export const reqFlowMethods = {
     // Before anyone has approved it, the requester may also change the amount, title and purpose.
     const untouched = r.st === 'pending' && this.reqUntouched(r), edits = {};
     if (untouched) {
-      if (f.amt != null && String(f.amt).trim() !== '') { const a = Math.round(+f.amt || 0); if (a <= 0) return 'Enter an amount above 0'; if (a !== r.amt) edits.amt = a; }
+      if (Array.isArray(f.items)) {
+        // Items: the amount becomes their sum. A lone item without its own description takes the purpose.
+        const it = this.reqItems(f.items, f.purpose != null ? f.purpose : r.purpose); if (it.error) return it.error;
+        if (it.amt !== r.amt) edits.amt = it.amt;
+        if (JSON.stringify(it.items) !== JSON.stringify(r.items || [{ d: String(f.purpose != null ? f.purpose : r.purpose || '').trim(), amt: r.amt }])) edits.items = it.items;
+      } else if (f.amt != null && String(f.amt).trim() !== '') { const a = Math.round(+f.amt || 0); if (a <= 0) return 'Enter an amount above 0'; if (a !== r.amt) edits.amt = a; }
       if (f.purpose != null) { const t = String(f.purpose).trim(); if (!t) return 'Write what the money is for'; if (t !== r.purpose) edits.purpose = t; }
       if (f.title != null && String(f.title).trim() !== (r.title || '')) edits.title = String(f.title).trim();
     }
     const reply = String(f.reply || '').trim(), at = this.today() + ' ' + this.now();
     const changed = JSON.stringify(pi.pay) !== JSON.stringify(r.pay || null), edited = Object.keys(edits).length > 0;
     if (!reply && !changed && !edited && r.st !== 'rejected') return 'Change something, or write a reply';
-    const note = [reply, edits.amt ? 'Amount: ' + this.fmtT(r.amt) + ' → ' + this.fmtT(edits.amt) : '', edits.purpose ? 'Purpose changed' : '', edits.title ? 'Title: ' + edits.title : '', changed ? 'Payment details: ' + [pi.pay.by, pi.pay.bank, pi.pay.name, pi.pay.no].filter(Boolean).join(' · ') : ''].filter(Boolean).join('\n');
+    const note = [reply, edits.amt ? 'Amount: ' + this.fmtT(r.amt) + ' → ' + this.fmtT(edits.amt) : '', edits.items && (edits.items.length > 1 || (r.items || []).length > 1) ? 'Items: ' + edits.items.map(x => x.d + ' ' + this.fmtT(x.amt)).join(' · ') : '', edits.purpose ? 'Purpose changed' : '', edits.title ? 'Title: ' + edits.title : '', changed ? 'Payment details: ' + [pi.pay.by, pi.pay.bank, pi.pay.name, pi.pay.no].filter(Boolean).join(' · ') : ''].filter(Boolean).join('\n');
     // A new amount can change who needs to approve (small amounts skip Management): rebuild the start of the chain.
     if (untouched && edits.amt) { const st0 = this.nextStep(Object.assign({}, r, edits), 0); Object.assign(edits, { step: st0, log: [r.log[0], ...Array.from({ length: Math.max(0, st0 - 1) }, () => 'Not needed')] }); }
     const resubmit = r.st === 'rejected', step = resubmit ? this.nextStep(r, 0) : r.step;

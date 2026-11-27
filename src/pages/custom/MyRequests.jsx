@@ -1,4 +1,5 @@
 import FixRequest from './FixRequest';
+import ReqItems from '../../components/ReqItems';
 import { useState } from 'react';
 import { PageHead, Card, Btn, Pill, Chips, Empty } from '../../ui/kit';
 
@@ -31,6 +32,7 @@ function Req({ r, showWho }) {
       {r.sel ? (
         <div className="mr-detail">
           {r.purpose ? <p>{r.purpose}</p> : null}
+          <ReqItems items={r.items} total={r.amt} />
           <ol className="mr-steps">
             {r.steps.map((x, i) => <li key={i} className={x.rej ? 'is-rej' : x.done ? 'is-done' : x.cur ? 'is-cur' : ''}><i />{x.l}{x.at ? <small>{x.at}</small> : x.cur ? <small>Now</small> : null}</li>)}
           </ol>

@@ -167,6 +167,7 @@ export function todayVals(s) {
       setPhone: (k, ph) => this.setCompany({ phones: Object.assign({}, company.phones || {}, { [k]: ph.trim() }) }),
       outbox: (s.outbox || []).slice(0, 15).map(m => ({ id: m.id, to: this.av(m.to).n, phone: m.phone, text: m.text, st: m.st, at: m.at, ch: m.ch,
         send: () => { const num = m.phone.replace(/\D/g, ''); try { window.open('https://wa.me/' + num + '?text=' + encodeURIComponent(m.text), '_blank', 'noopener'); } catch (e) { /* blocked */ } this.setState(x => ({ outbox: x.outbox.map(o => (o.id === m.id ? Object.assign({}, o, { st: 'sent by hand' }) : o)) })); } })),
+      sites: this.canSetSites() ? this.siteVals() : null,
       signatures: [['ED', 'Executive Director'], ['GM', 'General Manager']].map(([k, l]) => ({ k, l, url: ((company.signatures || {})[k] || {}).url || '' })),
       setSig: (k, url, name) => { this.setCompany({ signatures: Object.assign({}, company.signatures || {}, { [k]: url ? { url, name } : null }) }); this.toast(url ? 'Signature saved · it appears on invoices once signed' : 'Signature removed'); },
       test: () => { this.notify({ to: this.ROLES.clientservice.k, ic: 'users', t: 'Test alert: new client enquiry', s: 'This is how Client Service alerts arrive on WhatsApp', go: 'clients' }); this.toast('Test alert queued for ' + this.av(this.ROLES.clientservice.k).n); }

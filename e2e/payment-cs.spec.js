@@ -5,7 +5,7 @@ test('money request asks how to pay; Finance sees where to send it', async ({ pa
   await openAs(page, 'staff', 'staffportal');
   await btn(page, 'Request money').click();
   await chooseRequest(page, 'Project request');
-  await fillModal(page, { 'Amount (TZS)': 120000, 'Purpose': 'Transport for the site visit', 'Pay by': 'Bank', 'Name on the account / recipient': 'Grace Mrema', 'Phone or account number': '0150 1234 5678' });
+  await fillModal(page, { 'Item 1 amount': 120000, 'Purpose': 'Transport for the site visit', 'Pay by': 'Bank', 'Name on the account / recipient': 'Grace Mrema', 'Phone or account number': '0150 1234 5678' });
   await modal(page).getByRole('button', { name: 'Submit request' }).click();
   await expect(modal(page)).toContainText('Enter the bank name');
   await fillModal(page, { 'Bank (for bank transfers)': 'CRDB' });
@@ -33,7 +33,7 @@ test('a request that was not approved can be corrected and resubmitted by the re
   await openAs(page, 'staff', 'staffportal');
   await btn(page, 'Request money').click();
   await chooseRequest(page, 'Project request');
-  await fillModal(page, { 'Amount (TZS)': 90000, 'Purpose': 'Fuel for the site generator' });
+  await fillModal(page, { 'Item 1 amount': 90000, 'Purpose': 'Fuel for the site generator' });
   await modal(page).getByRole('button', { name: 'Submit request' }).click();
   let data = await saved(page); const id = data.reqs[0].id;
   await openAs(page, 'gm', 'requests', {}, false);
@@ -65,14 +65,14 @@ test('a request can be edited until someone approves it; WhatsApp reminders and 
   await expect(page.getByText('WhatsApp reminders go to').first()).toBeVisible();
   await btn(page, 'Request money').click();
   await chooseRequest(page, 'Project request');
-  await fillModal(page, { 'Amount (TZS)': 80000, 'Purpose': 'Printing samples' });
+  await fillModal(page, { 'Item 1 amount': 80000, 'Purpose': 'Printing samples' });
   await modal(page).getByRole('button', { name: 'Submit request' }).click();
   let data = await saved(page); const id = data.reqs[0].id;
   await openAs(page, 'staff', 'requests', {}, false);
   await page.locator('[data-req="' + id + '"] .mr-row').click();
   const fx = page.getByRole('region', { name: 'Correct my request' });
   await expect(fx).toContainText('nobody has approved it yet');
-  await fx.getByRole('textbox', { name: 'Amount', exact: true }).fill('95000');
+  await fx.getByRole('textbox', { name: 'Item 1 amount', exact: true }).fill('95000');
   await fx.getByRole('textbox', { name: 'Purpose', exact: true }).fill('Printing samples and lamination');
   await fx.getByRole('button', { name: 'Save changes' }).click();
   data = await saved(page);
@@ -85,7 +85,7 @@ test('Finance enters the amount paid; the request shows it; the approver sees ev
   await openAs(page, 'staff', 'staffportal');
   await btn(page, 'Request money').click();
   await chooseRequest(page, 'Project request');
-  await fillModal(page, { 'Amount (TZS)': 150000, 'Purpose': 'Hire of two vans', 'Needed by': 'Friday' });
+  await fillModal(page, { 'Item 1 amount': 150000, 'Purpose': 'Hire of two vans', 'Needed by': 'Friday' });
   await modal(page).getByRole('button', { name: 'Submit request' }).click();
   let data = await saved(page); const id = data.reqs[0].id;
   // The approver sees what was filled in.
@@ -103,4 +103,36 @@ test('Finance enters the amount paid; the request shows it; the approver sees ev
   await expect(page.locator('.rq-paid')).toContainText('Paid TZS 120,000 of TZS 150,000');
   data = await saved(page);
   expect(data.reqs.find(r => r.id === id)).toMatchObject({ st: 'paid', paidAmt: 120000 });
+});
+
+test('a money request can list several items; the total is their sum and the approver sees each item', async ({ page }) => {
+  await openAs(page, 'staff', 'staffportal');
+  await btn(page, 'Request money').click();
+  await chooseRequest(page, 'Project request');
+  const m = modal(page);
+  await fillModal(page, { 'Item 1': 'Transport to Mwanza', 'Item 1 amount': '150000' });
+  await m.getByRole('button', { name: '+ Add item' }).click();
+  await fillModal(page, { 'Item 2': 'Crew lunch', 'Item 2 amount': '80000' });
+  await m.getByRole('button', { name: '+ Add item' }).click();
+  await fillModal(page, { 'Item 3 amount': '70000' });
+  await expect(m.locator('.ff-items-total')).toHaveText('3 items · Total TZS 300,000');
+  await fillModal(page, { Purpose: 'Site visit in Mwanza' });
+  await m.getByRole('button', { name: 'Submit request' }).click();
+  await expect(m).toContainText('Describe item 3');
+  await fillModal(page, { 'Item 3': 'Fuel' });
+  await m.getByRole('button', { name: 'Remove item 2' }).click();
+  await expect(m.locator('.ff-items-total')).toHaveText('2 items · Total TZS 220,000');
+  await m.getByRole('button', { name: '+ Add item' }).click();
+  await fillModal(page, { 'Item 3': 'Crew lunch', 'Item 3 amount': '80000' });
+  await m.getByRole('button', { name: 'Submit request' }).click();
+  await expect(m).toHaveCount(0);
+  const data = await saved(page), r = data.reqs[0];
+  expect(r.amt).toBe(300000);
+  expect(r.items).toEqual([{ d: 'Transport to Mwanza', amt: 150000 }, { d: 'Fuel', amt: 70000 }, { d: 'Crew lunch', amt: 80000 }]);
+  await openAs(page, 'gm', 'requests', {}, false);
+  await page.getByText(r.id).first().click();
+  const list = page.getByRole('list', { name: 'Items' });
+  await expect(list).toContainText('Transport to Mwanza');
+  await expect(list).toContainText('Crew lunch');
+  await expect(list.locator('li.is-total')).toContainText('TZS 300,000');
 });

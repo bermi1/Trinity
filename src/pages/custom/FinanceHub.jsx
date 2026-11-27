@@ -3,7 +3,7 @@ import { PageHead, Btn, Pill, Empty } from '../../ui/kit';
 import { Reports, CashBook, CashChart, Periods } from './FinanceReports';
 import { PettyCash, Obligations } from './PettyCash';
 
-const ST = { draft: ['Draft', '#F1EEF6', '#6E6A7C'], sent: ['Sent', '#E9EFFA', '#3559A8'], partial: ['Part paid', '#FBF1DD', '#8A6414'], overdue: ['Overdue', '#FBEDEE', '#B23A46'], paid: ['Paid', '#E6F4EC', '#1F7549'] };
+const ST = { draft: ['Draft', '#F1EEF6', '#6E6A7C'], sent: ['Sent', '#E9EFFA', '#3559A8'], partial: ['Part paid', '#FBF1DD', '#8A6414'], overdue: ['Overdue', '#FBEDEE', '#B23A46'], paid: ['Paid', '#E6F4EC', '#1F7549'], cancelled: ['Cancelled', '#EDEBF0', '#6E6A7C'] };
 const n = v => Math.round(+v || 0).toLocaleString('en-US');
 const digits = v => String(v || '').replace(/\D/g, '');
 
@@ -32,28 +32,51 @@ function PayForm({ i, onDone }) {
   );
 }
 
-function InvoiceRow({ i, F }) {
+// Cancel an invoice: the reason is required, then a confirmation.
+function CancelForm({ i, onDone }) {
+  const [r, setR] = useState(''); const [e, setE] = useState('');
+  const go = () => { const m = i.doCancel(r); if (m === 'Not cancelled') return; if (m) setE(m); else onDone(); };
+  return (
+    <div className="fh-pay" data-cancel-form>
+      <label className="ff"><span className="ff-l">Why is this invoice cancelled?<em>*</em></span>
+        <input className="ff-search" value={r} onChange={x => { setR(x.target.value); setE(''); }} placeholder="e.g. Issued to the wrong client · replaced by a new invoice" aria-label="Reason for cancelling" autoFocus /></label>
+      <div className="fh-row"><Btn kind="dark" onClick={go}>Cancel invoice</Btn><Btn kind="ghost" onClick={onDone}>Keep it</Btn></div>
+      {e ? <div className="fm-err" role="alert">{e}</div> : null}
+    </div>
+  );
+}
+
+function InvoiceRow({ i }) {
   const [paying, setPaying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [err, setErr] = useState('');
   const s = ST[i.st] || ST.sent;
   return (
-    <li className={'fh-inv' + (i.sel ? ' is-open' : '')} data-invoice={i.id}>
-      <button type="button" className="fh-inv-row" onClick={i.open} aria-expanded={i.sel}>
+    <li className={'fh-inv' + (i.sel ? ' is-open' : '') + (i.cancelled ? ' is-cancelled' : '')} data-invoice={i.id}>
+      <button type="button" className="fh-inv-row" onClick={i.open} aria-expanded={i.sel} style={i.cancelled ? { opacity: 0.6 } : undefined}>
         <span className="fh-inv-id">{i.no}</span>
         <span className="fh-inv-c"><b>{i.c}</b><small>{i.proj || '—'}</small></span>
         <span className="fh-inv-bar" aria-hidden="true"><i style={{ width: i.pct + '%' }} /></span>
-        <span className="fh-inv-amt"><b>{i.totalT}</b><small>{i.paid ? i.dueT + ' due' : i.dueOn}</small></span>
+        <span className="fh-inv-amt"><b style={i.cancelled ? { textDecoration: 'line-through' } : undefined}>{i.totalT}</b><small>{i.cancelled ? 'Cancelled ' + i.cancelInfo.at : i.paid ? i.dueT + ' due' : i.dueOn}</small></span>
         <Pill l={i.needsSign ? 'To sign' : s[0]} bg={i.needsSign ? '#FBF6EA' : s[1]} fg={i.needsSign ? '#8A6414' : s[2]} />
       </button>
       {i.sel ? (
         <div className="fh-inv-detail">
+          {i.cancelled ? (
+            <p className="bi-ret" data-cancelled-note><b>Cancelled</b> · {i.cancelInfo.at}{i.cancelInfo.by ? ' · by ' + i.cancelInfo.by : ''} · Reason: {i.cancelInfo.reason}. It no longer counts as owed or in the reports; its number {i.no} stays used.</p>
+          ) : null}
           <div className="fh-row">
             <Btn kind="ghost" onClick={i.print}>Open PDF</Btn>
             {i.canSign ? <Btn kind="dark" onClick={i.sign}>Sign &amp; stamp</Btn> : null}
             {i.st === 'draft' && i.signed ? <Btn kind="dark" onClick={i.send}>Mark as sent</Btn> : null}
             {i.needsSign && !i.canSign ? <span className="k-sub">Edited or new · waiting for signature</span> : null}
-            {i.st !== 'paid' && F.canInvoice ? <Btn kind="ghost" onClick={i.edit}>Edit</Btn> : null}
+            {i.canEdit ? <Btn kind="ghost" onClick={i.edit}>Edit</Btn> : null}
             {i.canPay && !paying ? <Btn kind="dark" onClick={() => setPaying(true)}>Record payment</Btn> : null}
+            {i.canCancel && !cancelling ? <Btn kind="ghost" onClick={() => { if (i.cancelBlock) setErr(i.cancelBlock); else { setPaying(false); setCancelling(true); } }}>Cancel invoice</Btn> : null}
+            {i.canRestore ? <Btn kind="ghost" onClick={() => { const m = i.restore(); if (m) setErr(m); }}>Restore{i.cancelInfo.was ? ' (back to ' + i.cancelInfo.was + ')' : ''}</Btn> : null}
           </div>
+          {err ? <div className="fm-err" role="alert">{err}</div> : null}
+          {cancelling ? <CancelForm i={i} onDone={() => setCancelling(false)} /> : null}
           {i.needsSign ? <p className="k-sub">Waiting for the {i.signer} to sign. The signature and company stamp appear on the PDF only after signing.</p> : null}
           {paying ? <PayForm i={i} onDone={() => setPaying(false)} /> : null}
           {i.payments.length ? (
@@ -121,11 +144,12 @@ function Editor({ F }) {
           </div>
 
           <div className="fh-sum">
-            <div><span>Total direct costs</span><b>{n(T.direct)}</b></div>
-            <div><span>Administrative cost
+            <div><span>Total direct cost</span><b>{n(T.direct)}</b></div>
+            <div><span>Administrative cost {+f.admin}%
               <span className="fh-adm">{[0, 10, 15].map(a => <button key={a} type="button" className={+f.admin === a ? 'is-on' : ''} onClick={() => set('admin', a)}>{a}%</button>)}</span></span><b>{n(T.admin)}</b></div>
-            <div><span>VAT 18%</span><b>{n(T.vat)}</b></div>
-            <div className="fh-grand"><span>Total VAT inclusive</span><b>TZS {n(T.total)}</b></div>
+            <div><span>Total direct cost VAT exclusive</span><b>{n(T.net)}</b></div>
+            <div><span>VAT amount 18%</span><b>{n(T.vat)}</b></div>
+            <div className="fh-grand"><span>Total direct cost VAT inclusive</span><b>TZS {n(T.total)}</b></div>
           </div>
 
           <div className="ff" data-field="Signed by"><span className="ff-l">Signed by</span>
@@ -209,8 +233,10 @@ function FloatTab({ F }) {
 export default function FinanceHub({ v }) {
   const F = v.FH, R = v.REP;
   const HEAD = { overview: ['Finance', 'Money in and out, who owes us and what needs attention.'], invoices: ['Invoices', 'Create, sign, send and record payments.'], cash: ['Cash book', 'Every shilling in and out, with a running balance.'], reports: ['Reports', 'Income and spending by period, category, client and project.'], float: ['Float', 'The float from Management, allocated to projects and office purposes.'], petty: ['Petty cash', 'The office cash box: vouchers, top-ups and cash counts.'] }[F.tab];
-  const openInv = F.invoices.filter(i => i.st !== 'paid').slice(0, 6);
-  const list = F.invoices.filter(i => (F.filter === 'open' ? i.st !== 'paid' : F.filter === 'paid' ? i.st === 'paid' : F.filter === 'sign' ? i.needsSign : true));
+  const openInv = F.invoices.filter(i => i.st !== 'paid' && !i.cancelled).slice(0, 6);
+  // Cancelled invoices have their own filter; in "All" they come last, greyed.
+  const list = F.invoices.filter(i => (F.filter === 'open' ? i.st !== 'paid' && !i.cancelled : F.filter === 'paid' ? i.st === 'paid' : F.filter === 'sign' ? i.needsSign : F.filter === 'cancelled' ? i.cancelled : true))
+    .sort((a, b) => (a.cancelled ? 1 : 0) - (b.cancelled ? 1 : 0));
   return (
     <>
       <PageHead kicker="Finance" title={F.showTabs ? 'Finance & Invoices' : HEAD[0]} sub={F.showTabs ? 'Money in and out, invoices, the cash book, reports and the float.' : HEAD[1]}>
@@ -229,7 +255,7 @@ export default function FinanceHub({ v }) {
           </section>
           <section className="fh-card">
             <h3>Open invoices</h3>
-            {openInv.length ? <ul className="fh-invs">{openInv.map(i => <InvoiceRow key={i.id} i={i} F={F} />)}</ul> : <Empty>No open invoices.</Empty>}
+            {openInv.length ? <ul className="fh-invs">{openInv.map(i => <InvoiceRow key={i.id} i={i} />)}</ul> : <Empty>No open invoices.</Empty>}
           </section>
         </>
       ) : null}
@@ -238,8 +264,8 @@ export default function FinanceHub({ v }) {
       {F.tab === 'reports' && R ? <Reports R={R} /> : null}
       {F.tab === 'invoices' ? (
         <section className="fh-card">
-          <div className="k-chips fh-filter">{[['open', 'Open'], ['sign', 'To sign'], ['paid', 'Paid'], ['all', 'All']].map(([k, l]) => <button key={k} type="button" className={F.filter === k ? 'is-on' : ''} onClick={() => F.setFilter(k)}>{l}</button>)}</div>
-          {list.length ? <ul className="fh-invs">{list.map(i => <InvoiceRow key={i.id} i={i} F={F} />)}</ul> : <Empty>No invoices here.</Empty>}
+          <div className="k-chips fh-filter">{[['open', 'Open'], ['sign', 'To sign'], ['paid', 'Paid'], ['cancelled', 'Cancelled'], ['all', 'All']].map(([k, l]) => <button key={k} type="button" className={F.filter === k ? 'is-on' : ''} onClick={() => F.setFilter(k)}>{l}</button>)}</div>
+          {list.length ? <ul className="fh-invs">{list.map(i => <InvoiceRow key={i.id} i={i} />)}</ul> : <Empty>No invoices here.</Empty>}
         </section>
       ) : null}
 

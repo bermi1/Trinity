@@ -1,20 +1,22 @@
 import { useState } from 'react';
+import { Items } from '../../components/FormFields';
 
 // The requester's own request, while it waits or after it was not approved: reply to a question,
 // correct the payment details, and resubmit a request that was not approved.
 export default function FixRequest({ R }) {
   const p = R.curPay || {};
-  const [f, setF] = useState({ amt: R.curAmt || '', purpose: R.curPurpose || '', title: R.curTitle || '', reply: '', payBy: p.by || '', payName: p.name || '', payNo: p.no || '', payBank: p.bank || '' });
+  const [f, setF] = useState({ items: R.curItems || [{ d: '', amt: String(R.curAmt || '') }], purpose: R.curPurpose || '', title: R.curTitle || '', reply: '', payBy: p.by || '', payName: p.name || '', payNo: p.no || '', payBank: p.bank || '' });
   const [msg, setMsg] = useState(''), [ok, setOk] = useState(false);
   const set = (k, v) => { setMsg(''); setF(x => Object.assign({}, x, { [k]: v })); };
   const rej = R.isRej;
-  const send = () => { const m = R.fix(R.canEdit ? f : Object.assign({}, f, { amt: undefined, purpose: undefined, title: undefined })); setOk(!m); setMsg(m || (rej ? 'Resubmitted for approval' : 'Sent')); if (!m) set('reply', ''); };
+  const total = (f.items || []).reduce((a, x) => a + (+String(x.amt || '').replace(/\D/g, '') || 0), 0);
+  const send = () => { const m = R.fix(R.canEdit ? f : Object.assign({}, f, { items: undefined, purpose: undefined, title: undefined })); setOk(!m); setMsg(m || (rej ? 'Resubmitted for approval' : 'Sent')); if (!m) set('reply', ''); };
   return (
     <section className={'fx' + (rej ? ' is-rej' : R.infoAsked ? ' is-ask' : '')} aria-label="Correct my request">
       <b className="fx-h">{rej ? 'Not approved: correct it and resubmit' : R.infoAsked ? 'You were asked for more information' : R.canEdit ? 'Edit my request (nobody has approved it yet)' : 'Change my request'}</b>
       {R.canEdit ? (
         <div className="fx-row">
-          <label className="fx-f"><span>Amount (TZS)</span><input value={f.amt} onChange={e => set('amt', e.target.value)} inputMode="numeric" aria-label="Amount" /></label>
+          <div className="fx-f ff" style={{ flexBasis: '100%' }}><span>Items</span><Items f={{ rows: f.items, ph: '', total: 'TZS ' + total.toLocaleString('en-US'), set: v => set('items', v) }} /></div>
           {R.curTitle ? <label className="fx-f"><span>Title</span><input value={f.title} onChange={e => set('title', e.target.value)} aria-label="Title" /></label> : null}
           <label className="fx-f" style={{ flexBasis: '100%' }}><span>Purpose</span><textarea rows={2} value={f.purpose} onChange={e => set('purpose', e.target.value)} aria-label="Purpose" /></label>
         </div>

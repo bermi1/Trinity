@@ -274,7 +274,7 @@ export default function ProjectView({ v }) {
                 <ul className="mr-list">
                   {P.reqs.map(r => (
                     <li key={r.id}><button type="button" onClick={r.open}>
-                      <span><b>{r.what}</b><small>{r.who} · {r.id}</small></span>
+                      <span><b>{r.what}</b><small>{r.who} · {r.id}</small>{r.items ? <small>{r.items}</small> : null}</span>
                       <span className="mr-right"><b>{r.amt}</b><Pill l={r.status} bg={TONE[r.tone][0]} fg={TONE[r.tone][1]} /></span>
                     </button></li>
                   ))}

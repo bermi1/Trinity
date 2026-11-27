@@ -271,7 +271,7 @@ export function crmVals(s) {
     const jobs = s.projects.filter(p => (p.client || '').toLowerCase() === c.n.toLowerCase()), active = jobs.filter(p => p.st !== 'done').length;
     const same = x => (x || '').toLowerCase() === c.n.toLowerCase();
     const job = p => {
-      const step = this.flowOf(p), done = p.st === 'done' || step === 'closed', inv = (s.invoices || []).filter(i => i.p === p.id);
+      const step = this.flowOf(p), done = p.st === 'done' || step === 'closed', inv = (s.invoices || []).filter(i => i.p === p.id && i.st !== 'cancelled');
       return { id: p.id, name: p.name, done, stage: FLOW_L[FLOW.indexOf(step)] || '', due: p.due || '', when: p.closedAt || p.due || '',
         pm: p.pm ? this.av(p.pm).n : '', value: fmtM(p.val || 0), po: p.po && p.po.no ? 'PO ' + p.po.no : 'No PO yet',
         billed: showV && inv.length ? fmtM(inv.reduce((a, b) => a + (b.v || 0), 0)) + ' invoiced · ' + inv.filter(i => i.st === 'paid').length + '/' + inv.length + ' paid' : '',

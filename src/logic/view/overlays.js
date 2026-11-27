@@ -11,6 +11,12 @@ export function overlayVals(s, IC) {
   const isPerson = v => !!(this.PPL[v] || (this.people || {})[v]);
   V.modalFields = m ? m.fields.filter(f => !f.when || f.when(s.form || {})).map(f => {
     if (f.type === 'file') return {k:f.k, l:f.l, kind:'file', accept:f.accept, hint:f.hint, attached:s.form._file ? (s.form.n || 'File') + ' · ' + this.fmtSize(s.form._file.size) : '', uploading:!!s.form._uploading, on:e => this.attachFile(e.target.files && e.target.files[0])};
+    // A list of items (description + amount) with a live total; the form keeps the rows as an array.
+    if (f.type === 'items') {
+      const rows = Array.isArray(s.form[f.k]) && s.form[f.k].length ? s.form[f.k] : [{d:'', amt:''}];
+      const total = rows.reduce((a, x) => a + (+String((x && x.amt) || '').replace(/\D/g, '') || 0), 0);
+      return {k:f.k, l:f.l, kind:'items', rows, ph:f.ph || '', req:!!f.req, total:this.fmtT(total), set:setF(f.k)};
+    }
     const base = {k:f.k, l:f.l, v:s.form[f.k] == null ? '' : s.form[f.k], ph:f.ph || '', type:f.type || 'text', req:!!f.req, im:f.im, set:setF(f.k)};
     if (f.opts) {
       const people = f.opts.length > 0 && f.opts.every(o => isPerson(o.v));
