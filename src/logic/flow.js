@@ -260,6 +260,55 @@ export const flowMethods = {
     this.toast('Done · ' + t.t);
     this.log('check', 'green', this.me().first + ' finished a task', t.t + (r ? ' · ' + r : ''));
   },
+  // ---- Management and the GM run a project directly, without the full procedure: some projects come in
+  // already agreed or are already running. They can put a project at any step (e.g. Ongoing = execution,
+  // Completed = closed), and set the agreed value and the budget. The PA then adds the PO as usual.
+  canManageProject() { return this.isTop(); },
+  setProjectStage(pid, to, comment) {
+    const p = this.state.projects.find(x => x.id === pid); if (!p) return 'Project not found';
+    if (!this.canManageProject()) return 'Only the GM or Management can set the stage directly';
+    if (!FLOW.includes(to)) return 'Choose a stage';
+    const from = this.flowOf(p); if (from === to) return '';
+    const who = (this.state.role || 'ceo') === 'gm' ? 'the GM' : 'Management';
+    const skipped = FLOW.indexOf(to) - FLOW.indexOf(from) > 1 ? ' (steps skipped)' : '';
+    const c = this.stepNote(pid, to, 'Set directly by ' + who + skipped, comment);
+    const closedAt = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    this.setProject(pid, x => Object.assign({ flow: to },
+      to === 'closed' ? { st: 'done', prog: 100, closedAt } : { st: x.st === 'done' ? 'on' : x.st, closedAt: null },
+      // Set straight to execution with a budget still waiting: it counts as approved.
+      to === 'execution' && x.budget && x.budget.st && x.budget.st !== 'approved' ? { budget: Object.assign({}, x.budget, { st: 'approved', mgmt: { by: this.me().k, at: dayKey(0), direct: true } }) } : {}));
+    const L = FLOW_L[FLOW.indexOf(to)], label = to === 'execution' ? 'Ongoing (execution)' : to === 'closed' ? 'Completed' : L;
+    const tell = to === 'closed' ? [this.ROLES.ceo.k, this.ROLES.gm.k, this.ROLES.finance.k, p.pm, p.cs]
+      : to === 'execution' ? [p.pm, this.managerOf('operations'), p.cs, this.ROLES.finance.k, this.ROLES.pa && this.ROLES.pa.k, this.ROLES.ceo.k, this.ROLES.gm.k] : [p.cs, p.pm, this.ROLES.ceo.k, this.ROLES.gm.k];
+    tell.filter((k, i, a) => k && k !== this.me().k && a.indexOf(k) === i).forEach(k => this.remind(k, p.client + ' · ' + label, 'project', to === 'closed' ? 'check' : 'folder',
+      p.name + ' · set by ' + this.me().n + (to === 'execution' && !p.po && k === (this.ROLES.pa && this.ROLES.pa.k) ? ' · please add the PO' : '') + (c ? ' · ' + c : '')));
+    this.toast(p.name + ' · ' + label);
+    this.log('folder', to === 'closed' ? 'green' : 'purple', p.client + ' · ' + label, p.name + ' · set by ' + this.me().n);
+    return '';
+  },
+  // Agreed value (what the client pays) and budget (what it costs us), in TZS. Either may be left as is.
+  setProjectMoney(pid, f) {
+    const p = this.state.projects.find(x => x.id === pid); if (!p) return 'Project not found';
+    if (!this.canManageProject()) return 'Only the GM or Management can change the value and budget';
+    const num = v => { const t = String(v == null ? '' : v).replace(/[,\s]/g, ''); if (t === '') return null; const n = Math.round(+t); return isFinite(n) && n >= 0 ? n : NaN; };
+    const val = num(f.val), bud = num(f.bud);
+    if (Number.isNaN(val)) return 'The agreed value must be a number'; if (Number.isNaN(bud)) return 'The budget must be a number';
+    const oldVal = this.projectValue ? this.projectValue(p) : (+p.val || 0) * 1e6, oldBud = (+p.bud || 0) * 1e6;
+    const changes = [];
+    if (val != null && val !== Math.round(oldVal)) changes.push('Agreed value ' + this.fmtT(oldVal) + ' → ' + this.fmtT(val));
+    if (bud != null && bud !== Math.round(oldBud)) changes.push('Budget ' + this.fmtT(oldBud) + ' → ' + this.fmtT(bud));
+    if (!changes.length) return '';
+    this.setProject(pid, x => Object.assign({},
+      val != null ? { val: +(val / 1e6).toFixed(2) } : {},
+      bud != null ? { bud: +(bud / 1e6).toFixed(2) } : {},
+      val != null && x.budget ? { budget: Object.assign({}, x.budget, { value: val }) } : {}));
+    const c = said(f.note);
+    this.pnote(pid, [changes.join(' · '), c, 'by ' + this.me().n].filter(Boolean).join(' · '), { money: true });
+    [this.ROLES.finance.k, p.pm, this.ROLES.ceo.k, this.ROLES.gm.k].filter((k, i, a) => k && k !== this.me().k && a.indexOf(k) === i)
+      .forEach(k => this.remind(k, 'Value / budget updated · ' + p.client, 'project', 'wallet', p.name + ' · ' + changes.join(' · ')));
+    this.toast('Saved · ' + changes.join(' · '));
+    return '';
+  },
   canClose(p) { const me = this.me().k; return !!p && (this.isTop() || p.pm === me || this.isManagerOf('operations')); },
   closeProject(pid, comment) {
     const p = this.state.projects.find(x => x.id === pid); if (!p) return 'Project not found';

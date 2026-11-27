@@ -17,6 +17,13 @@ export function projectVals(s) {
     stages: this.STAGES.map((l, i) => ({ l, done: i + 1 < stage || P.st === 'done', cur: i + 1 === stage && P.st !== 'done' })),
     stageLabel: this.STAGES[stage - 1], back: () => this.go('projects')
   };
+  // GM / Management: set the stage directly and the agreed value and budget.
+  V.manage = this.canManageProject() ? {
+    stage: FLOW.indexOf(this.flowOf(P)),
+    stages: FLOW.map((k, i) => ({ k, l: k === 'execution' ? 'Ongoing' : k === 'closed' ? 'Completed' : FLOW_L[i], on: k === this.flowOf(P) })),
+    val: String(Math.round(this.projectValue(P) || 0)), bud: String(Math.round((+P.bud || 0) * 1e6)),
+    setStage: (to, c) => this.setProjectStage(P.id, to, c), saveMoney: f => this.setProjectMoney(P.id, f)
+  } : null;
   // The event: venue, setup date and pax. Those who manage the project can change them.
   const E = eventFields(P);
   V.event = { venue: E.venue, setupDate: E.setupDate, setup: fmtDay(E.setupDate), pax: E.pax ? E.pax.toLocaleString('en-US') : '', paxN: E.pax,
