@@ -37,13 +37,13 @@ export default function ProjectsPage({ v }) {
                 <div onClick={p.on} style={{ background: "#fff", border: "1px solid #E8E4EF", borderRadius: "14px", padding: "14px", display: "flex", flexDirection: "column", gap: "10px", cursor: "pointer" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "flex-start" }}>
                     <div style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: "0" }}>
-                      <b style={{ fontSize: "14px" }}>
+                      <b style={{ fontSize: "13px" }}>
                         {p.client}
                       </b>
-                      <span style={{ fontSize: "12.5px", color: "#6E6A7C" }}>
+                      <span style={{ fontSize: "11.5px", color: "#6E6A7C" }}>
                         {p.name}
                       </span>
-                      {p.ev ? <span data-event style={{ fontSize: "12px", color: "#8A7239", fontWeight: "600" }}>{p.ev}</span> : null}
+                      {p.ev ? <span data-event style={{ fontSize: "11px", color: "#8A7239", fontWeight: "600" }}>{p.ev}</span> : null}
                     </div>
                     <span style={{ fontSize: "10.5px", fontWeight: "700", padding: "3px 8px", borderRadius: "6px", background: p.stbg, color: p.stfg, whiteSpace: "nowrap" }}>
                       {p.stl}
@@ -102,7 +102,7 @@ export default function ProjectsPage({ v }) {
             </div>
             {(v.projRows || []).map((p, _i0) => (
               <Fragment key={_i0}>
-                <div className="tm-h11" onClick={p.on} style={{ display: "grid", gridTemplateColumns: "minmax(240px,2.2fr) 170px 150px 90px 110px 90px 110px", gap: "16px", padding: "14px 20px", borderBottom: "1px solid #F1EEF6", fontSize: "13px", alignItems: "center", cursor: "pointer" }}>
+                <div className="tm-h11" onClick={p.on} style={{ display: "grid", gridTemplateColumns: "minmax(240px,2.2fr) 170px 150px 90px 110px 90px 110px", gap: "16px", padding: "14px 20px", borderBottom: "1px solid #F1EEF6", fontSize: "12px", alignItems: "center", cursor: "pointer" }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "3px", minWidth: "0" }}>
                     <b style={{ fontWeight: "600" }}>
                       <span>{p.client}</span>{" · "}<span>{p.name}</span>
@@ -110,7 +110,7 @@ export default function ProjectsPage({ v }) {
                     <span style={{ font: "500 11.5px 'IBM Plex Mono',monospace", color: "#6E6A7C" }}>
                       {p.id}
                     </span>
-                    {p.ev ? <span data-event style={{ fontSize: "12px", color: "#8A7239", fontWeight: "600" }}>{p.ev}</span> : null}
+                    {p.ev ? <span data-event style={{ fontSize: "11px", color: "#8A7239", fontWeight: "600" }}>{p.ev}</span> : null}
                   </div>
                   <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <span style={{ width: "26px", height: "26px", borderRadius: "50%", background: p.pmC, color: "#fff", fontSize: "10px", fontWeight: "700", display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>

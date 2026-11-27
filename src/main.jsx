@@ -6,6 +6,7 @@ import './styles/global.css';
 import './styles/interactions.css';
 import './styles/mobile.css';
 import './styles/kit.css';
+import { startFitNumbers } from './lib/fitNumbers';
 
 // The public event registration page (reached by scanning the QR code) needs no account and skips the office system.
 const isRegister = /^\/register\/?$/.test(window.location.pathname);
@@ -23,3 +24,6 @@ else root.render(
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(err => console.warn('Service worker not registered', err)));
 }
+
+// Amounts always fit on one line (millions, billions): their font shrinks when space is short.
+if (!isRegister) startFitNumbers(document.getElementById('root'));

@@ -21,7 +21,8 @@ export function overlayVals(s, IC) {
     if (f.opts) {
       const people = f.opts.length > 0 && f.opts.every(o => isPerson(o.v));
       if (people) return Object.assign(base, {kind:'people', opts:f.opts.map(o => { const a = this.av(o.v); return {v:o.v, l:o.l, i:a.i, c:a.c, ph:a.ph}; })});
-      return Object.assign(base, {kind:f.kind || (f.opts.length <= 6 ? 'chips' : 'pick'), opts:f.opts});
+      // Projects are searched, never listed out (there can be many); other short lists are chips.
+      return Object.assign(base, {kind:f.kind || (f.k === 'p' || f.opts.length > 6 ? 'pick' : 'chips'), search:f.k === 'p', opts:f.opts});
     }
     if (f.type === 'number' && /\(TZS\)/.test(f.l)) return Object.assign(base, {kind:'money'});
     return Object.assign(base, {kind:f.area || /^(purpose|note|message)$/.test(f.k) ? 'area' : 'text'});

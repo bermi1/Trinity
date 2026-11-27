@@ -98,6 +98,47 @@ function EventDetails({ E }) {
   );
 }
 
+// GM / Management: put the project at any stage (e.g. Ongoing or Completed) without the full procedure,
+// and set the agreed value and the budget.
+const tzs = v => (String(v || '').replace(/\D/g, '') ? Number(String(v).replace(/\D/g, '')).toLocaleString('en-US') : '');
+function ManageProject({ M }) {
+  const [to, setTo] = useState(''), [note, setNote] = useState(''), [err, setErr] = useState('');
+  const [money, setMoney] = useState(false), [f, setF] = useState({ val: M.val, bud: M.bud, note: '' }), [merr, setMerr] = useState('');
+  const pick = M.stages.find(s => s.k === to);
+  return (
+    <section className="rc-sec pm-manage" aria-label="Manage project">
+      <h3><span className="rc-dot" style={{ background: '#2B1459' }} />Manage project<small className="k-sub" style={{ marginLeft: 8, fontWeight: 500 }}>GM · Management</small></h3>
+      <p className="k-sub" style={{ margin: '0 0 8px' }}>Set the stage directly when a project didn’t go through every step (already agreed, already running, or done).</p>
+      <div className="ff-chips" role="radiogroup" aria-label="Set stage">
+        {M.stages.map(s => <button key={s.k} type="button" role="radio" aria-checked={s.on || to === s.k} className={(s.on ? 'is-now ' : '') + (to === s.k ? 'is-on' : '') + (s.k === 'execution' || s.k === 'closed' ? ' is-key' : '')} disabled={s.on} onClick={() => { setTo(s.k); setErr(''); }}>{s.l}{s.on ? ' · now' : ''}</button>)}
+      </div>
+      {pick ? (
+        <div className="pn-form" style={{ marginTop: 10 }}>
+          <label className="ff"><span className="ff-l">Comment · optional</span><input value={note} onChange={e => setNote(e.target.value)} placeholder={pick.k === 'closed' ? 'e.g. Event delivered, client happy' : pick.k === 'execution' ? 'e.g. Agreed by phone, work already started' : 'What changed'} /></label>
+          {err ? <div className="fm-err" role="alert">{err}</div> : null}
+          <div className="fh-row"><button type="button" className="me-cancel" onClick={() => { setTo(''); setNote(''); }}>Cancel</button><button type="button" className="me-save" onClick={() => { const m = M.setStage(to, note); if (m) setErr(m); else { setTo(''); setNote(''); } }}>Mark as {pick.l}</button></div>
+        </div>
+      ) : null}
+      <div className="pm-money">
+        <div><small>Agreed value</small><b>{M.val && M.val !== '0' ? 'TZS ' + tzs(M.val) : 'Not set'}</b></div>
+        <div><small>Budget</small><b>{M.bud && M.bud !== '0' ? 'TZS ' + tzs(M.bud) : 'Not set'}</b></div>
+        {!money ? <button type="button" className="td-start" onClick={() => { setF({ val: M.val, bud: M.bud, note: '' }); setMerr(''); setMoney(true); }}>Update value / budget</button> : null}
+      </div>
+      {money ? (
+        <div className="pn-form">
+          <div className="fh-two">
+            <label className="ff"><span className="ff-l">Agreed value (TZS)</span><input inputMode="numeric" value={tzs(f.val)} onChange={e => setF({ ...f, val: e.target.value.replace(/\D/g, '') })} placeholder="0" aria-label="Agreed value" /></label>
+            <label className="ff"><span className="ff-l">Budget (TZS)</span><input inputMode="numeric" value={tzs(f.bud)} onChange={e => setF({ ...f, bud: e.target.value.replace(/\D/g, '') })} placeholder="0" aria-label="Budget" /></label>
+          </div>
+          <label className="ff"><span className="ff-l">Note · optional</span><input value={f.note} onChange={e => setF({ ...f, note: e.target.value })} placeholder="e.g. Client added a second day" /></label>
+          {merr ? <div className="fm-err" role="alert">{merr}</div> : null}
+          <div className="fh-row"><button type="button" className="me-cancel" onClick={() => setMoney(false)}>Cancel</button><button type="button" className="me-save" onClick={() => { const m = M.saveMoney(f); if (m) setMerr(m); else setMoney(false); }}>Save</button></div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function Overview({ P, M }) {
   return (
     <div className="rc-sections">
@@ -244,6 +285,7 @@ export default function ProjectView({ v }) {
             <Field l="Stage">{P.stageLabel}</Field>
           </dl>
           {P.event ? <div className="pv-event-wrap"><EventDetails key={P.event.venue + P.event.setupDate + P.event.paxN} E={P.event} /></div> : null}
+          {P.manage ? <div className="pv-event-wrap"><ManageProject key={P.manage.stage + ':' + P.manage.val + ':' + P.manage.bud} M={P.manage} /></div> : null}
 
           <div className="rc-smart" role="tablist">
             {P.tabs.map(t => (

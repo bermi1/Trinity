@@ -1482,3 +1482,15 @@
 @media (max-width: 520px) { .att-siterow { grid-template-columns: 1fr 1fr; } .att-siterow label:last-child { grid-column: 1 / -1; } .ck-live b { font-size: 23px; } .ck-loc { flex-wrap: wrap; } }
 .att-live { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0 12px; font-size: 13px; color: #3D3950; line-height: 1.45; cursor: pointer; }
 .att-live input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+/* GM / Management: manage a project directly */
+.pm-manage .ff-chips button.is-now { opacity: .55; cursor: default; }
+.pm-manage .ff-chips button.is-key:not(.is-on):not(.is-now) { border-color: #CDBFEA; font-weight: 700; }
+.pm-money { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin-top: 14px; padding: 10px 12px; background: #F7F5FB; border-radius: 10px; }
+.pm-money div { display: flex; flex-direction: column; }
+.pm-money small { font-size: 11px; color: #6E6A7C; text-transform: uppercase; letter-spacing: .06em; }
+.pm-money b { font-size: 15px; color: #17152A; }
+.pm-money .td-start { margin-left: auto; }
+/* Project search in forms: small, compact results */
+.ff-pick.is-search .ff-pick-btn { height: 44px; font-size: 13.5px; }
+.ff-pick.is-search .ff-pick-list [role=option] { font-size: 12.5px; padding: 8px 10px; line-height: 1.3; }
+.ff-pick.is-search .ff-none { font-size: 12px; }

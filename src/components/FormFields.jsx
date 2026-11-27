@@ -41,21 +41,23 @@ function Pick({ f }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const cur = f.opts.find(o => String(o.v) === String(f.v));
-  const list = q ? f.opts.filter(o => o.l.toLowerCase().includes(q.toLowerCase())) : f.opts;
+  // Search fields (projects) show nothing until you type, then only what matches.
+  const waiting = f.search && !q && f.opts.length > 5;
+  const list = q ? f.opts.filter(o => o.l.toLowerCase().includes(q.toLowerCase())) : waiting ? [] : f.opts;
   return (
-    <div className={'ff-pick' + (open ? ' is-open' : '')}>
+    <div className={'ff-pick' + (open ? ' is-open' : '') + (f.search ? ' is-search' : '')}>
       <button type="button" className="ff-pick-btn" aria-expanded={open} aria-label={f.l + ': ' + (cur ? cur.l : 'choose')} onClick={() => setOpen(!open)}>
-        <span>{cur ? cur.l : 'Choose…'}</span>
+        <span>{cur ? cur.l : f.search ? 'Search ' + f.l.toLowerCase() + '…' : 'Choose…'}</span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg>
       </button>
       {open ? (
         <div className="ff-pick-list">
-          <input className="ff-search" autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder={'Search ' + f.l.toLowerCase()} aria-label={'Search ' + f.l} />
+          <input className="ff-search" autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder={f.search ? 'Type the client or project name' : 'Search ' + f.l.toLowerCase()} aria-label={'Search ' + f.l} />
           <div role="listbox" aria-label={f.l}>
             {list.map(o => (
               <button key={o.v} type="button" role="option" aria-selected={String(f.v) === String(o.v)} onClick={() => { f.set(o.v); setOpen(false); setQ(''); }}>{o.l}</button>
             ))}
-            {!list.length ? <p className="ff-none">Nothing matches.</p> : null}
+            {waiting ? <p className="ff-none">Type to find a project ({f.opts.length} open).</p> : !list.length ? <p className="ff-none">Nothing matches.</p> : null}
           </div>
         </div>
       ) : null}
