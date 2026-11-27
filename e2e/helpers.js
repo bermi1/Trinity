@@ -63,6 +63,9 @@ export async function fillModal(page, values) {
     const radio = field.getByRole('radio', { name: String(value), exact: true });
     if (await radio.count()) { await radio.first().click(); continue; }
     await field.locator('.ff-pick-btn').click();
+    // Project fields are a search: type the name, then pick it.
+    const search = field.locator('.ff-search');
+    if (await search.count()) await search.fill(String(value).split(' · ').pop());
     await field.getByRole('option', { name: String(value), exact: true }).click();
   }
   // Money requests ask how to pay; fill a mobile-money payee unless the test chose its own.

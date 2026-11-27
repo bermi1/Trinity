@@ -580,6 +580,8 @@ export default class TrinityApp extends Logic {
     };
     const m = Object.assign({act}, defs[act], preset && preset._meta ? preset._meta : {});
     const form = {}; m.fields.forEach(f => { form[f.k] = f.type === 'items' ? [{d:'', amt:''}] : f.opts ? f.opts[0].v : ''; });
+    // Money requests: the project is searched and chosen on purpose (no silent first project).
+    if (/^req(Project|Internal|Emergency|Mgmt)$/.test(act) && 'p' in form) form.p = '';
     Object.assign(form, preset || {}); delete form._meta;
     // New project: the client is chosen on purpose (no silent default); with no clients yet it starts on "+ New client".
     if (act === 'project' && !(preset && preset.client)) form.client = (this.state.customers || []).length ? '' : NEW_CLIENT;
