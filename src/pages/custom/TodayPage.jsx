@@ -167,6 +167,12 @@ export default function TodayPage({ v }) {
         {T.canGive ? <Btn kind="dark" onClick={T.give}>Assign a task</Btn> : null}
       </PageHead>
       <MyWhatsApp v={v} />
+      {T.advances && T.advances.length ? (
+        <section className="fh-card ac-todo" aria-label="Account for money received">
+          <h3>Account for money you received</h3>
+          <ul className="fl-srows">{T.advances.map(a => <li key={a.id}><span><b>{a.id} · {a.amt}</b><small>{a.what} · {a.back ? 'sent back by Finance' : (a.overdue ? 'overdue · was due ' : 'due ') + a.due}</small></span><Btn kind={a.overdue || a.back ? 'dark' : 'ghost'} onClick={a.go}>Account for it</Btn></li>)}</ul>
+        </section>
+      ) : null}
       {tabs.length > 1 ? <Chips items={tabs} /> : null}
       {!T.isTeam && !T.isGiven && v.MYT ? <MyTargets M={v.MYT} /> : null}
       {T.isTeam && T.canTeam ? <Team T={T} /> : T.isGiven && T.canGive ? <Given T={T} /> : <Mine T={T} />}

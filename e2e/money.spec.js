@@ -61,6 +61,8 @@ test('a large project request travels the whole chain: GM → Finance → Manage
   const rowBtn = page.locator('[data-req="REQ-0427"] .mr-row');
   if ((await rowBtn.getAttribute('aria-expanded')) !== 'true') await rowBtn.click();
   await page.getByLabel('Amount spent').fill('320000');
+  await expect(page.getByLabel('Change left over')).toHaveValue('30,000');
+  await page.getByRole('radio', { name: 'Cash to Finance' }).click();
   await btn(page, 'Send to Finance').click();
   await toast(page, 'Sent to Finance to check');
   await switchTo(page, 'Finance portal');
@@ -69,7 +71,8 @@ test('a large project request travels the whole chain: GM → Finance → Manage
   await btn(float, 'Accept receipts').click();
   await toast(page, 'Reconciled · REQ-0427');
   r = (await saved(page)).reqs.find(x => x.id === 'REQ-0427');
-  expect(r.rec).toMatchObject({ spent: 320000, back: 30000, st: 'ok' });
+  expect(r.rec).toMatchObject({ spent: 320000, back: 30000, backVia: 'Cash', st: 'ok' });
+  expect((await saved(page)).staff.find(p => p.k === 'GM').fl).toBe(180000);
 });
 
 // Removed or redesigned in this phase: rewrite this test.

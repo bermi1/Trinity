@@ -3,6 +3,7 @@
 // Operations the PM, team and internal budget, Finance and Management the money.
 // Mixed into TrinityApp, so `this` is the app.
 import { ST } from './constants';
+import { tzTime } from './finance';
 import { FLOW, FLOW_L, FLOW_OWNER, sumLines, eventFields, fmtDay } from './flow';
 
 export function projectVals(s) {
@@ -256,22 +257,51 @@ export const reqFlowMethods = {
     this.toast('Answer sent');
     return '';
   },
-  // The person who received the money reports what was spent, with the receipt; Finance confirms.
+  // The person who received the money accounts for it: what was spent (per item), the receipts and the
+  // change (computed as paid − spent, editable) and how it comes back. Spending more than was given is
+  // allowed and marked, so Finance can decide (a top-up is a new request). Old callers pass (spent, file).
   async reconcileReq(id, spent, file) {
     const r = this.state.reqs.find(x => x.id === id); if (!r) return 'Request not found';
-    const amt = Math.round(+spent || 0); if (amt <= 0) return 'Enter the amount spent';
-    if (amt > r.amt) return 'Spent is more than the ' + this.fmtT(r.amt) + ' received';
-    let rc = null;
-    if (file) { try { rc = await this.storeFile(file); } catch (e) { return 'Receipt upload failed · ' + (e.message || e); } }
-    this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { rec: { spent: amt, back: r.amt - amt, file: rc, at: this.today(), st: 'submitted' } }) : q)) }));
-    this.notify({ to: this.ROLES.finance.k, ic: 'receipt', t: 'Receipts to check · ' + r.id, s: this.av(r.who).n + ' spent ' + this.fmtT(amt) + (r.amt - amt ? ' · returns ' + this.fmtT(r.amt - amt) : ''), go: 'requests' });
+    if (r.st !== 'paid') return 'This request is not paid yet';
+    if (r.rec && (r.rec.st === 'submitted' || r.rec.st === 'ok')) return 'Already sent to Finance';
+    const paid = r.paidAmt || r.amt, toN = v => Math.round(+String(v == null ? '' : v).replace(/[^0-9.]/g, '') || 0);
+    let amt, items = null, files = [], backVia = '', back;
+    if (spent && typeof spent === 'object') {
+      items = (spent.items || []).map(x => ({ d: String(x.d || '').trim(), amt: toN(x.amt) })).filter(x => x.d || x.amt);
+      if (items.some(x => x.amt > 0 && !x.d)) return 'Say what each amount was for';
+      items = items.filter(x => x.amt > 0);
+      amt = items.reduce((a, x) => a + x.amt, 0);
+      files = (spent.files || []).filter(Boolean);
+      backVia = spent.backVia || '';
+      if (spent.back != null && String(spent.back).trim() !== '') back = toN(spent.back);
+    } else { amt = Math.round(+spent || 0); if (file) files = [file]; }
+    if (amt <= 0) return 'Enter the amount spent';
+    const over = Math.max(0, amt - paid), left = Math.max(0, paid - amt);
+    if (back == null) back = left;
+    if (back > left) return 'The change cannot be more than ' + this.fmtT(left);
+    if (back > 0 && items && !backVia) return 'Say how the change comes back to Finance';
+    const up = [];
+    for (const f of files) { try { up.push(await this.storeFile(f)); } catch (e) { return 'Receipt upload failed · ' + (e.message || e); } }
+    const rec = Object.assign({ spent: amt, back, file: up[0] || null, at: this.fToday(), time: tzTime(this.nowDate()), st: 'submitted', paid }, items ? { items } : {}, up.length > 1 ? { files: up } : {}, backVia ? { backVia } : {}, over ? { over } : {}, left - back > 0 ? { short: left - back } : {}, r.rec && r.rec.st === 'back' ? { prev: r.rec } : {});
+    this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { rec }) : q)) }));
+    this.notify({ to: this.ROLES.finance.k, ic: 'receipt', t: 'Receipts to check · ' + r.id, s: this.av(r.who).n + ' spent ' + this.fmtT(amt) + (over ? ' · spent more than given (' + this.fmtT(over) + ')' : back ? ' · returns ' + this.fmtT(back) + (backVia ? ' (' + backVia + ')' : '') : ''), go: 'float' });
     this.toast('Sent to Finance to check');
     return '';
   },
-  confirmRec(id) {
-    const r = this.state.reqs.find(x => x.id === id); if (!r || !r.rec) return;
-    this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { rec: Object.assign({}, q.rec, { st: 'ok', by: this.me().k }) }) : q)), staff: x.staff.map(p => (p.k === r.who ? Object.assign({}, p, { fl: Math.max(0, p.fl - r.amt) }) : p)) }));
-    if (r.who !== this.me().k) this.notify({ to: r.who, ic: 'check', t: 'Receipts accepted · ' + r.id, s: 'Your float for this request is closed', go: 'requests' });
-    this.toast('Reconciled · ' + r.id);
+  // Finance accepts the accounting: the advance closes (the person's float goes down by what was paid)
+  // and the change goes back into the float on the day of acceptance, with how it came back.
+  confirmRec(id, opts) {
+    if (!['finance', 'ceo'].includes(this.state.role || 'ceo')) return 'Only Finance accepts receipts';
+    const r = this.state.reqs.find(x => x.id === id); if (!r || !r.rec) return 'Nothing to accept';
+    if (r.rec.st !== 'submitted') return r.rec.st === 'ok' ? 'Already accepted' : 'Waiting for ' + this.av(r.who).n + ' to send it again';
+    const paid = r.paidAmt || r.amt, back = r.rec.back || 0;
+    const via = (opts && opts.backVia) || r.rec.backVia || 'Cash';
+    if (back > 0 && via === 'Not yet') return 'The change (' + this.fmtT(back) + ') has not come back yet · choose how it was returned';
+    const ok = { st: 'ok', by: this.me().k, okAt: this.fToday(), okTime: tzTime(this.nowDate()) };
+    if (back > 0) ok.backVia = via;
+    this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { rec: Object.assign({}, q.rec, ok) }) : q)), staff: x.staff.map(p => (p.k === r.who ? Object.assign({}, p, { fl: Math.max(0, (p.fl || 0) - paid) }) : p)) }));
+    if (r.who !== this.me().k) this.notify({ to: r.who, ic: 'check', t: 'Receipts accepted · ' + r.id, s: 'Your advance for this request is closed' + (back > 0 ? ' · change ' + this.fmtT(back) + ' received' : ''), go: 'requests' });
+    this.toast('Reconciled · ' + r.id + (back > 0 ? ' · ' + this.fmtT(back) + ' back in the float' : ''));
+    return '';
   }
 };

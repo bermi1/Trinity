@@ -4,6 +4,7 @@ import { Fragment } from 'react';
 export default function FinancePortalPage({ v }) {
   return (
     <>
+      {v.floatNudge ? <button type="button" className="fl-nudge" onClick={v.floatNudge.go}><b>{v.floatNudge.t}</b><small>{v.floatNudge.s}</small></button> : null}
       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
         <span style={{ font: "600 11px 'IBM Plex Mono',monospace", letterSpacing: ".16em", color: "#8A7239" }}>
           FINANCE PORTAL

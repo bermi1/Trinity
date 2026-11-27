@@ -1,38 +1,83 @@
 import { test, expect } from '@playwright/test';
 import { openAs, watchErrors, saved, toast, btn } from './helpers';
 
-// The finance officer's cash box: pay out with a voucher, refuse more than is in the box,
-// count the cash (a shortage tells Management), and see petty spending in the cash book.
-test('petty cash: vouchers, balance, cash count and the cash book', async ({ page }) => {
+const money = async loc => Number((await loc.innerText()).replace(/[^0-9−-]/g, '').replace('−', '-'));
+const balance = page => money(page.locator('.fl-bal b'));
+
+// The float page: a daily expense paid from the float lowers the balance once, shows in the day list,
+// the petty cash book and the cash book.
+test('float: a daily expense lowers the balance and shows in the day, the petty cash book and the cash book', async ({ page }) => {
   const errors = watchErrors(page);
-  await openAs(page, 'finance', 'petty');
-  await expect(page.locator('.fh-kpi').first()).toContainText('TZS 443,000');
-  const form = page.getByRole('region', { name: 'Petty cash entry' });
-  await form.getByLabel('Petty amount').fill('20000');
-  await form.getByRole('radio', { name: 'Courier' }).click();
-  await form.getByLabel('Paid to').fill('DHL Kariakoo');
-  await form.getByLabel('What for').fill('Samples to Arusha office');
-  await btn(form, 'Record payment · print voucher no.').click();
-  await toast(page, 'PCV-0003 · TZS 20,000 paid to DHL Kariakoo');
-  await expect(page.locator('.fh-kpi').first()).toContainText('TZS 423,000');
-
-  await form.getByLabel('Petty amount').fill('900000');
-  await form.getByRole('radio', { name: 'Repairs' }).click();
-  await form.getByLabel('Paid to').fill('Fundi');
-  await btn(form, 'Record payment · print voucher no.').click();
-  await expect(form.getByRole('alert')).toHaveText('Only TZS 423,000 is in the cash box');
-
-  const count = page.getByRole('region', { name: 'Cash count' });
-  await count.getByLabel('Cash counted').fill('420000');
-  await btn(count, 'Save count').click();
-  await toast(page, 'Cash count short by TZS 3,000 · Management told');
+  await openAs(page, 'finance', 'petty'); // the old Petty cash page opens the Float page
+  await expect(page.locator('.fl-bal')).toBeVisible();
+  const before = await balance(page);
+  await btn(page, 'Daily expense').click();
+  const sheet = page.getByRole('dialog', { name: 'Daily expense' });
+  await sheet.getByLabel('Expense amount').fill('20000');
+  await sheet.getByRole('radio', { name: 'Courier' }).click();
+  await btn(sheet, 'Other (supplier, shop…)').click();
+  await sheet.getByLabel('Paid to (name)').fill('DHL Kariakoo');
+  await sheet.getByLabel('Expense note').fill('Samples to Arusha office');
+  await btn(sheet, 'Save expense').click();
+  await toast(page, /PCV-\d{6}-\d\d · TZS 20,000 · Courier/);
+  expect(await balance(page)).toBe(before - 20000);
+  await expect(page.locator('.fl-line', { hasText: 'Courier · Samples to Arusha office' })).toContainText('−TZS 20,000');
   const data = await saved(page);
-  expect(data.petty.counts[0]).toMatchObject({ counted: 420000, expected: 423000, diff: -3000 });
-  expect(data.notes.some(n => n.to === 'DK' && /Petty cash short by TZS 3,000/.test(n.t))).toBe(true);
+  expect(data.petty.entries[0]).toMatchObject({ dir: 'out', amt: 20000, cat: 'Courier', who: 'DHL Kariakoo', method: 'Cash', p: '' });
+
+  await page.getByRole('tab', { name: 'Cash book' }).click();
+  const book = page.getByRole('region', { name: 'Petty cash book' });
+  await expect(book.getByText('Balance brought forward')).toBeVisible();
+  await expect(book.locator('tr', { hasText: 'DHL Kariakoo' })).toContainText('−20,000');
+  await expect(book.locator('tr', { hasText: 'Balance carried down' })).toContainText((before - 20000).toLocaleString('en-US'));
 
   await page.locator('aside').getByText('Cash book', { exact: true }).click();
-  await expect(page.getByText('Petty cash · Courier').first()).toBeVisible();
+  await expect(page.getByText('Daily expense · Courier').first()).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+// A row paid to a staff member settles their approved request: it is that request's payment, counted once.
+test('petty cash book: a row paid to a staff member settles their approved request', async ({ page }) => {
+  await openAs(page, 'finance', 'float');
+  const before = await balance(page);
+  await page.getByRole('tab', { name: 'Cash book' }).click();
+  const row = page.getByRole('form', { name: 'Add a row' });
+  await row.getByLabel('Row paid to').fill('Neema Lyimo');
+  const settle = page.getByRole('radiogroup', { name: 'Settles a request' });
+  await settle.getByRole('radio', { name: /Settles REQ-0416/ }).click();
+  await expect(row.getByLabel('Row amount')).toHaveValue('850,000');
+  await row.getByLabel('Row method').selectOption('Bank');
+  await row.getByLabel('Row amount').press('Enter');
+  await toast(page, /^Paid TZS 850,000 · float opened for Neema Lyimo/);
+  expect(await balance(page)).toBe(before - 850000);
+  const data = await saved(page);
+  expect(data.reqs.find(r => r.id === 'REQ-0416')).toMatchObject({ st: 'paid', paidAmt: 850000, paidVia: 'Bank' });
+  expect(data.petty.entries.some(e => e.amt === 850000)).toBe(false);
+  await expect(page.getByRole('region', { name: 'Petty cash book' }).locator('tr', { hasText: 'REQ-0416' })).toContainText('−850,000');
+});
+
+// The daily report: the summary carried down, Download PDF, and Send to the boss.
+test('daily float report: summary, PDF and sent to the boss', async ({ page, context }) => {
+  await openAs(page, 'finance', 'float');
+  await btn(page, 'Daily report').click();
+  const R = page.getByRole('region', { name: 'Daily float report' });
+  await expect(R.getByText('= Closing balance')).toBeVisible();
+  await expect(R.locator('.fl-check')).toContainText('✓');
+  const [pdf] = await Promise.all([context.waitForEvent('page'), btn(R, 'Download PDF').click()]);
+  await expect(pdf.getByText('DAILY FLOAT REPORT')).toBeVisible();
+  await expect(pdf.getByText('Requests paid today')).toBeVisible();
+  await pdf.close();
+  // WhatsApp opens with the short summary (caught here instead of leaving the site).
+  await page.evaluate(() => { const o = window.open.bind(window); window.__wa = []; window.open = (u, ...r) => { if (/wa\.me/.test(u || '')) { window.__wa.push(u); return null; } return o(u, ...r); }; });
+  await btn(R, 'Send to the boss').click();
+  await toast(page, 'Report sent to Daniel');
+  expect(decodeURIComponent((await page.evaluate(() => window.__wa))[0])).toMatch(/text=Trinity · Float \d+ \w{3}: Open .* \| Close /);
+  const data = await saved(page);
+  const day = Object.keys(data.float.closes)[0];
+  expect(data.float.closes[day]).toMatchObject({ by: 'RT' });
+  expect(data.reports[0]).toMatchObject({ kind: 'daily', to: ['DK'] });
+  expect(data.reports[0].file.name).toBe('Daily float report ' + day + '.html');
+  await expect(R.getByText(/Sent to Management/)).toBeVisible();
 });
 
 // The month's obligations: recording the VAT payment marks it paid and puts it in the cash book.

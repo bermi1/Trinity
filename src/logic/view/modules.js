@@ -101,7 +101,14 @@ export function pageVals2(s, IC, ST, narrow) {
     reqs:fReqs.map(r => ({who:this.av(r.who).n, amt:this.fmtT(r.amt), cat:this.reqWhat(r).split(' · ')[0], proj:this.reqWhat(r).split(' · ').slice(1).join(' · '), verify:() => this.decide(r, true)})),
     reqsEmpty:fReqs.length === 0,
     overdue:s.invoices.filter(i => i.st === 'overdue').map(i => ({id:i.id, c:i.c, due:i.due, v:this.fmtM(i.v)})), overdueEmpty:s.invoices.filter(i => i.st === 'overdue').length === 0,
-    floats:s.staff.filter(p => p.fl > 0).map(p => { const a = this.av(p.k); return {n:a.n, i:a.i, c:a.c, ph:a.ph, amt:this.fmtT(p.fl), age:({JM:'1 day',GM:'2 days',AJ:'4 days',PL:'12 days'})[p.k] || 'today', rec:() => { this.setState(x => ({staff:x.staff.map(q => q.k === p.k ? Object.assign({}, q, {fl:0}) : q)})); this.toast('Float reconciled · ' + a.n); this.log('receipt','green','Float reconciled · ' + this.fmtT(p.fl), a.n); }}; })
+    // Closing a float goes through the receipts: Finance accepts what the person accounted for (confirmRec),
+    // or reminds them to account for it. Nothing is zeroed by hand.
+    floats:s.staff.filter(p => p.fl > 0).map(p => { const a = this.av(p.k), mine = s.reqs.filter(r => r.who === p.k && r.st === 'paid' && !(r.rec && r.rec.st === 'ok')), sub = mine.filter(r => r.rec && r.rec.st === 'submitted');
+      const oldest = mine.reduce((m, r) => (r.paidOn && (!m || r.paidOn < m) ? r.paidOn : m), ''), days = oldest ? Math.max(0, Math.round((Date.parse(this.fToday()) - Date.parse(oldest)) / 864e5)) : 0;
+      return {n:a.n, i:a.i, c:a.c, ph:a.ph, amt:this.fmtT(p.fl), age:days ? days + (days === 1 ? ' day' : ' days') : 'today', rec:() => {
+        if (sub.length) { const errs = sub.map(r => this.confirmRec(r.id)).filter(Boolean); if (errs.length) this.toast(errs[0]); return; }
+        this.remind(p.k, 'Please account for your float: ' + this.fmtT(p.fl), 'requests', 'receipt', (mine.map(r => r.id).join(', ') || 'Your float') + ' · what you spent, the receipts and the change');
+        this.toast('Reminder sent to ' + a.n); }}; })
   };
 
   // Reception / office front portal
