@@ -230,6 +230,7 @@ export default function ProjectDetailPage({ v }) {
                     <span style={{ fontSize: "12px", color: "#6E6A7C" }}>
                       <span>{r.who}</span>{" · "}<span>{r.cat}</span>
                     </span>
+                    {r.items ? <span style={{ fontSize: "12px", color: "#6E6A7C" }}>{r.items}</span> : null}
                   </div>
                   <span style={{ fontSize: "10.5px", fontWeight: "700", padding: "3px 7px", borderRadius: "6px", background: r.stbg, color: r.stfg, whiteSpace: "nowrap" }}>
                     {r.stl}

@@ -15,7 +15,7 @@ test('a large project request travels the whole chain: GM → Finance → Manage
   await openAs(page, 'staff', 'staffportal');
   await btn(page, 'Request money').click();
   await chooseRequest(page, 'Project request');
-  await fillModal(page, { 'Amount (TZS)': '350000', Purpose: 'Taxi to Mlimani site' });
+  await fillModal(page, { 'Item 1 amount': '350000', Purpose: 'Taxi to Mlimani site' });
   await modal(page).locator('button').last().click();
   await toast(page, 'REQ-0427 submitted · waiting for General Manager');
   let r = (await saved(page)).reqs.find(x => x.id === 'REQ-0427');
@@ -143,7 +143,7 @@ test.fixme('internal, emergency and management requests follow their own routes'
   await btn(page, 'Request money').click();
   await expect(modal(page).locator('select option')).toHaveText(['Project request', 'Internal office request', 'Emergency request']);
   await chooseRequest(page, 'Internal office request');
-  await fillModal(page, { Title: 'Office internet, May', 'Amount (TZS)': '450000', Purpose: 'Monthly fibre bill' });
+  await fillModal(page, { Title: 'Office internet, May', 'Item 1 amount': '450000', Purpose: 'Monthly fibre bill' });
   await modal(page).locator('button').last().click();
   await toast(page, 'REQ-0427 submitted · waiting for General Manager');
   expect((await saved(page)).reqs[0]).toMatchObject({ type: 'internal', title: 'Office internet, May', step: 2 });
@@ -151,7 +151,7 @@ test.fixme('internal, emergency and management requests follow their own routes'
   // Emergency: GM → Management → Finance pays (no Finance check first).
   await btn(page, 'Request money').click();
   await chooseRequest(page, 'Emergency request');
-  await fillModal(page, { Title: 'Generator repair on site', 'Amount (TZS)': '600000', 'What happened, and what is it for?': 'Generator failed during setup' });
+  await fillModal(page, { Title: 'Generator repair on site', 'Item 1 amount': '600000', 'What happened, and what is it for?': 'Generator failed during setup' });
   await modal(page).locator('button').last().click();
   await toast(page, 'REQ-0428 submitted · waiting for General Manager');
 
@@ -173,7 +173,7 @@ test.fixme('internal, emergency and management requests follow their own routes'
   await side(page, 'Approvals');
   await btn(page, 'New request').click();
   await chooseRequest(page, 'Management request');
-  await fillModal(page, { Title: 'Client dinner', 'Amount (TZS)': '300000', Purpose: 'Dinner with Kilimo Bank' });
+  await fillModal(page, { Title: 'Client dinner', 'Item 1 amount': '300000', Purpose: 'Dinner with Kilimo Bank' });
   await modal(page).locator('button').last().click();
   await toast(page, 'REQ-0429 submitted · waiting for Finance');
   const r = (await saved(page)).reqs.find(x => x.id === 'REQ-0429');

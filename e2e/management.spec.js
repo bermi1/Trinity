@@ -29,7 +29,7 @@ test.fixme('dashboard: figures, chart, shortcuts and every quick action', async 
     ['Create project', { Client: 'Azam Media', 'Project name': 'Studio launch' }, 'Project PRJ-0236 created'],
     ['Create invoice', { 'Amount (TZS M)': '12' }, 'Invoice INV-0199 saved as draft'],
     ['Add task', { Task: 'Book sound system' }, 'Task created and assigned to Sarah Kimaro'],
-    ['Request payment', { 'Amount (TZS)': '50000', Purpose: 'Parking fees' }, /REQ-0427 submitted/],
+    ['Request payment', { 'Item 1 amount': '50000', Purpose: 'Parking fees' }, /REQ-0427 submitted/],
     ['New lead', { Client: 'Vodashop', Opportunity: 'Store openings' }, 'Lead added · Vodashop'],
     ['Create proposal', { Client: 'Vodashop', 'Service / scope': 'Store openings' }, 'Proposal PRO-0153 saved as draft'],
     ['Schedule meeting', { Title: 'Ops review' }, /Meeting scheduled · Mon 21/]
@@ -63,9 +63,9 @@ test.fixme('forms reject zero or negative amounts', async ({ page }) => {
   await btn(page, 'New request').click();
   await chooseRequest(page, 'Internal office request');
   await fillModal(page, { Title: 'Office internet' });
-  await fillModal(page, { 'Amount (TZS)': '-5', Purpose: 'Test' });
+  await fillModal(page, { 'Item 1 amount': '0', Purpose: 'Test' });
   await modal(page).locator('button').last().click();
-  await expect(modal(page).getByText('Amount (TZS) must be a number above 0.')).toBeVisible();
+  await expect(modal(page).getByText('The amount for item 1 must be a whole number above 0.')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(modal(page)).toHaveCount(0);
 });
@@ -124,7 +124,7 @@ test.fixme('projects: filters, workflow, tasks, money and invoices from a projec
   await chooseRequest(page, 'Project request');
   // The project is already chosen.
   await expect(modal(page).locator('label').filter({ hasText: 'Project' }).locator('select')).toHaveValue('PRJ-0231');
-  await fillModal(page, { 'Amount (TZS)': '75000', Purpose: 'Badge printing' });
+  await fillModal(page, { 'Item 1 amount': '75000', Purpose: 'Badge printing' });
   await modal(page).locator('button').last().click();
   await expect(page.getByText('REQ-0427')).toBeVisible();
 

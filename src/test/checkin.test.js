@@ -33,13 +33,16 @@ describe('my check-in (own face, own device)', () => {
     const a = staff(), me = a.me().k;
     expect(a.clock(me, '')).toHaveProperty('error');
     expect(a.clock(me, '', { face: false })).toHaveProperty('error');
-    expect(a.clock('RT', '', { face: true })).toHaveProperty('error');
+    expect(a.clock('RT', '', { face: true, live: true })).toHaveProperty('error');
+    // A face match alone is not enough: the liveness challenge must have passed too.
+    expect(a.clock(me, 'data:x', { face: true })).toEqual({ error: expect.stringMatching(/really you/) });
     expect(a.state.attendance.length).toBe(0);
-    expect(a.clock(me, 'data:x', { face: true })).toMatchObject({ kind: 'in' });
-    expect(a.attendanceOf(me)).toMatchObject({ k: me, how: 'face-self', inPhoto: 'data:x' });
+    expect(a.clock(me, 'data:x', { face: true, live: true })).toMatchObject({ kind: 'in' });
+    expect(a.attendanceOf(me)).toMatchObject({ k: me, how: 'face-self', inPhoto: 'data:x', live: true });
     expect(a.myCheckinVals(a.state).CHK.status).toBe('in');
-    expect(a.myCheckinVals(a.state).CHK.clockMe('')).toMatchObject({ kind: 'out' });
-    expect(a.attendanceOf(me)).toMatchObject({ howOut: 'face-self' });
+    expect(a.myCheckinVals(a.state).CHK.clockMe('')).toHaveProperty('error');
+    expect(a.myCheckinVals(a.state).CHK.clockMe('', { live: true })).toMatchObject({ kind: 'out' });
+    expect(a.attendanceOf(me)).toMatchObject({ howOut: 'face-self', liveOut: true });
     expect(a.myCheckinVals(a.state).CHK.status).toBe('left');
   });
 
@@ -51,8 +54,9 @@ describe('my check-in (own face, own device)', () => {
     // Reception cannot register someone's face either.
     expect(a.saveFace('GM', ds(), true)).toMatch(/registers their own face/);
     // The camera recognised GM's own registered face.
-    expect(a.clock('GM', '', { face: true })).toMatchObject({ kind: 'in' });
-    expect(a.attendanceOf('GM').how).toBe('face-kiosk');
+    expect(a.clock('GM', '', { face: true })).toHaveProperty('error');
+    expect(a.clock('GM', '', { face: true, live: true })).toMatchObject({ kind: 'in' });
+    expect(a.attendanceOf('GM')).toMatchObject({ how: 'face-kiosk', live: true });
     // Management or the GM can remove a face so the person registers again.
     a.setState({ role: 'gm', faces: [{ k: 'GM', ds: ds() }] });
     expect(a.removeFace('GM')).toBe('');

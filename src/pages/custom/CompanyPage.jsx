@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PageHead, Card, Btn, Empty } from '../../ui/kit';
+import { OfficeSites } from './AttendancePage';
 
 // A person, chosen from a searchable list (no dropdown).
 function PersonPick({ value, people, onPick, label }) {
@@ -133,6 +134,7 @@ export default function CompanyPage({ v }) {
             <Btn kind="dark" type="submit">Save target</Btn>
           </form>
         </Card>
+        {C.sites ? <Card title="Office location"><OfficeSites S={C.sites} bare /></Card> : null}
         <Signatures C={C} />
         <Notify C={C} />
         <Card title="Sections">

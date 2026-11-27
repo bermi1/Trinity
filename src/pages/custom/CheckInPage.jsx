@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { readFace, bestMatch, pack } from '../../logic/face';
+import { readFace, bestMatch, pack, runLiveness, makeChallenge } from '../../logic/face';
+import { getLocation } from '../../logic/attendance';
+import { LiveBox } from './AttendancePage';
+
+const FAIL = 'Could not confirm it’s really you. Try again in good light.';
+const fmtM = m => (m >= 1000 ? (m / 1000).toFixed(1) + ' km' : m + ' m');
 
 // My check-in: each person registers their own face on their own phone or computer, then checks in and
 // out for work with it. The face is compared only with their own registered face; only numbers are stored.
@@ -9,13 +14,38 @@ export default function CheckInPage({ v }) {
   const [cam, setCam] = useState(false), [camErr, setCamErr] = useState('');
   const [consent, setConsent] = useState(false), [busy, setBusy] = useState(''), [note, setNote] = useState(''), [msg, setMsg] = useState(null), [rereg, setRereg] = useState(false);
   const [now, setNow] = useState(new Date());
+  const [chal, setChal] = useState(null), [loc, setLoc] = useState(null), [locBusy, setLocBusy] = useState(false);
+  const needLoc = !!(C && C.sites.length);
 
   useEffect(() => {
     alive.current = true;
     const t = setInterval(() => setNow(new Date()), 15000);
+    // If location is already allowed, show where the phone is straight away (no prompt).
+    try {
+      if (navigator.permissions && navigator.geolocation) navigator.permissions.query({ name: 'geolocation' }).then(p => { if (p.state === 'granted' && alive.current) findMe(); }).catch(() => {});
+    } catch (e) { /* not supported */ }
     return () => { alive.current = false; clearInterval(t); stopCam(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   if (!C) return null;
+
+  // Where the phone is, compared with the office sites: { lat, lng, acc, w: whereIs(...) } or { error }.
+  async function findMe() {
+    setLocBusy(true);
+    const l = await getLocation();
+    if (!alive.current) return null;
+    const r = l.error ? l : Object.assign({}, l, { w: C.where(l) });
+    setLoc(r); setLocBusy(false);
+    return r;
+  }
+  // Why this place does not allow a check-in on the phone ('' when it does).
+  function locProblem(r) {
+    if (!needLoc) return '';
+    if (!r || r.error) return (r && r.error ? r.error + '. ' : '') + 'Checking in on your phone needs your location, to confirm you are at the office.';
+    if (r.w.vague) return 'Your location is too vague (±' + fmtM(r.w.acc) + '), go outside / turn on GPS';
+    if (!r.w.inside && !C.mayAway) return 'You are ' + fmtM(r.w.dist) + ' from ' + r.w.site + '. Check in when you are at the office (within ' + r.w.r + ' m), or at reception.';
+    return '';
+  }
 
   async function startCam() {
     setCamErr('');
@@ -56,12 +86,21 @@ export default function CheckInPage({ v }) {
     } catch (e) { setNote('Face check-in could not start · ' + (e.message || e)); } finally { if (alive.current) setBusy(''); }
   }
 
-  // Check in or out: read a face (up to 10 tries) and compare it only with the person's own registered face.
+  // Check in or out: where the phone is (when an office location is set), then read a face (up to 10
+  // tries) and compare it only with the person's own registered face, then the liveness challenge
+  // (turn the head as asked), then the last frame must still be their face.
   async function checkMe() {
     setMsg(null); setNote('');
     if (!cam || !ready()) { setNote(cam ? 'The camera is still starting. Try again in a moment.' : 'Turn on the camera first'); return; }
-    setBusy('chk'); setNote('Looking at your face…');
+    setBusy('chk');
     try {
+      setNote(needLoc ? 'Checking where you are…' : '');
+      // Without an office location the place is still recorded when the phone can tell.
+      const where = needLoc || !loc || loc.error ? await findMe() : loc;
+      if (!alive.current) return;
+      const bad = locProblem(where);
+      if (bad) { setNote(''); setMsg({ error: bad }); return; }
+      setNote('Looking at your face…');
       let seen = false, ok = false;
       for (let i = 0; i < 10 && !ok && alive.current; i++) {
         const f = ready() ? await readFace(video.current) : null;
@@ -71,8 +110,13 @@ export default function CheckInPage({ v }) {
       if (!alive.current) return;
       setNote('');
       if (!ok) { setMsg({ error: seen ? 'Face did not match. Try again in good light' : 'No face seen. Look straight at the camera in good light and try again' }); return; }
-      setMsg(C.clockMe(snap()));
-    } catch (e) { setNote('Face check-in could not start · ' + (e.message || e)); } finally { if (alive.current) setBusy(''); }
+      const res = C.liveOn ? await runLiveness(video.current, { challenge: makeChallenge(), alive: () => alive.current && ready(), onStep: setChal }) : { ok: true };
+      if (!alive.current) return;
+      const fin = res.ok && ready() ? await readFace(video.current) : null;
+      setChal(null);
+      if (!res.ok || !fin || !bestMatch(fin.d, [C.myFace])) { setMsg({ error: FAIL }); return; }
+      setMsg(C.clockMe(snap(), { live: !!C.liveOn, loc: where && !where.error ? { lat: where.lat, lng: where.lng, acc: where.acc } : null }));
+    } catch (e) { setNote('Face check-in could not start · ' + (e.message || e)); } finally { if (alive.current) { setBusy(''); setChal(null); } }
   }
 
   const showReg = !C.hasFace || rereg;
@@ -93,7 +137,24 @@ export default function CheckInPage({ v }) {
         {camErr ? <small className="att-err">{camErr}</small> : null}
       </div>
 
-      {msg ? <div className={'att-msg' + (msg.error ? ' is-err' : msg.kind === 'out' ? ' is-out' : '')} role="status">{msg.error ? msg.error : msg.kind === 'in' ? <><b>Karibu, {first}!</b> Checked in at {msg.time}{msg.late ? ' · late' : ''}</> : <><b>Kwaheri, {first}!</b> Checked out at {msg.time} · in since {msg.since}</>}</div> : null}
+      <LiveBox st={chal} />
+
+      {msg ? <div className={'att-msg' + (msg.error ? ' is-err' : msg.kind === 'out' ? ' is-out' : '')} role="status">{msg.error ? msg.error : msg.kind === 'in' ? <><b>Karibu, {first}!</b> Checked in at {msg.time}{msg.late ? ' · late' : ''}{msg.site ? ' · ' + msg.site : msg.away ? ' · away from the office' : ''}</> : <><b>Kwaheri, {first}!</b> Checked out at {msg.time} · in since {msg.since}</>}</div> : null}
+
+      {!showReg && C.status !== 'left' ? (
+        <div className={'ck-loc' + (locProblem(loc) && loc ? ' is-bad' : loc && !loc.error && (!needLoc || loc.w.inside) ? ' is-ok' : '')} role="status" aria-label="Location">
+          <span>
+            <b>{!needLoc ? 'Location' : 'Office check-in · ' + C.sites.map(x => x.name).join(', ')}</b>
+            <small>{locBusy ? 'Finding your location…' : !loc ? (needLoc ? 'You must be at the office' + (C.mayAway ? ' (you may also check in away; the place is recorded)' : '') + '. Your location is checked when you check in.' : 'No office location is set; your location is recorded if the phone can tell.')
+              : loc.error ? loc.error
+              : loc.w.vague ? 'Your location is too vague (±' + fmtM(loc.w.acc) + '), go outside / turn on GPS'
+              : loc.w.inside ? 'You are at ' + loc.w.site + ' · ' + fmtM(loc.w.dist) + ' (±' + fmtM(loc.w.acc) + ')'
+              : loc.w.site ? 'You are ' + fmtM(loc.w.dist) + ' from ' + loc.w.site + ' (±' + fmtM(loc.w.acc) + ')' + (C.mayAway ? ' · allowed, recorded as away' : '')
+              : 'Location found (±' + fmtM(loc.w.acc) + ')'}</small>
+          </span>
+          <button type="button" className="att-cancel" disabled={locBusy || !!busy} onClick={findMe}>{loc ? 'Check again' : 'Check my location'}</button>
+        </div>
+      ) : null}
 
       {showReg ? (
         <section className="ck-card" aria-label="Register my face">
@@ -112,6 +173,7 @@ export default function CheckInPage({ v }) {
               {busy === 'chk' ? 'Checking…' : C.status === 'in' ? 'Check out with my face' : 'Check in with my face'}
             </button>
           )}
+          {C.status !== 'left' ? <p className="ck-how">After your face is recognised, turn your head left and right as the screen asks, then look straight again. This shows it is really you, not a photo.</p> : null}
           <div className="ck-acts ck-small">
             <button type="button" className="att-cancel" disabled={!!busy} onClick={() => { setRereg(true); setMsg(null); setNote(''); }}>Re-register my face</button>
             <button type="button" className="att-cancel" disabled={!!busy} onClick={() => { const m = C.removeMyFace(); setMsg(null); setNote(m || 'Your face was removed. Register again to check in with your face.'); }}>Remove my face</button>

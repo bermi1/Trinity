@@ -559,10 +559,10 @@ export default class TrinityApp extends Logic {
       customer:{title:'Add client',sub:'Everything an invoice needs about the client. The PO number, PO date and vendor number come later, per project.',submit:'Add client',wide:true,fields:[{k:'n',l:'Company name',ph:'e.g. CRDB Bank PLC',req:1},{k:'contact',l:'Contact person',ph:'Name'},{k:'title',l:'Contact title',ph:'e.g. Head of Marketing'},{k:'phone',l:'Phone',ph:'+255 7xx xxx xxx'},{k:'email',l:'Email',ph:'name@company.co.tz'},{k:'tin',l:'TIN',ph:'100-000-000'},{k:'vrn',l:'VRN',ph:'10-000000-X'},{k:'address',l:'Physical address',ph:'Street, building, area'},{k:'box',l:'P.O. Box',ph:'e.g. P.O. Box 268'},{k:'city',l:'City',ph:'Dar es Salaam'},{k:'owner',l:'Account owner',opts:this.teamOf('clientservice').map(k => ({v:k,l:this.av(k).n}))}]},
       leadEdit:{title:'Edit lead',sub:'Fix the client name, what they need, the estimated value, the event details or the contact. The change is noted on the lead.',submit:'Save changes',fields:[{k:'c',l:'Client',ph:'Company name',req:1},{k:'t',l:'What do they need?',ph:'e.g. Roadshow in 6 regions',req:1},{k:'v',l:'Estimated value (TZS M)',ph:'e.g. 80'},{k:'venue',l:'Venue',ph:'e.g. Serena Hotel, Dar es Salaam'},{k:'setupDate',l:'Setup date',type:'date'},{k:'pax',l:'Pax (number of guests)',im:'numeric',ph:'e.g. 250'},{k:'contact',l:'Contact person',ph:'Name and phone'},{k:'src',l:'Came in by',opts:O(SOURCES)}]},
       brief:{title:'Send brief to Creative',sub:'The Creative lead receives it and assigns a designer. You are told when artwork goes to the client.',submit:'Send brief',fields:[{k:'t',l:'What is needed',ph:'e.g. Stage backdrop and 3 roll-up banners',req:1},{k:'p',l:'Project',opts:PO},{k:'place',l:'For',opts:O(['Indoor event','Outdoor event','Print','Digital'])},{k:'note',l:'Brief memo',ph:'Theme, sizes, client wishes, deadlines'},{k:'due',l:'Needed by',ph:'e.g. Fri 21'}]},
-      reqProject:{title:'Project request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'amt',l:'Amount (TZS)',type:'number',ph:'300000',req:1},{k:'cat',l:'Category',opts:O(['Team','Operations','Supplies'])},{k:'p',l:'Project',opts:PO},{k:'purpose',l:'Purpose',ph:'What is the money for?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'},...this.payFields()]},
-      reqInternal:{title:'Internal office request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'cat',l:'Category',opts:O(INTERNAL_CATS),req:1},{k:'title',l:'Title',ph:'e.g. Office internet, May',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'150000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for and why?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'},...(this.fl().allocs.some(a => a.to.indexOf('office:') === 0) ? [{k:'alloc',l:'From the office float',opts:this.fl().allocs.filter(a => a.to.indexOf('office:') === 0).map(a => ({v:a.to,l:a.to.slice(7) + ' · ' + this.fmtT(this.allocUse(a).left) + ' left'}))}] : []),...this.payFields()]},
-      reqEmergency:{title:'Emergency request',sub:'Goes to GM → Management → Finance pays. Use only when it cannot wait.',submit:'Submit emergency',fields:[{k:'title',l:'Title',ph:'e.g. Generator repair on site',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'250000',req:1},{k:'p',l:'Project',opts:[{v:'',l:'Not for a project'}, ...PO,...this.payFields()]},{k:'purpose',l:'What happened, and what is it for?',ph:'Explain the emergency',req:1}]},
-      reqMgmt:{title:'Management request',sub:'Finance checks, then pays.',submit:'Submit request',fields:[{k:'title',l:'Title',ph:'e.g. Client meeting expenses',req:1},{k:'amt',l:'Amount (TZS)',type:'number',ph:'500000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for?',req:1},...this.payFields()]},
+      reqProject:{title:'Project request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'items',l:'Items',type:'items',ph:'300000',req:1},{k:'cat',l:'Category',opts:O(['Team','Operations','Supplies'])},{k:'p',l:'Project',opts:PO},{k:'purpose',l:'Purpose',ph:'What is the money for?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'},...this.payFields()]},
+      reqInternal:{title:'Internal office request',sub:'Goes to GM → Finance → Management → Finance pays.' + (this.smallLimit() ? ' Up to ' + this.fmtT(this.smallLimit()) + ', Management is not needed.' : ''),submit:'Submit request',fields:[{k:'cat',l:'Category',opts:O(INTERNAL_CATS),req:1},{k:'title',l:'Title',ph:'e.g. Office internet, May',req:1},{k:'items',l:'Items',type:'items',ph:'150000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for and why?',req:1},{k:'need',l:'Needed by',ph:'e.g. Friday'},...(this.fl().allocs.some(a => a.to.indexOf('office:') === 0) ? [{k:'alloc',l:'From the office float',opts:this.fl().allocs.filter(a => a.to.indexOf('office:') === 0).map(a => ({v:a.to,l:a.to.slice(7) + ' · ' + this.fmtT(this.allocUse(a).left) + ' left'}))}] : []),...this.payFields()]},
+      reqEmergency:{title:'Emergency request',sub:'Goes to GM → Management → Finance pays. Use only when it cannot wait.',submit:'Submit emergency',fields:[{k:'title',l:'Title',ph:'e.g. Generator repair on site',req:1},{k:'items',l:'Items',type:'items',ph:'250000',req:1},{k:'p',l:'Project',opts:[{v:'',l:'Not for a project'}, ...PO]},{k:'purpose',l:'What happened, and what is it for?',ph:'Explain the emergency',req:1},...this.payFields()]},
+      reqMgmt:{title:'Management request',sub:'Finance checks, then pays.',submit:'Submit request',fields:[{k:'title',l:'Title',ph:'e.g. Client meeting expenses',req:1},{k:'items',l:'Items',type:'items',ph:'500000',req:1},{k:'purpose',l:'Purpose',ph:'What is it for?',req:1},...this.payFields()]},
       lead:{title:'New lead',sub:'Leads move Lead → Qualified → Proposal → Negotiation → Won.',submit:'Add lead',fields:[{k:'c',l:'Client',ph:'Company name',req:1},{k:'t',l:'Opportunity',ph:'e.g. Product launch event',req:1},{k:'v',l:'Estimated value (TZS M)',type:'number',ph:'80'},{k:'src',l:'Source',opts:O(['Website','Referral','Tender','Existing client','Walk-in'])}]},
       project:{title:'New project',sub:'Starts at the brief. Operations sets the Project Manager, budget and value later. A new client? Choose “+ New client” and add their details here.',submit:'Create project',fields:[{k:'client',l:'Client',opts:[{v:NEW_CLIENT,l:'+ New client'}, ...(this.state.customers || []).map(c => ({v:c.n,l:c.n}))],req:1,kind:'pick'},
         ...[{k:'nc_n',l:'New client · company name',ph:'e.g. Azam Media Ltd',req:1},{k:'nc_contact',l:'Contact person',ph:'Name'},{k:'nc_phone',l:'Phone',ph:'+255 7xx xxx xxx'},{k:'nc_email',l:'Email',ph:'name@company.co.tz'},{k:'nc_tin',l:'TIN',ph:'100-000-000'},{k:'nc_vrn',l:'VRN',ph:'10-000000-X'},{k:'nc_box',l:'P.O. Box',ph:'e.g. P.O. Box 268'},{k:'nc_city',l:'City',ph:'Dar es Salaam'}].map(x => Object.assign(x, {when:fm => fm.client === NEW_CLIENT})),{k:'name',l:'Project name',ph:'e.g. Brand activation',req:1},{k:'due',l:'Deadline',ph:'e.g. 30 Oct'},{k:'venue',l:'Venue',ph:'e.g. Mlimani City Hall'},{k:'setupDate',l:'Setup date',type:'date'},{k:'pax',l:'Pax (number of people)',type:'number',ph:'e.g. 250'}]},
@@ -579,7 +579,7 @@ export default class TrinityApp extends Logic {
       proc:{title:'Purchase request',sub:'Request → Approved → Delivered. The store then receives it.',submit:'Submit purchase request',fields:[{k:'t',l:'Item',ph:'e.g. Vinyl rolls × 10',req:1},{k:'p',l:'Project',opts:PO},{k:'v',l:'Estimated cost (TZS M)',type:'number',ph:'1.5'}]}
     };
     const m = Object.assign({act}, defs[act], preset && preset._meta ? preset._meta : {});
-    const form = {}; m.fields.forEach(f => { form[f.k] = f.opts ? f.opts[0].v : ''; });
+    const form = {}; m.fields.forEach(f => { form[f.k] = f.type === 'items' ? [{d:'', amt:''}] : f.opts ? f.opts[0].v : ''; });
     Object.assign(form, preset || {}); delete form._meta;
     // New project: the client is chosen on purpose (no silent default); with no clients yet it starts on "+ New client".
     if (act === 'project' && !(preset && preset.client)) form.client = (this.state.customers || []).length ? '' : NEW_CLIENT;
@@ -589,6 +589,7 @@ export default class TrinityApp extends Logic {
     const s = this.state, m = s.modal, f = s.form;
     for (const fd of m.fields) {
       if (fd.type === 'file' || (fd.when && !fd.when(f))) continue;
+      if (fd.type === 'items') { const e = this.reqItems(f[fd.k], f.purpose).error; if (e) { this.setState({modalErr:e}); return; } continue; }
       const val = String(f[fd.k] == null ? '' : f[fd.k]).trim();
       if (fd.req && !val) { this.setState({modalErr:fd.l + ' is required.'}); return; }
       if (fd.type === 'number' && val && !(+val > 0)) { this.setState({modalErr:fd.l + ' must be a number above 0.'}); return; }
@@ -693,12 +694,40 @@ export default class TrinityApp extends Logic {
     if (by === 'Bank' && !bank) return { error: 'Enter the bank name' };
     return { pay: { by, name, no: by === 'Cash' ? '' : no, bank: by === 'Bank' ? bank : '' } };
   }
+  // The items of a money request: rows of {d, amt} (what for, how much). Blank rows are left out; with a
+  // single row the description may stay blank (it takes the purpose). Amounts are whole shillings above 0.
+  reqItems(rows, purpose) {
+    const list = (Array.isArray(rows) ? rows : []).map(x => ({d:String((x && x.d) || '').trim(), a:String(x && x.amt != null ? x.amt : '').replace(/[,\s]/g, '')})).filter(x => x.d || x.a);
+    if (!list.length) return {error:'Add at least one item with an amount.'};
+    for (let i = 0; i < list.length; i++) {
+      const x = list[i], name = x.d ? '“' + x.d + '”' : 'item ' + (i + 1);
+      if (!x.a) return {error:'Enter the amount for ' + name + '.'};
+      if (!/^\d+$/.test(x.a) || !(+x.a > 0)) return {error:'The amount for ' + name + ' must be a whole number above 0.'};
+      if (!x.d && list.length > 1) return {error:'Describe item ' + (i + 1) + ': what is the ' + this.fmtT(+x.a) + ' for?'};
+    }
+    const items = list.map(x => ({d:x.d || String(purpose || '').trim(), amt:+x.a}));
+    return {items, amt:items.reduce((t, x) => t + x.amt, 0)};
+  }
+  // The items to show on a request ([] for old requests, or one item that only repeats the purpose).
+  reqItemsView(r) {
+    const it = Array.isArray(r && r.items) ? r.items : [];
+    if (!it.length || (it.length === 1 && (!it[0].d || it[0].d === r.purpose))) return [];
+    return it.map(x => ({d:x.d, amt:this.fmtT(x.amt)}));
+  }
+  // The rows the requester edits before the first approval (a lone item that repeats the purpose shows blank).
+  reqEditItems(r) {
+    const it = Array.isArray(r.items) && r.items.length ? r.items : [{d:'', amt:r.amt}];
+    return it.map(x => ({d:it.length === 1 && x.d === r.purpose ? '' : x.d || '', amt:String(x.amt || '')}));
+  }
   createRequest(f) {
-    const s = this.state, type = REQ_TYPES[f.type] ? f.type : 'project', amt = +f.amt || 0, who = f.who || this.me().k;
+    const s = this.state, type = REQ_TYPES[f.type] ? f.type : 'project', who = f.who || this.me().k;
+    const it = Array.isArray(f.items) ? this.reqItems(f.items, f.purpose) : null;
+    if (it && it.error) return it.error;
+    const amt = it ? it.amt : +f.amt || 0;
     const id = this.nextId('REQ', s.reqs), draft = {type, amt};
     const step = this.nextStep(draft, 0), log = [this.now()];
     for (let i = 1; i < step; i++) log.push('Not needed');
-    const r = {id, type, who, ...(who !== this.me().k ? {by:this.me().k} : {}), amt, pay:(this.payInfo(f).pay || null), cat:type === 'project' ? (f.cat || 'Operations') : type === 'internal' && f.cat ? f.cat : REQ_TYPES[type].l.replace(' request', ''), title:(f.title || '').trim(), purpose:(f.purpose || '').trim(), p:f.p || '', alloc:f.alloc || '', need:f.need || (type === 'emergency' ? 'Today' : 'This week'), step, st:step >= 5 ? 'approved' : 'pending', log};
+    const r = {id, type, who, ...(who !== this.me().k ? {by:this.me().k} : {}), amt, ...(it ? {items:it.items} : {}), pay:(this.payInfo(f).pay || null), cat:type === 'project' ? (f.cat || 'Operations') : type === 'internal' && f.cat ? f.cat : REQ_TYPES[type].l.replace(' request', ''), title:(f.title || '').trim(), purpose:(f.purpose || '').trim(), p:f.p || '', alloc:f.alloc || '', need:f.need || (type === 'emergency' ? 'Today' : 'This week'), step, st:step >= 5 ? 'approved' : 'pending', log};
     this.setState(x => ({reqs:[r, ...x.reqs], reqSel:id}));
     const to = step >= 5 ? this.roleKey('finance', 'RT') : this.approverAt(r, step);
     this.remind(to, step >= 5 ? id + ' is ready to pay' : id + ' needs your approval', 'requests', 'banknote', this.av(who).n + ' · ' + this.fmtT(amt));

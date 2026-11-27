@@ -2,6 +2,7 @@
 import { Fragment } from 'react';
 import MyRequests from './custom/MyRequests';
 import FixRequest from './custom/FixRequest';
+import ReqItems from '../components/ReqItems';
 
 export default function RequestsPage({ v }) {
   if (v.MR) return <MyRequests M={v.MR} />;
@@ -108,6 +109,7 @@ export default function RequestsPage({ v }) {
                   <p style={{ margin: "0", fontSize: "14px", lineHeight: "1.6", maxWidth: "520px", textWrap: "pretty" }}>
                     {v.R.purpose}
                   </p>
+                  <ReqItems items={v.R.items} total={v.R.amt} />
                   {v.R.waWho ? <button type="button" className="td-start wa-btn" style={{ justifySelf: 'start', width: 'fit-content' }} onClick={v.R.waWho} aria-label={'WhatsApp ' + v.R.who}><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11 11 0 0 0 3.2 17.4L2 22l4.7-1.2A11 11 0 1 0 20.5 3.5zM12 20a8 8 0 0 1-4.1-1.1l-.3-.2-2.8.7.7-2.7-.2-.3A8 8 0 1 1 12 20z" /></svg>WhatsApp {v.R.who}</button> : null}
                   {v.R.canFix ? <FixRequest key={v.R.id + (v.R.isRej ? 'r' : '')} R={v.R} /> : null}
                   {(v.R.thread || []).length ? <ul className="mr-thread">{v.R.thread.map((m, i) => <li key={i}><b>{m.who}</b> · <small>{m.at}</small><p>{m.t}</p></li>)}</ul> : null}

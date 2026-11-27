@@ -87,12 +87,12 @@ test.fixme('forms open as a bottom sheet; a small drag snaps back, a long one cl
   await chooseRequest(page, 'Project request');
   const sheet = page.getByRole('dialog', { name: 'Project request' });
   await expect(sheet).toBeVisible();
-  await expect(sheet.locator('input').first()).toHaveAttribute('inputmode', 'decimal');
+  await expect(sheet.getByLabel('Item 1 amount')).toHaveAttribute('inputmode', 'numeric');
   await swipe(page, '.m-sheet-grip', 40, 80);
   await expect(sheet).toBeVisible();
   await btn(sheet, 'Submit request').click();
-  await expect(sheet.getByRole('alert')).toHaveText('Amount (TZS) is required.');
-  await fillModal(page, { 'Amount (TZS)': '15000', Purpose: 'Bodaboda to site' });
+  await expect(sheet.getByRole('alert')).toHaveText('Add at least one item with an amount.');
+  await fillModal(page, { 'Item 1 amount': '15000', Purpose: 'Bodaboda to site' });
   await btn(sheet, 'Submit request').click();
   await toast(page, /REQ-0427 submitted/);
   await expect(sheet).toHaveCount(0);
