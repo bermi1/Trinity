@@ -5,10 +5,10 @@ const n = v => Math.round(+v || 0).toLocaleString('en-US');
 const digits = v => String(v || '').replace(/\D/g, '');
 
 // The person who received money for a request accounts for it: what was spent per item (pre-filled from
-// the request, amounts editable, rows can be added), receipts, and the change with how it comes back.
+// the request with each line total, "Asked 24 × 1,000 = 24,000" under it; amounts editable, rows can be added), receipts, and the change with how it comes back.
 export function AccountForm({ r }) {
   const A = r.account;
-  const [rows, setRows] = useState(() => A.items.map(x => ({ d: x.d, amt: digits(x.amt) })));
+  const [rows, setRows] = useState(() => A.items.map(x => ({ d: x.d, amt: digits(x.amt), asked: x.asked || '' })));
   const [back, setBack] = useState(null); // null = paid − spent
   const [via, setVia] = useState('');
   const [files, setFiles] = useState([]);
@@ -31,6 +31,7 @@ export function AccountForm({ r }) {
             <input className="ff-search" value={x.d} onChange={e => setRow(i, 'd', e.target.value)} placeholder="What it was for" aria-label={'What for' + (i ? ' · item ' + (i + 1) : '')} />
             <label className="fh-amt"><span>TZS</span><input inputMode="numeric" value={x.amt ? n(x.amt) : ''} onChange={e => setRow(i, 'amt', digits(e.target.value))} placeholder="0" aria-label={'Amount spent' + (i ? ' · item ' + (i + 1) : '')} /></label>
             {rows.length > 1 ? <button type="button" className="td-x" aria-label={'Remove item ' + (i + 1)} onClick={() => setRows(l => l.filter((_, j) => j !== i))}>×</button> : null}
+            {x.asked ? <small className="ac-asked">{x.asked}</small> : null}
           </div>
         ))}
         <button type="button" className="fh-addline" onClick={() => setRows(l => [...l, { d: '', amt: '' }])}>+ Add a row</button>

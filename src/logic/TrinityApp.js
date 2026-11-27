@@ -11,6 +11,7 @@ import { overlayVals } from './view/overlays';
 import { supabase } from '../lib/supabase';
 import RecordSync, { applyChange } from './sync';
 import { printDocument } from '../lib/print';
+import { rowTotal } from '../lib/reqItems';
 import { storeMethods } from './store';
 import { adminMethods, emptyLike } from './admin';
 import { pinFor, savePin, checkPin, clearPin, clearUnlocked, isUnlocked, isValidPin, markUnlocked, LOCK_AFTER_MS } from './pin';
@@ -584,7 +585,7 @@ export default class TrinityApp extends Logic {
       proc:{title:'Purchase request',sub:'Request → Approved → Delivered. The store then receives it.',submit:'Submit purchase request',fields:[{k:'t',l:'Item',ph:'e.g. Vinyl rolls × 10',req:1},{k:'p',l:'Project',opts:PO},{k:'v',l:'Estimated cost (TZS M)',type:'number',ph:'1.5'}]}
     };
     const m = Object.assign({act}, defs[act], preset && preset._meta ? preset._meta : {});
-    const form = {}; m.fields.forEach(f => { form[f.k] = f.type === 'items' ? [{d:'', amt:''}] : f.opts ? f.opts[0].v : ''; });
+    const form = {}; m.fields.forEach(f => { form[f.k] = f.type === 'items' ? [{d:'', qty:'1', price:''}] : f.opts ? f.opts[0].v : ''; });
     // Money requests: the project is searched and chosen on purpose (no silent first project).
     if (/^req(Project|Internal|Emergency|Mgmt)$/.test(act) && 'p' in form) form.p = '';
     Object.assign(form, preset || {}); delete form._meta;
@@ -701,30 +702,55 @@ export default class TrinityApp extends Logic {
     if (by === 'Bank' && !bank) return { error: 'Enter the bank name' };
     return { pay: { by, name, no: by === 'Cash' ? '' : no, bank: by === 'Bank' ? bank : '' } };
   }
-  // The items of a money request: rows of {d, amt} (what for, how much). Blank rows are left out; with a
-  // single row the description may stay blank (it takes the purpose). Amounts are whole shillings above 0.
+  // The items of a money request: rows of {d, qty, price} (what for, how many, price of one). Blank rows are
+  // left out; with a single row the description may stay blank (it takes the purpose). The quantity is a whole
+  // number from 1 (blank = 1) and the unit price whole shillings above 0. Each item is stored as
+  // {d, qty, price, amt} with amt = qty × price, so everything that reads amt keeps working.
+  // Rows from before quantities ({d, amt}) count as 1 × amt.
   reqItems(rows, purpose) {
-    const list = (Array.isArray(rows) ? rows : []).map(x => ({d:String((x && x.d) || '').trim(), a:String(x && x.amt != null ? x.amt : '').replace(/[,\s]/g, '')})).filter(x => x.d || x.a);
+    const clean = v => String(v == null ? '' : v).replace(/[,\s]/g, '');
+    const list = (Array.isArray(rows) ? rows : []).map(x => {
+      const price = clean(x && x.price != null && x.price !== '' ? x.price : x && x.amt);
+      return {d:String((x && x.d) || '').trim(), q:clean(x && x.qty) || '1', a:price};
+    }).filter(x => x.d || x.a);
     if (!list.length) return {error:'Add at least one item with an amount.'};
     for (let i = 0; i < list.length; i++) {
       const x = list[i], name = x.d ? '“' + x.d + '”' : 'item ' + (i + 1);
-      if (!x.a) return {error:'Enter the amount for ' + name + '.'};
-      if (!/^\d+$/.test(x.a) || !(+x.a > 0)) return {error:'The amount for ' + name + ' must be a whole number above 0.'};
-      if (!x.d && list.length > 1) return {error:'Describe item ' + (i + 1) + ': what is the ' + this.fmtT(+x.a) + ' for?'};
+      if (!/^\d+$/.test(x.q) || !(+x.q >= 1)) return {error:'The quantity for ' + name + ' must be a whole number, 1 or more.'};
+      if (!x.a) return {error:'Enter the unit price for ' + name + '.'};
+      if (!/^\d+$/.test(x.a) || !(+x.a > 0)) return {error:'The unit price for ' + name + ' must be a whole number above 0.'};
+      if (!x.d && list.length > 1) return {error:'Describe item ' + (i + 1) + ': what is the ' + this.fmtT(+x.q * +x.a) + ' for?'};
     }
-    const items = list.map(x => ({d:x.d || String(purpose || '').trim(), amt:+x.a}));
+    const items = list.map(x => ({d:x.d || String(purpose || '').trim(), qty:+x.q, price:+x.a, amt:+x.q * +x.a}));
     return {items, amt:items.reduce((t, x) => t + x.amt, 0)};
   }
-  // The items to show on a request ([] for old requests, or one item that only repeats the purpose).
+  // The live line total of a form row (quantity × unit price).
+  reqRowTotal(x) { return rowTotal(x); }
+  // One stored item in the current shape (old items without a quantity are 1 × amt).
+  reqItemNorm(x) {
+    const amt = Math.round(+(x && x.amt) || 0), qty = Math.max(1, Math.round(+(x && x.qty) || 1));
+    return {d:String((x && x.d) || ''), qty, price:x && +x.price > 0 ? Math.round(+x.price) : Math.round(amt / qty), amt};
+  }
+  // "24 × 1,000 = 24,000" for an item.
+  reqItemCalc(x) {
+    const it = this.reqItemNorm(x), n = v => Math.round(v).toLocaleString('en-US');
+    return it.qty + ' × ' + n(it.price) + ' = ' + n(it.amt);
+  }
+  // An item in one line of text (lists, notes): "Bottled water 24 × 1,000 = TZS 24,000"; a single one: "Fuel TZS 70,000".
+  reqItemText(x) {
+    const it = this.reqItemNorm(x);
+    return it.d + ' ' + (it.qty > 1 ? it.qty + ' × ' + Math.round(it.price).toLocaleString('en-US') + ' = ' : '') + this.fmtT(it.amt);
+  }
+  // The items to show on a request ([] for old requests, or one item of 1 that only repeats the purpose).
   reqItemsView(r) {
-    const it = Array.isArray(r && r.items) ? r.items : [];
-    if (!it.length || (it.length === 1 && (!it[0].d || it[0].d === r.purpose))) return [];
-    return it.map(x => ({d:x.d, amt:this.fmtT(x.amt)}));
+    const it = (Array.isArray(r && r.items) ? r.items : []).map(x => this.reqItemNorm(x));
+    if (!it.length || (it.length === 1 && it[0].qty === 1 && (!it[0].d || it[0].d === r.purpose))) return [];
+    return it.map(x => ({d:x.d, qty:x.qty, price:this.fmtT(x.price), amt:this.fmtT(x.amt), calc:this.reqItemCalc(x), text:this.reqItemText(x)}));
   }
   // The rows the requester edits before the first approval (a lone item that repeats the purpose shows blank).
   reqEditItems(r) {
-    const it = Array.isArray(r.items) && r.items.length ? r.items : [{d:'', amt:r.amt}];
-    return it.map(x => ({d:it.length === 1 && x.d === r.purpose ? '' : x.d || '', amt:String(x.amt || '')}));
+    const it = (Array.isArray(r.items) && r.items.length ? r.items : [{d:'', amt:r.amt}]).map(x => this.reqItemNorm(x));
+    return it.map(x => ({d:it.length === 1 && x.d === r.purpose ? '' : x.d || '', qty:String(x.qty), price:String(x.price || '')}));
   }
   createRequest(f) {
     const s = this.state, type = REQ_TYPES[f.type] ? f.type : 'project', who = f.who || this.me().k;

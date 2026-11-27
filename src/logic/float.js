@@ -42,7 +42,7 @@ export const floatMethods = {
   accountInfo(r) {
     const paid = r.paidAmt || r.amt, today = this.fToday(), due = shiftDay(r.paidOn || today, this.accountDays());
     const its = Array.isArray(r.items) && r.items.length ? r.items : [{ d: r.purpose || r.cat || '', amt: paid }];
-    const items = its.map(x => ({ d: x.d || r.purpose || '', amt: String(its.length === 1 ? Math.min(paid, x.amt) : x.amt) }));
+    const items = its.map(x => ({ d: x.d || r.purpose || '', amt: String(its.length === 1 ? Math.min(paid, x.amt) : x.amt), asked: +x.qty > 1 ? 'Asked ' + this.reqItemCalc(x) : '' }));
     const open = !r.rec || r.rec.st === 'back';
     return { paid, paidT: this.fmtT(paid), due, dueLabel: dayLabel(due), overdue: open && today >= due, open, items, backNote: r.rec && r.rec.st === 'back' ? r.rec.backNote || '' : '', backVia: BACK_VIA };
   },

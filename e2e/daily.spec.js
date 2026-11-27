@@ -97,7 +97,7 @@ test('a small project request goes GM → Finance and skips Management', async (
   await btn(page, 'Request money').click();
   await chooseRequest(page, 'Project request');
   await expect(modal(page).getByText(/Up to TZS 200,000, Management is not needed/)).toBeVisible();
-  await fillModal(page, { 'Item 1 amount': '120000', Purpose: 'Taxi to Mlimani site' });
+  await fillModal(page, { 'Item 1 price': '120000', Purpose: 'Taxi to Mlimani site' });
   await modal(page).locator('button').last().click();
   await toast(page, 'REQ-0427 submitted · waiting for General Manager');
 
@@ -173,7 +173,7 @@ test('an internal office request carries its category through the approvals', as
   await chooseRequest(page, 'Internal office request');
   await modal(page).locator('button').last().click();
   await expect(modal(page).getByText(/Category/).first()).toBeVisible();
-  await fillModal(page, { Category: 'Internet & phone', Title: 'Office internet, November', 'Item 1 amount': '450000', Purpose: 'Monthly fibre bill' });
+  await fillModal(page, { Category: 'Internet & phone', Title: 'Office internet, November', 'Item 1 price': '450000', Purpose: 'Monthly fibre bill' });
   await modal(page).locator('button').last().click();
   await toast(page, 'submitted · waiting for General Manager');
   const r = (await saved(page)).reqs[0];

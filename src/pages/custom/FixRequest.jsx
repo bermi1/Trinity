@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { Items } from '../../components/FormFields';
+import { rowTotal } from '../../lib/reqItems';
 
 // The requester's own request, while it waits or after it was not approved: reply to a question,
 // correct the payment details, and resubmit a request that was not approved.
 export default function FixRequest({ R }) {
   const p = R.curPay || {};
-  const [f, setF] = useState({ items: R.curItems || [{ d: '', amt: String(R.curAmt || '') }], purpose: R.curPurpose || '', title: R.curTitle || '', reply: '', payBy: p.by || '', payName: p.name || '', payNo: p.no || '', payBank: p.bank || '' });
+  const [f, setF] = useState({ items: R.curItems || [{ d: '', qty: '1', price: String(R.curAmt || '') }], purpose: R.curPurpose || '', title: R.curTitle || '', reply: '', payBy: p.by || '', payName: p.name || '', payNo: p.no || '', payBank: p.bank || '' });
   const [msg, setMsg] = useState(''), [ok, setOk] = useState(false);
   const set = (k, v) => { setMsg(''); setF(x => Object.assign({}, x, { [k]: v })); };
   const rej = R.isRej;
-  const total = (f.items || []).reduce((a, x) => a + (+String(x.amt || '').replace(/\D/g, '') || 0), 0);
+  const total = (f.items || []).reduce((a, x) => a + rowTotal(x), 0);
   const send = () => { const m = R.fix(R.canEdit ? f : Object.assign({}, f, { items: undefined, purpose: undefined, title: undefined })); setOk(!m); setMsg(m || (rej ? 'Resubmitted for approval' : 'Sent')); if (!m) set('reply', ''); };
   return (
     <section className={'fx' + (rej ? ' is-rej' : R.infoAsked ? ' is-ask' : '')} aria-label="Correct my request">
