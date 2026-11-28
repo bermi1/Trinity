@@ -244,13 +244,26 @@
 .ff .ff-money-in input { border: none !important; background: none !important; box-shadow: none !important; height: 100%; padding: 0; font-size: 24px; font-weight: 800; letter-spacing: -.01em; }
 .ff-quick { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .ff-quick button { height: 34px; padding: 0 12px; border-radius: 17px; border: 1px dashed #CBBFE3; background: #F7F3FD; color: #5A2FA8; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
-/* Items of a money request: description + amount rows, add/remove, live total */
-.ff-items { display: flex; flex-direction: column; gap: 8px; }
-.ff-item { display: grid; grid-template-columns: minmax(0, 1fr) 128px auto; gap: 8px; align-items: center; }
-.ff-item-a { display: flex; align-items: center; gap: 4px; height: 48px; padding: 0 10px; border: 1.5px solid #E8E4EF; border-radius: 12px; background: #FBFAFD; min-width: 0; }
-.ff-item-a:focus-within { border-color: #6D3CC2; background: #fff; box-shadow: 0 0 0 4px rgba(109, 60, 194, .13); }
-.ff-item-a span { font-size: 11.5px; font-weight: 800; color: #8A8599; letter-spacing: .04em; }
-.ff .ff-item-a input { border: none !important; background: none !important; box-shadow: none !important; height: 100%; padding: 0; min-width: 0; font-size: 16px; font-weight: 800; text-align: right; }
+/* Items of a money request: description, qty × unit price = line total rows, add/remove, live total */
+.ff-items { display: flex; flex-direction: column; gap: 8px; container-type: inline-size; min-width: 0; }
+/* One line per item: Description · Qty × Price = Total · remove. */
+.ff-item { display: grid; grid-template-columns: minmax(0, 1fr) 46px 8px 112px 8px minmax(64px, auto) 36px; grid-template-areas: "d q m p e t x"; gap: 5px; align-items: center; min-width: 0; }
+.ff-item.is-one { grid-template-areas: "d q m p e t t"; }
+.ff-item-d { grid-area: d; min-width: 0; }
+.ff-item-q { grid-area: q; }
+.ff-item-times { grid-area: m; }
+.ff-item-a { grid-area: p; }
+.ff-item-eq { grid-area: e; }
+.ff-item-t { grid-area: t; }
+.ff-item-x { grid-area: x; }
+.ff-item-q, .ff-item-a { display: flex; align-items: center; gap: 4px; height: 48px; padding: 0 7px; border: 1.5px solid #E8E4EF; border-radius: 12px; background: #FBFAFD; min-width: 0; }
+.ff-item-q:focus-within, .ff-item-a:focus-within { border-color: #6D3CC2; background: #fff; box-shadow: 0 0 0 4px rgba(109, 60, 194, .13); }
+.ff-item-a span { font-size: 10px; font-weight: 800; color: #8A8599; letter-spacing: .04em; }
+.ff .ff-item-q input, .ff .ff-item-a input { border: none !important; background: none !important; box-shadow: none !important; height: 100%; padding: 0; min-width: 0; width: 100%; font-size: 16px; font-weight: 800; }
+.ff .ff-item-q input { text-align: center; }
+.ff .ff-item-a input { text-align: right; }
+.ff-item-op { text-align: center; color: #8A8599; font-weight: 700; font-size: 15px; }
+.ff-item-t { text-align: right; font-size: 15px; font-weight: 800; color: #17152A; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ff-item-x { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #E8E4EF; background: #fff; color: #8A8599; display: grid; place-items: center; cursor: pointer; }
 .ff-item-x:hover { color: #B23A46; border-color: #F0C9CD; background: #FBEDEE; }
 .ff-items-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
@@ -258,11 +271,18 @@
 .ff-item-add:hover { background: #F7F3FD; }
 .ff-items-total { font-size: 13px; color: #6E6A7C; }
 .ff-items-total b { font-size: 15px; color: #17152A; margin-left: 4px; }
-@media (max-width: 380px) { .ff-item { grid-template-columns: minmax(0, 1fr) 116px auto; gap: 6px; } }
-/* Items shown on a request */
+/* Narrow (phone, or a narrow form): the description on its own line, then Qty × Price = Total. */
+@container (max-width: 440px) {
+  .ff-item { grid-template-columns: 50px 10px minmax(0, 2fr) 10px minmax(0, 1fr) 36px; grid-template-areas: "d d d d d x" "q m p e t t"; row-gap: 6px; column-gap: 5px; }
+  .ff-item.is-one { grid-template-areas: "d d d d d d" "q m p e t t"; }
+  .ff-item + .ff-item { border-top: 1px dashed #E8E4EF; padding-top: 8px; }
+  .ff-item-q, .ff-item-a { height: 44px; }
+}
+
 .rq-items { list-style: none; margin: 4px 0 0; padding: 0; border: 1px solid #E8E4EF; border-radius: 10px; overflow: hidden; max-width: 520px; font-size: 13.5px; }
 .rq-items li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid #F1EEF6; }
 .rq-items li span { min-width: 0; overflow-wrap: anywhere; }
+.rq-items li span small { display: block; font-size: 12px; color: #6E6A7C; font-variant-numeric: tabular-nums; }
 .rq-items li b { white-space: nowrap; font-weight: 600; }
 .rq-items li.is-total { background: #F7F5FB; border-bottom: none; }
 .rq-items li.is-total b { font-weight: 800; }
@@ -1591,6 +1611,7 @@
 .ac-rows { display: grid; gap: 8px; }
 .ac-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 170px) auto; gap: 8px; align-items: center; }
 .ac-row .fh-amt { height: 44px; }
+.ac-asked { grid-column: 1 / -1; margin-top: -4px; font-size: 12px; color: #6E6A7C; font-variant-numeric: tabular-nums; }
 .ac-sum { margin: 0; font-size: 13.5px; } .ac-sum b { white-space: nowrap; }
 .ac-change { display: grid; gap: 8px; } .ac-change .fh-amt { max-width: 260px; }
 .ac-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; } .ac-items li { display: flex; justify-content: space-between; gap: 10px; }

@@ -1,9 +1,10 @@
 import { faceStyle, faceText } from '../ui/kit';
 import { useState } from 'react';
+import { rowTotal } from '../lib/reqItems';
 
 // Form fields shared by the desktop form and the phone sheet. No plain dropdowns:
 // short choices are chips, people are faces, long lists open a searchable list,
-// amounts get thousands separators and quick amounts, money requests get a list of items.
+// amounts get thousands separators and quick amounts, money requests get a list of items (quantity × unit price).
 
 const QUICK = [50000, 100000, 250000, 500000, 1000000];
 const short = n => (n >= 1e6 ? n / 1e6 + 'M' : n / 1e3 + 'K');
@@ -79,33 +80,45 @@ function Money({ f, last, onEnter }) {
   );
 }
 
-// Items of a money request: a description and an amount per row, "+ Add item", remove, and a live total.
-// One row is the quick case: type the amount (or tap a quick amount); the description may stay blank.
+// Items of a money request: per row a description, a quantity and a unit price; the line total
+// (quantity × price) is worked out, with "+ Add item", remove, and a live total of all lines.
+// One row is the quick case: quantity 1, type the price (or tap a quick amount); the description may stay blank.
+// Wide: one line per item. Narrow (phone): the description on its own line, then Qty × Price = Total.
 export function Items({ f, onEnter }) {
   const [added, setAdded] = useState(false);
   const rows = f.rows;
-  const put = (i, k, val) => f.set(rows.map((x, j) => (j === i ? Object.assign({}, x, { [k]: val }) : x)));
-  const add = () => { setAdded(true); f.set([...rows, { d: '', amt: '' }]); };
+  const put = (i, k, val) => f.set(rows.map((x, j) => (j === i ? Object.assign({}, x, { [k]: val }, k === 'price' && x.amt != null ? { amt: undefined } : {}) : x)));
+  const add = () => { setAdded(true); f.set([...rows, { d: '', qty: '1', price: '' }]); };
   const remove = i => f.set(rows.filter((x, j) => j !== i));
+  const one = rows.length === 1;
   return (
     <div className="ff-items">
-      {rows.map((x, i) => (
-        <div key={i} className="ff-item" data-field={'Item ' + (i + 1)}>
-          <input className="ff-item-d" value={x.d || ''} onChange={e => put(i, 'd', e.target.value)} placeholder={i === 0 ? (rows.length > 1 ? 'e.g. Transport to Mwanza' : 'What for? (optional)') : 'e.g. Crew lunch'} aria-label={'Item ' + (i + 1) + ' description'} autoFocus={added && i === rows.length - 1} enterKeyHint="next" />
-          <div className="ff-item-a" data-field={'Item ' + (i + 1) + ' amount'}>
-            <span>TZS</span>
-            <input inputMode="numeric" value={groupDigits(x.amt)} onChange={e => put(i, 'amt', e.target.value.replace(/\D/g, ''))} placeholder={i === 0 ? groupDigits(f.ph) || '0' : '0'} aria-label={'Item ' + (i + 1) + ' amount'} enterKeyHint="next" onKeyDown={onEnter} />
+      {rows.map((x, i) => {
+        const n = i + 1, price = x.price != null && x.price !== '' ? x.price : x.amt, qty = x.qty == null ? '1' : x.qty;
+        return (
+          <div key={i} className={'ff-item' + (one ? ' is-one' : '')} data-field={'Item ' + n}>
+            <input className="ff-item-d" value={x.d || ''} onChange={e => put(i, 'd', e.target.value)} placeholder={i === 0 ? (one ? 'What for? (optional)' : 'e.g. Bottled water') : 'e.g. Banner printing'} aria-label={'Item ' + n + ' description'} autoFocus={added && i === rows.length - 1} enterKeyHint="next" />
+            <div className="ff-item-q" data-field={'Item ' + n + ' qty'}>
+              <input inputMode="numeric" value={qty} onChange={e => put(i, 'qty', e.target.value.replace(/\D/g, ''))} onBlur={() => { if (!String(qty).replace(/\D/g, '')) put(i, 'qty', '1'); }} placeholder="1" aria-label={'Item ' + n + ' quantity'} enterKeyHint="next" />
+            </div>
+            <span className="ff-item-op ff-item-times" aria-hidden="true">×</span>
+            <div className="ff-item-a" data-field={'Item ' + n + ' price'}>
+              <span>TZS</span>
+              <input inputMode="numeric" value={groupDigits(price)} onChange={e => put(i, 'price', e.target.value.replace(/\D/g, ''))} placeholder={i === 0 ? groupDigits(f.ph) || '0' : '0'} aria-label={'Item ' + n + ' price'} enterKeyHint="next" onKeyDown={onEnter} />
+            </div>
+            <span className="ff-item-op ff-item-eq" aria-hidden="true">=</span>
+            <output className="ff-item-t" aria-label={'Item ' + n + ' total'}>{groupDigits(rowTotal(x)) || '0'}</output>
+            {!one ? (
+              <button type="button" className="ff-item-x" onClick={() => remove(i)} aria-label={'Remove item ' + n}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              </button>
+            ) : null}
           </div>
-          {rows.length > 1 ? (
-            <button type="button" className="ff-item-x" onClick={() => remove(i)} aria-label={'Remove item ' + (i + 1)}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-            </button>
-          ) : null}
-        </div>
-      ))}
-      {rows.length === 1 ? (
+        );
+      })}
+      {one ? (
         <div className="ff-quick" aria-label="Quick amounts">
-          {QUICK.map(n => <button key={n} type="button" onClick={() => put(0, 'amt', String(n))}>{short(n)}</button>)}
+          {QUICK.map(n => <button key={n} type="button" onClick={() => put(0, 'price', String(n))}>{short(n)}</button>)}
         </div>
       ) : null}
       <div className="ff-items-foot">
