@@ -32,8 +32,9 @@ test('a large project request travels the whole chain: GM → Finance → Manage
   expect((await saved(page)).notes.find(n => n.to === 'RT').t).toBe('REQ-0427 needs your approval');
 
   await switchTo(page, 'Finance portal');
-  const row = page.locator('div').filter({ hasText: /^Grace Mrema/ }).filter({ has: page.getByRole('button', { name: 'Verify & send to Management' }) }).last();
-  await btn(row, 'Verify & send to Management').click();
+  // Finance opens on the Float: the requests waiting for its Verify step are at the top.
+  const row = page.getByRole('region', { name: 'Requests to verify' }).locator('li', { hasText: 'Grace Mrema' }).first();
+  await btn(row, 'Verify').click();
   await toast(page, 'REQ-0427 verified · sent to Management');
 
   await switchTo(page, 'Management · Command Center');
@@ -46,11 +47,14 @@ test('a large project request travels the whole chain: GM → Finance → Manage
 
   // Finance pays it.
   await switchTo(page, 'Finance portal');
-  await side(page, 'Requests & Floats');
+  await side(page, 'Pay & approve');
   await btn(page, /^Approved ·/).click();
   await page.getByText('REQ-0427').first().click();
+  // Mark paid asks to confirm the amount, method, charges and day first.
   await page.getByRole('button', { name: /^Mark paid · TZS/ }).click();
-  await expect(page.getByText(/^Paid TZS [0-9,]+ · float opened for Grace Mrema/).last()).toBeVisible();
+  const pay = page.getByRole('dialog', { name: 'Confirm payment' });
+  await pay.getByRole('button', { name: /^Pay TZS / }).click();
+  await expect(page.getByText(/^Paid TZS [0-9,]+ to Grace · they must account for it/).last()).toBeVisible();
   r = (await saved(page)).reqs.find(x => x.id === 'REQ-0427');
   expect(r.st).toBe('paid');
   expect((await saved(page)).staff.find(p => p.k === 'GM').fl).toBe(530000);
@@ -66,10 +70,10 @@ test('a large project request travels the whole chain: GM → Finance → Manage
   await btn(page, 'Send to Finance').click();
   await toast(page, 'Sent to Finance to check');
   await switchTo(page, 'Finance portal');
-  await side(page, 'Requests & Floats');
+  await side(page, 'Pay & approve');
   const float = page.locator('div').filter({ hasText: /^GM/ }).filter({ has: page.getByRole('button', { name: 'Accept receipts' }) }).last();
   await btn(float, 'Accept receipts').click();
-  await toast(page, 'Reconciled · REQ-0427');
+  await toast(page, 'Receipts accepted · REQ-0427');
   r = (await saved(page)).reqs.find(x => x.id === 'REQ-0427');
   expect(r.rec).toMatchObject({ spent: 320000, back: 30000, backVia: 'Cash', st: 'ok' });
   expect((await saved(page)).staff.find(p => p.k === 'GM').fl).toBe(180000);
@@ -105,7 +109,7 @@ test('opening a paid request shows its history', async ({ page }) => {
   await openAs(page, 'ceo', 'requests');
   await btn(page, /^All ·/).click();
   await page.getByText('REQ-0412').first().click();
-  await expect(page.getByText('Paid · float open').first()).toBeVisible();
+  await expect(page.getByText(/^Paid · (to account for|accounted for)$/).first()).toBeVisible();
 });
 
 // Screen redesigned (My work, CRM, Finance hub, project by department): rewrite this test.

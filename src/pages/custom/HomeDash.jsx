@@ -15,6 +15,18 @@ export default function HomeDash({ v }) {
         <div className="hd-acts">{H.actions.map((a, i) => <button key={a.l} type="button" className={'hd-btn' + (i === 0 ? ' is-pri' : '')} onClick={a.on}><i aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d={v.ic[['plus', 'checkSquare', 'fileText', 'banknote'][i]]} /></svg></i><span>{a.l}</span></button>)}</div>
       </header>
       <MyWhatsApp v={v} />
+      {H.float ? (
+        <section className="hd-card hd-float" aria-label="Today's float">
+          <header><h3>Today’s float</h3><span className={H.float.sent ? 'hd-sent' : 'hd-unsent'}>{H.float.sent ? '✓ Report sent' : '✗ Report not sent'}</span></header>
+          <b className={'hd-fbal' + (H.float.neg ? ' is-neg' : '')}>{H.float.balance}</b>
+          <dl className="hd-fl">
+            <div><dt>Out today</dt><dd>{H.float.out}</dd></div>
+            <div><dt>Waiting to be paid</dt><dd>{H.float.waitN} · {H.float.waitT}</dd></div>
+            <div><dt>Daily report</dt><dd>{H.float.sentLine}</dd></div>
+          </dl>
+          <button type="button" className="hd-btn is-pri hd-fopen" onClick={H.float.open}><span>Open today’s report</span></button>
+        </section>
+      ) : null}
 
       {v.TG ? <TargetPanel T={v.TG} /> : null}
 
@@ -27,18 +39,6 @@ export default function HomeDash({ v }) {
       </section>
 
       <div className="hd-grid">
-        {H.float ? (
-          <section className="hd-card hd-float" aria-label="Today's float">
-            <header><h3>Today’s float</h3><span className={H.float.sent ? 'hd-sent' : 'hd-unsent'}>{H.float.sent ? '✓ Report sent' : '✗ Report not sent'}</span></header>
-            <b className={'hd-fbal' + (H.float.neg ? ' is-neg' : '')}>{H.float.balance}</b>
-            <dl className="hd-fl">
-              <div><dt>Out today</dt><dd>{H.float.out}</dd></div>
-              <div><dt>Waiting to be paid</dt><dd>{H.float.waitN} · {H.float.waitT}</dd></div>
-              <div><dt>Daily report</dt><dd>{H.float.sentLine}</dd></div>
-            </dl>
-            <button type="button" className="hd-btn is-pri hd-fopen" onClick={H.float.open}><span>Open today’s report</span></button>
-          </section>
-        ) : null}
         <section className="hd-card hd-att">
           <header><h3>Needs attention</h3><span>{H.att.length}</span></header>
           {H.att.length ? (

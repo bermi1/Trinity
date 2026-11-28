@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openAs, watchErrors, saved, toast, btn } from './helpers';
+import { openAs, watchErrors, saved, toast, btn, side } from './helpers';
 
 const money = async loc => Number((await loc.innerText()).replace(/[^0-9−-]/g, '').replace('−', '-'));
 const balance = page => money(page.locator('.fl-bal b'));
@@ -25,13 +25,14 @@ test('float: a daily expense lowers the balance and shows in the day, the petty 
   const data = await saved(page);
   expect(data.petty.entries[0]).toMatchObject({ dir: 'out', amt: 20000, cat: 'Courier', who: 'DHL Kariakoo', method: 'Cash', p: '' });
 
-  await page.getByRole('tab', { name: 'Cash book' }).click();
+  await page.getByRole('tab', { name: 'Petty cash book' }).click();
   const book = page.getByRole('region', { name: 'Petty cash book' });
   await expect(book.getByText('Balance brought forward')).toBeVisible();
   await expect(book.locator('tr', { hasText: 'DHL Kariakoo' })).toContainText('−20,000');
   await expect(book.locator('tr', { hasText: 'Balance carried down' })).toContainText((before - 20000).toLocaleString('en-US'));
 
-  await page.locator('aside').getByText('Cash book', { exact: true }).click();
+  // The company cash book is under More.
+  await side(page, 'Company cash book');
   await expect(page.getByText('Daily expense · Courier').first()).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -40,7 +41,7 @@ test('float: a daily expense lowers the balance and shows in the day, the petty 
 test('petty cash book: a row paid to a staff member settles their approved request', async ({ page }) => {
   await openAs(page, 'finance', 'float');
   const before = await balance(page);
-  await page.getByRole('tab', { name: 'Cash book' }).click();
+  await page.getByRole('tab', { name: 'Petty cash book' }).click();
   const row = page.getByRole('form', { name: 'Add a row' });
   await row.getByLabel('Row paid to').fill('Neema Lyimo');
   const settle = page.getByRole('radiogroup', { name: 'Settles a request' });
@@ -48,7 +49,7 @@ test('petty cash book: a row paid to a staff member settles their approved reque
   await expect(row.getByLabel('Row amount')).toHaveValue('850,000');
   await row.getByLabel('Row method').selectOption('Bank');
   await row.getByLabel('Row amount').press('Enter');
-  await toast(page, /^Paid TZS 850,000 · float opened for Neema Lyimo/);
+  await toast(page, /^Paid TZS 850,000 to Neema · they must account for it/);
   expect(await balance(page)).toBe(before - 850000);
   const data = await saved(page);
   expect(data.reqs.find(r => r.id === 'REQ-0416')).toMatchObject({ st: 'paid', paidAmt: 850000, paidVia: 'Bank' });
@@ -63,19 +64,22 @@ test('daily float report: summary, PDF and sent to the boss', async ({ page, con
   const R = page.getByRole('region', { name: 'Daily float report' });
   await expect(R.getByText('= Closing balance')).toBeVisible();
   await expect(R.locator('.fl-check')).toContainText('✓');
-  const [pdf] = await Promise.all([context.waitForEvent('page'), btn(R, 'Download PDF').click()]);
+  const [pdf] = await Promise.all([context.waitForEvent('page'), btn(R, 'Save PDF').click()]);
   await expect(pdf.getByText('DAILY FLOAT REPORT')).toBeVisible();
   await expect(pdf.getByText('Requests paid today')).toBeVisible();
   await pdf.close();
   // WhatsApp opens with the short summary (caught here instead of leaving the site).
   await page.evaluate(() => { const o = window.open.bind(window); window.__wa = []; window.open = (u, ...r) => { if (/wa\.me/.test(u || '')) { window.__wa.push(u); return null; } return o(u, ...r); }; });
-  await btn(R, 'Send to the boss').click();
-  await toast(page, 'Report sent to Daniel');
+  // Without the phone's share sheet, "Send to boss" opens WhatsApp; the hint says to attach the saved PDF.
+  await page.evaluate(() => { try { Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }); } catch (e) { /* none */ } });
+  await expect(R.getByText('Attach the PDF you saved.')).toBeVisible();
+  await btn(R, 'Send to boss').click();
+  await toast(page, 'Report sent to Daniel and Joseph');
   expect(decodeURIComponent((await page.evaluate(() => window.__wa))[0])).toMatch(/text=Trinity · Float \d+ \w{3}: Open .* \| Close /);
   const data = await saved(page);
   const day = Object.keys(data.float.closes)[0];
   expect(data.float.closes[day]).toMatchObject({ by: 'RT' });
-  expect(data.reports[0]).toMatchObject({ kind: 'daily', to: ['DK'] });
+  expect(data.reports[0]).toMatchObject({ kind: 'daily', to: ['DK', 'GN'] });
   expect(data.reports[0].file.name).toBe('Daily float report ' + day + '.html');
   await expect(R.getByText(/Sent to Management/)).toBeVisible();
 });

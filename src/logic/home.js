@@ -29,7 +29,7 @@ export function homeVals(s) {
     const sg = v => (v < 0 ? '−' : '') + this.fmtT(Math.abs(v));
     return { balance: sg(d.close), neg: d.close < 0, out: this.fmtT(d.out), waitN: W.n, waitT: this.fmtT(W.total),
       sent: !!sent, sentLine: sent ? 'Sent ' + String(sent.sentAt || '').slice(11) + ' · ' + this.av(sent.by).n : 'Not sent yet',
-      open: () => this.finGo('float', { flView: 'report', flDay: today }) };
+      open: () => { this.finGo('float', { flView: 'report', flDay: today }); setTimeout(() => { try { const el = document.querySelector('.fl-report'); if (el) el.scrollIntoView({ block: 'start' }); } catch (e) { /* not rendered */ } }, 120); } };
   })();
   return {
     HD: {
