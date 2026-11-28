@@ -301,7 +301,7 @@ export const reqFlowMethods = {
     const ok = { st: 'ok', by: this.me().k, okAt: this.fToday(), okTime: tzTime(this.nowDate()) };
     if (back > 0) ok.backVia = via;
     this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { rec: Object.assign({}, q.rec, ok) }) : q)), staff: x.staff.map(p => (p.k === r.who ? Object.assign({}, p, { fl: Math.max(0, (p.fl || 0) - paid) }) : p)) }));
-    if (r.who !== this.me().k) this.notify({ to: r.who, ic: 'check', t: 'Receipts accepted · ' + r.id, s: 'Your advance for this request is closed' + (back > 0 ? ' · change ' + this.fmtT(back) + ' received' : ''), go: 'request:' + r.id });
+    if (r.who !== this.me().k) this.notify({ to: r.who, ic: 'check', t: 'Receipts accepted · ' + r.id, s: 'This request is fully accounted for' + (back > 0 ? ' · change ' + this.fmtT(back) + ' received' : ''), go: 'request:' + r.id });
     this.toast('Receipts accepted · ' + r.id + (back > 0 ? ' · ' + this.fmtT(back) + ' back in the float' : ''));
     return '';
   }

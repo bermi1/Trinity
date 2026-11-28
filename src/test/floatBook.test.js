@@ -181,7 +181,7 @@ describe('accounting for an advance', () => {
     const R = a.dailyFloat(D);
     expect(R.advances).toHaveLength(2);
     expect(R.advancesT).toBe(380000);
-    expect(a.floatReportHtml(R)).toContain('Advances not yet accounted for');
+    expect(a.floatReportHtml(R)).toContain('Paid requests not yet accounted for');
   });
 });
 
