@@ -27,7 +27,10 @@ export function homeVals(s) {
     if (!['ceo', 'gm'].includes(role) || !this.floatDay) return null;
     const today = this.fToday(), d = this.floatDay(today), W = this.floatWaiting(today), sent = this.floatSent(today);
     const sg = v => (v < 0 ? '−' : '') + this.fmtT(Math.abs(v));
-    return { balance: sg(d.close), neg: d.close < 0, out: this.fmtT(d.out), waitN: W.n, waitT: this.fmtT(W.total),
+    const asks = role === 'ceo' ? this.fl().asks.filter(a => a.st === 'open').map(a => ({ id: a.id, amt: this.fmtT(a.amt), who: this.av(a.by).n, at: a.at + (a.time ? ' ' + a.time : ''), note: a.note,
+      before: this.fmtT(a.balBefore != null ? a.balBefore : d.close), after: this.fmtT((a.balBefore != null ? a.balBefore : d.close) + a.amt),
+      approve: () => this.approveFloatAsk(a.id), decline: why => this.declineFloatAsk(a.id, why) })) : [];
+    return { asks, balance: sg(d.close), neg: d.close < 0, out: this.fmtT(d.out), waitN: W.n, waitT: this.fmtT(W.total),
       sent: !!sent, sentLine: sent ? 'Sent ' + String(sent.sentAt || '').slice(11) + ' · ' + this.av(sent.by).n : 'Not sent yet',
       open: () => { this.finGo('float', { flView: 'report', flDay: today }); setTimeout(() => { try { const el = document.querySelector('.fl-report'); if (el) el.scrollIntoView({ block: 'start' }); } catch (e) { /* not rendered */ } }, 120); } };
   })();

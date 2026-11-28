@@ -209,7 +209,7 @@ describe('the daily float report', () => {
     expect(R.byProject.reduce((t, r) => t + r.total, 0) + R.charges).toBe(R.out);
     expect(a.floatByProject(D, D).reduce((t, r) => t + r.total, 0)).toBe(R.out);
     expect(R.waiting).toMatchObject({ n: 1, total: 900000, pendingN: 1 });
-    const html = a.floatReportHtml(R);
+    const html = a.floatReportHtml(R).replace(/\u2011/g, '-');
     ['DAILY FLOAT REPORT', 'DFR-20261127', 'CLOSING BALANCE', 'Requests paid today', 'Spending by project today', 'Waiting for payment', 'Prepared by', 'Received by Management', '/brand/trinity-logo-full.png', '✓'].forEach(t => expect(html).toContain(t));
     expect(html).toContain('None today'); // no change returned
     expect(html).not.toContain('short');

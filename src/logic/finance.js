@@ -34,6 +34,20 @@ th:first-child{border-radius:8px 0 0 8px}th:last-child{border-radius:0 8px 8px 0
 .bar{position:fixed;top:12px;right:12px}.bar button{font:600 13px Inter;padding:9px 16px;border:none;border-radius:9px;background:#2B1459;color:#fff;cursor:pointer}
 @page{size:A4;margin:0}
 @media print{html,body{background:#fff;width:210mm;height:297mm}.page{margin:0;box-shadow:none;page-break-after:avoid;break-after:avoid}.bar{display:none}}`;
+// Reports (daily float report, money report): normal reading size on A4, running onto more pages when
+// needed — no shrinking to one page. Table headings repeat on each page; rows never split.
+export const REPORT_CSS = `body{font-size:14px}
+.page{height:auto;min-height:297mm;overflow:visible;padding:14mm 14mm 16mm}
+.foot{position:static;margin-top:18px}
+table{font-size:12.5px!important}th{font-size:11px!important;padding:7px 8px!important}td{padding:6px 8px!important}
+thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}
+h2{font-size:13.5px!important;margin:16px 0 4px!important;break-after:avoid;page-break-after:avoid}
+.box,.sum .box div.l{font-size:13.5px}.kp b{font-size:17px!important}.lbl{font-size:11px}
+.sign{break-inside:avoid;page-break-inside:avoid}
+@page{size:A4;margin:12mm 0}
+@media print{html,body{height:auto}.page{width:210mm;min-height:0;padding:0 14mm;margin:0}}`;
+// Reference numbers and dates never break at their hyphens in reports (REQ-0414, PCV-261128-01, 2026-11-28).
+export const keepCodes = html => html.replace(/\b(REQ|PCV|INV|PRJ|DFR|MR)-[\dA-Z-]+|\b\d{4}-\d{2}-\d{2}\b/g, m => m.replace(/-/g, '\u2011'));
 export const FIT_JS = `// One A4 page, always: when the content is taller than the page (many items), it is scaled down to fit.
 function fit(){var p=document.querySelector('.page'),f=document.querySelector('.fit');if(!p||!f)return;f.style.transform='';f.style.width='';
 var cs=getComputedStyle(p),avail=p.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom),h=f.scrollHeight;
@@ -66,13 +80,39 @@ export const financeMethods = {
   giveFloat(amt, note, opts) { return this.receiveFloat(Object.assign({ amt, note }, opts || {})); },
   // Who a grant came from: the boss by name; grants Finance recorded itself (before this rule) say so.
   grantFrom(g) { const ceo = this.ROLES.ceo && this.ROLES.ceo.k; return g.by && ceo && g.by !== ceo ? 'Recorded by Finance' : g.by ? this.av(g.by).n : g.from || 'Management'; },
+  // Finance asks the boss for float: Management is told in the app and on WhatsApp, with the balance now,
+  // the amount asked and the balance it would make. Management approves (it becomes "Float received") or declines.
   askFloat(amt, note) {
     amt = Math.round(+amt || 0); if (amt <= 0) return 'Enter the amount';
     if (String(note || '').trim().length < 10) return 'Describe what the float is for (at least a short sentence)';
-    const f = this.fl();
-    this.setFloat({ asks: [{ id: 'FA' + Date.now().toString(36), amt, note: (note || '').trim(), by: this.me().k, at: dayKey(0), st: 'open' }, ...f.asks] });
-    this.remind(this.ROLES.ceo.k, 'Finance asks for float · ' + this.fmtT(amt), 'finance', 'wallet', note || 'From ' + this.me().n);
-    this.toast('Float request sent to Management');
+    const f = this.fl(), bal = this.floatBalance ? this.floatBalance() : 0, boss = this.ROLES.ceo.k;
+    const ask = { id: 'FA' + Date.now().toString(36), amt, note: (note || '').trim(), by: this.me().k, at: dayKey(0), time: this.now(), st: 'open', balBefore: bal };
+    this.setFloat({ asks: [ask, ...f.asks] });
+    const line = 'Balance now ' + this.fmtT(bal) + ' · asked ' + this.fmtT(amt) + ' · new balance ' + this.fmtT(bal + amt);
+    this.notify({ to: boss, ic: 'wallet', t: 'Float request · ' + this.fmtT(amt) + ' from ' + this.me().n, s: line + ' · ' + ask.note, go: 'float' });
+    if (this.waOpen) this.waOpen(boss, 'Float request from ' + this.me().n + ' (Finance)\n' +
+      'Balance now: ' + this.fmtT(bal) + '\nAmount requested: ' + this.fmtT(amt) + '\nNew balance after approval: ' + this.fmtT(bal + amt) +
+      '\nFor: ' + ask.note + '\nPlease approve in Trinity Mark 360.');
+    this.toast('Float request sent to the boss · ' + this.fmtT(amt));
+    return '';
+  },
+  // Management approves a float request: it is given straight away (Float received), Finance is told.
+  approveFloatAsk(id, amt) {
+    if ((this.state.role || 'ceo') !== 'ceo') return 'Only Management approves float';
+    const a = this.fl().asks.find(x => x.id === id && x.st === 'open'); if (!a) return 'This request is no longer open';
+    const give = Math.round(+String(amt == null ? a.amt : amt).replace(/[^0-9]/g, '') || 0); if (give <= 0) return 'Enter the amount to give';
+    const m = this.receiveFloat({ amt: give, note: 'Float request approved' + (give !== a.amt ? ' (asked ' + this.fmtT(a.amt) + ')' : '') + ' · ' + a.note });
+    if (m) return m;
+    this.setFloat({ asks: this.fl().asks.map(x => (x.id === id ? Object.assign({}, x, { st: 'given', gave: give, okBy: this.me().k, okAt: dayKey(0) }) : x)) });
+    return '';
+  },
+  declineFloatAsk(id, reason) {
+    if ((this.state.role || 'ceo') !== 'ceo') return 'Only Management declines float';
+    const a = this.fl().asks.find(x => x.id === id && x.st === 'open'); if (!a) return 'This request is no longer open';
+    const why = String(reason || '').trim(); if (!why) return 'Give the reason';
+    this.setFloat({ asks: this.fl().asks.map(x => (x.id === id ? Object.assign({}, x, { st: 'declined', why, okBy: this.me().k, okAt: dayKey(0) }) : x)) });
+    if (a.by && a.by !== this.me().k) this.notify({ to: a.by, ic: 'x', t: 'Float request declined · ' + this.fmtT(a.amt), s: why + ' · ' + this.me().n, go: 'float' });
+    this.toast('Float request declined');
     return '';
   },
   // Finance sets aside part of the float for a project or an office purpose.
@@ -321,7 +361,7 @@ export function financeVals(s) {
       ...inv.filter(i => i.canSign).map(i => ({ t: 'Sign ' + i.id + ' · ' + i.c, s: i.totalT, act: 'Sign', on: i.sign })),
       ...(role === 'ceo' ? inv.filter(i => i.payments.some(p => p.canOk)).map(i => ({ t: 'Confirm payment · ' + i.id, s: i.c + ' · ' + i.payments.filter(p => p.canOk).map(p => p.amt).join(', '), act: 'Review', on: () => this.finGo('invoices', { invSel: i.id }) })) : []),
       ...inv.filter(i => i.st === 'overdue').map(i => ({ t: i.c + ' · ' + i.id + ' overdue', s: i.dueT + ' · ' + i.dueOn, act: 'Open', on: () => this.finGo('invoices', { invSel: i.id }) })),
-      ...(role === 'ceo' ? this.fl().asks.filter(a => a.st === 'open').map(a => ({ t: 'Finance asks for float · ' + this.fmtT(a.amt), s: a.note || '', act: 'Give', on: () => this.finGo('float') })) : [])
+      ...(role === 'ceo' ? this.fl().asks.filter(a => a.st === 'open').map(a => ({ t: 'Float request · ' + this.fmtT(a.amt), s: 'Balance ' + this.fmtT(a.balBefore || 0) + ' → ' + this.fmtT((a.balBefore || 0) + a.amt) + ' · ' + (a.note || ''), act: 'Approve', on: () => { if (this.confirm('Give ' + this.fmtT(a.amt) + ' float to Finance?')) this.approveFloatAsk(a.id); } })) : [])
     ].slice(0, 8),
     invoices: inv, filter: s.invFilter || 'open', setFilter: k => this.setState({ invFilter: k }),
     canInvoice: this.canInvoice(), newInvoice: () => this.setState({ invEdit: 'new' }), nextNo: this.nextId('INV', s.invoices || []),
@@ -407,8 +447,8 @@ export const reportMethods = {
     const table = (head, rows) => `<table><thead><tr>${head.map(h => `<th${h[0] === '>' ? ' class=r' : ''}>${esc(h.replace(/^>/, ''))}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
     const tr = cells => `<tr>${cells.map(c => (c && typeof c === 'object' ? `<td class=r>${esc(c.r)}</td>` : `<td>${esc(c)}</td>`)).join('')}</tr>`;
     const none = t => `<p class=none>${esc(t)}</p>`;
-    const MAX = 60, lines = D.book.slice(0, MAX);
-    return `<!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>${esc(ref)} · Money report · ${esc(D.label)}</title>
+    const MAX = 1000, lines = D.book.slice(0, MAX);
+    return keepCodes(`<!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>${esc(ref)} · Money report · ${esc(D.label)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel=stylesheet>
 <style>
 ${DOC_CSS}
@@ -417,22 +457,24 @@ ${DOC_CSS}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 h2{margin:12px 0 2px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#2B1459}
 table{font-size:10.5px;margin-top:3px}th{padding:5px 6px;font-size:9.5px}td{padding:4px 6px;vertical-align:top}td.r,th.r{white-space:nowrap}
+.half{max-width:60%}.nw td:first-child{white-space:nowrap}
 .none{margin:2px 0 0;color:#6E6A7C;font-style:italic;font-size:11px}.more{font-size:10.5px;color:#6E6A7C;margin-top:4px}
 .sign{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:18px}.sig{border-top:1px solid #CFC8DD;padding-top:6px;font-size:11px;color:#6E6A7C;min-height:50px;display:flex;flex-direction:column;justify-content:flex-end}
+${REPORT_CSS}
 </style></head><body><div class=bar><button onclick="print()">Save PDF</button></div><div class=page><div class=fit>
 <div class=top><img src="${origin}/brand/trinity-logo-full.png" alt="Trinity Mark"><div class=inv><h1>MONEY REPORT</h1><div><b>${esc(ref)}</b></div><div>${esc(D.label)}</div></div></div>
 <div class=band></div>
 <div class=kp>${D.kpis.map(k => `<div class="${k.tone === 'green' ? 'g' : k.tone === 'red' ? 'r' : ''}"><span>${esc(k.l)}</span><b>${esc(k.v)}</b></div>`).join('')}</div>
 <div class=two><div><h2>Where the money went</h2>${D.outCat.length ? table(['What for', '>%', '>Amount (TZS)'], D.outCat.map(x => tr([x.l, { r: x.pct + '%' }, { r: x.t.replace(/^TZS /, '') }]))) : none('No spending in this period.')}</div>
 <div><h2>Where the money came from</h2>${D.inCli.length ? table(['From', '>%', '>Amount (TZS)'], D.inCli.map(x => tr([x.l, { r: x.pct + '%' }, { r: x.t.replace(/^TZS /, '') }]))) : none('No money in this period.')}</div></div>
-<div class=two><div><h2>What clients owe us</h2>${table(['Age', '>Invoices', '>Amount (TZS)'], D.aging.map(a => tr([a.l, { r: a.n }, { r: a.t.replace(/^TZS /, '') }])))}</div>
-<div><h2>Projects</h2>${D.projects.length ? table(['Project', '>Invoiced (TZS)', '>Received', '>Spent'].concat(D.showProfit ? ['>Profit'] : []), D.projects.map(p => tr([p.c + ' · ' + p.n, { r: p.invoiced.replace(/TZS /, '') }, { r: p.got.replace(/TZS /, '') }, { r: p.spent.replace(/TZS /, '') }].concat(D.showProfit ? [{ r: p.profit.replace(/TZS /, '') }] : [])))) : none('No projects.')}</div></div>
-<h2>Money in and out · ${esc(D.label)}</h2>${lines.length ? table(['Date', 'Details', '>In', '>Out', '>Balance'], lines.map(e => tr([e.at, e.cat + [e.party, e.proj, e.ref].filter(Boolean).map(x => ' · ' + x).join(''), { r: e.dir === 'in' ? e.amt.replace(/^TZS /, '') : '' }, { r: e.dir === 'out' ? e.amt.replace(/^TZS /, '') : '' }, { r: e.run.replace(/TZS /, '') }]))) : none('Nothing recorded in this period.')}
+<h2>What clients owe us</h2><div class=half>${table(['Age', '>Invoices', '>Amount (TZS)'], D.aging.map(a => tr([a.l, { r: a.n }, { r: a.t.replace(/^TZS /, '') }])))}</div>
+<h2>Projects</h2>${D.projects.length ? table(['Project', '>Invoiced (TZS)', '>Received', '>Spent'].concat(D.showProfit ? ['>Profit'] : []), D.projects.map(p => tr([p.c + ' · ' + p.n, { r: p.invoiced.replace(/TZS /, '') }, { r: p.got.replace(/TZS /, '') }, { r: p.spent.replace(/TZS /, '') }].concat(D.showProfit ? [{ r: p.profit.replace(/TZS /, '') }] : [])))) : none('No projects.')}
+<h2>Money in and out · ${esc(D.label)}</h2>${lines.length ? '<div class=nw>' + table(['Date', 'Details', '>In', '>Out', '>Balance'], lines.map(e => tr([e.at, e.cat + [e.party, e.proj, e.ref].filter(Boolean).map(x => ' · ' + x).join(''), { r: e.dir === 'in' ? e.amt.replace(/^TZS /, '') : '' }, { r: e.dir === 'out' ? e.amt.replace(/^TZS /, '') : '' }, { r: e.run.replace(/TZS /, '') }]))) + '</div>' : none('Nothing recorded in this period.')}
 ${D.book.length > MAX ? `<p class=more>Showing the latest ${MAX} of ${D.book.length} lines · the full list is in the Excel download.</p>` : ''}
 <div class=sign><div class=sig><span>Prepared by (Finance)</span><b>${esc(D.by)}</b><span>Sign · date</span></div><div class=sig><span>Received by Management</span><span>Sign · date</span></div></div>
 </div>
 <div class=foot><span>${COMPANY.box}</span><span>${esc(ref)} · Trinity Mark 360</span></div>
-</div><script>${FIT_JS}</script></body></html>`;
+</div></body></html>`);
   },
   printMoneyReport(D) {
     const html = this.moneyReportHtml(D);

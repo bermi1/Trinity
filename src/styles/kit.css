@@ -1673,3 +1673,13 @@
 @media (max-width: 700px) { .fin-tabs { margin: 0 0 8px; } .fin-tabs button { min-height: 40px; } }
 .rq-remind { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .rq-remind .me-save, .rq-remind .td-start { min-height: 40px; }
+/* Float request from Finance, on Management's home */
+.hd-asks { display: grid; gap: 10px; margin: 12px 0; }
+.hd-ask { border: 1.5px solid #E2CE98; background: #FFFBF0; border-radius: 12px; padding: 12px 14px; display: grid; gap: 4px; }
+.hd-ask small { color: #6E6A7C; }
+.hd-ask-bal { font-size: 14px; color: #3D3950; }
+.hd-ask p { margin: 2px 0; font-size: 13px; color: #3D3950; }
+.hd-ask-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.hd-ask-row input { flex: 1 1 160px; min-height: 40px; border: 1px solid #E8E4EF; border-radius: 10px; padding: 0 10px; font: inherit; }
+.hd-ask-row button { min-height: 40px; }
+.fl-askbal { margin: 6px 0 10px; font-size: 13.5px; color: #3D3950; }

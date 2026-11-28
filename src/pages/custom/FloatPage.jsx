@@ -135,10 +135,11 @@ function AskSheet({ F, onClose }) {
   const [err, setErr] = useState('');
   const set = (k, v) => { setErr(''); setF(x => Object.assign({}, x, { [k]: v })); };
   return (
-    <Sheet title="Ask the boss for float" sub={F.asked ? 'Already asked: TZS ' + n(F.asked.amt) + ' · ' + F.asked.at : 'Management is told; when they give it, it shows here as “Float received”'} onClose={onClose} label="Ask the boss for float"
+    <Sheet title="Ask the boss for float" sub={F.asked ? 'Already asked: TZS ' + n(F.asked.amt) + ' · ' + F.asked.at : 'The boss gets it in the app and on WhatsApp; once approved it shows here as “Float received”'} onClose={onClose} label="Ask the boss for float"
       foot={<Btn kind="dark" onClick={() => { const m = F.ask(f); if (m) setErr(m); else onClose(true); }}>Send request</Btn>}>
       <Money value={f.amt} set={v => set('amt', v)} label="Float amount asked" autoFocus />
       <div className="ff-quick">{QUICK.map(v => <button key={v} type="button" onClick={() => set('amt', String(v))}>{v / 1e6}M</button>)}</div>
+      <p className="fl-askbal">Balance now <b>TZS {n(F.balanceN)}</b> · asked <b>TZS {n(+f.amt || 0)}</b> · new balance <b>TZS {n(F.balanceN + (+f.amt || 0))}</b></p>
       <input className="ff-search" value={f.note} onChange={e => set('note', e.target.value)} placeholder="What is it for? (a short sentence)" aria-label="What the float is for" />
       {err ? <div className="fm-err" role="alert">{err}</div> : null}
     </Sheet>
