@@ -83,7 +83,7 @@ function Breakdown({ title, items, tone, empty }) {
 export function Reports({ R }) {
   return (
     <>
-      <Periods R={R} />
+      <div className="fr-bookbar"><Periods R={R} /><div className="fh-row"><Btn kind="dark" onClick={R.pdf}>Save PDF</Btn></div></div>
       <RepKpis R={R} />
       <CashChart R={R} />
       <div className="fr-two">
@@ -161,6 +161,7 @@ export function CashBook({ R, canAdd }) {
         <Periods R={R} />
         <div className="fh-row">
           {canAdd ? <Btn kind="dark" onClick={() => setAdding(!adding)}>Record money in / out</Btn> : null}
+          <Btn kind="ghost" onClick={R.pdf}>Save PDF</Btn>
           <Btn kind="ghost" onClick={R.export}>Download (Excel CSV)</Btn>
         </div>
       </div>
