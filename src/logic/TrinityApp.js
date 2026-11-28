@@ -862,17 +862,24 @@ export default class TrinityApp extends Logic {
     if (cur.st !== 'approved' && !(cur.st === 'pending' && (this.state.role || 'ceo') === 'ceo')) { const m = cur.st === 'paid' ? r.id + ' is already paid' : r.id + ' is not approved yet · it can be paid once approved'; this.toast(m); return m; }
     const fee = parseFee(charges);
     if (fee < 0) { this.toast('Transaction charges must be a number'); return 'Transaction charges must be a number'; }
-    // Paid earlier, outside the float (the boss, the bank, before the float started): any past day, and
-    // the float is not touched. The person still accounts for it.
+    // Already recorded in the cash book (paid before, written there as an expense): the request is marked
+    // paid and accounted for, and its amount is NOT taken from the float again (no double entry). Any past day.
     const out = !!o.outside;
     const d = out ? (!/^\d{4}-\d{2}-\d{2}$/.test(o.date || '') ? { at: this.fToday() } : o.date > this.fToday() ? { error: 'The date cannot be in the future' } : { at: o.date }) : this.floatDate(o.date);
     if (d.error) { this.toast(d.error); return d.error; }
     const via = METHODS.includes(o.method) ? o.method : (r.pay && r.pay.by) || '';
     const t = tzTime(this.nowDate());
-    this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, {step:6,st:'paid',paidOn:d.at,paidAt:t,paidAmt:amt,paidBy:this.me().k,log:[...q.log,this.now()]}, via ? {paidVia:via} : {}, fee ? {payFee:fee} : {}, out ? {paidOutside:true} : {}) : q), staff:x.staff.map(p => p.k === r.who ? Object.assign({}, p, {fl:(p.fl || 0) + amt}) : p)}));
-    const warn = !out && this.fl().grants.length ? this.floatCheckBelowZero('Paid ' + r.id + ' · ' + this.fmtT(amt)) : '';
-    if (!out && d.at !== this.fToday()) this.floatRevised(d.at, r.id + ' paid ' + this.fmtT(amt));
-    this.toast((out ? 'Marked already paid (not from the float) · ' : 'Paid ') + this.fmtT(amt) + ' to ' + this.av(r.who).first + ' · they must account for it' + (fee ? ' · charges ' + this.fmtT(fee) : '') + warn);
+    const inBook = out ? { paidOutside: true, rec: { st: 'ok', spent: amt, back: 0, at: d.at, okAt: this.fToday(), okTime: t, by: this.me().k, inBook: true, note: 'Already recorded in the cash book' } } : {};
+    this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, {step:6,st:'paid',paidOn:d.at,paidAt:t,paidAmt:amt,paidBy:this.me().k,log:[...q.log,this.now()]}, via ? {paidVia:via} : {}, fee ? {payFee:fee} : {}, inBook) : q), staff:out ? x.staff : x.staff.map(p => p.k === r.who ? Object.assign({}, p, {fl:(p.fl || 0) + amt}) : p)}));
+    if (out) {
+      this.toast(r.id + ' marked paid · already in the cash book, so the float is not reduced again');
+      this.remind(r.who, r.id + ' marked paid · ' + this.fmtT(amt), 'request:' + r.id, 'wallet', 'Already recorded in the cash book');
+      this.log('wallet', 'green', 'Marked paid · already in the cash book · ' + this.fmtT(amt), this.av(r.who).n, r.id);
+      return '';
+    }
+    const warn = this.fl().grants.length ? this.floatCheckBelowZero('Paid ' + r.id + ' · ' + this.fmtT(amt)) : '';
+    if (d.at !== this.fToday()) this.floatRevised(d.at, r.id + ' paid ' + this.fmtT(amt));
+    this.toast('Paid ' + this.fmtT(amt) + ' to ' + this.av(r.who).first + ' · they must account for it' + (fee ? ' · charges ' + this.fmtT(fee) : '') + warn);
     const due = this.accountDays();
     this.remind(r.who, 'Account for ' + r.id + ' · ' + this.fmtT(amt) + ' paid', 'request:' + r.id, 'wallet', (amt < r.amt ? 'Part of ' + this.fmtT(r.amt) + ' · ' : '') + 'within ' + due + ' days: what you spent, the receipts and the change');
     this.smsTo(r.who, 'Your request ' + r.id + ' has been paid: ' + this.fmtT(amt) + (amt < r.amt ? ' of ' + this.fmtT(r.amt) : '') + (via ? ' by ' + via : '') + '. Please account for it (receipts and change) within ' + due + ' days.');

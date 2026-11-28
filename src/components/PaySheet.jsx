@@ -23,9 +23,12 @@ function EditPay({ P }) {
         <div className="fm-body">
           <p className="mr-pay"><b>Paid</b> {E.paidLine}</p>
           {E.fromBook ? <p className="k-sub">Paid with {E.fromBook} from the cash book. To change it, undo this payment ({E.fromBook} becomes a normal expense again), then mark it paid the right way.</p> : <>
-            <div className="k-chips ps-mode" role="tablist" aria-label="Where the money came from">
-              {[[false, 'From the float'], [true, 'Not from the float']].map(([k, l]) => <button key={l} type="button" role="tab" aria-selected={f.outside === k} className={f.outside === k ? 'is-on' : ''} onClick={() => set('outside', k)}>{l}</button>)}
+            <div className="ff" data-field="Already recorded in the cash book?"><span className="ff-l">Already recorded in the cash book?</span>
+              <div className="k-chips ps-mode" role="radiogroup" aria-label="Already recorded in the cash book?">
+                {[[false, 'No · paid from the float'], [true, 'Yes · already recorded']].map(([k, l]) => <button key={l} type="button" role="radio" aria-checked={f.outside === k} className={f.outside === k ? 'is-on' : ''} onClick={() => set('outside', k)}>{l}</button>)}
+              </div>
             </div>
+            {f.outside ? <p className="k-sub">Already in the cash book: it is <b>not</b> taken from the float again and nothing is left for {P.first} to account for.</p> : null}
             <label className="fh-amt fl-money"><span>TZS</span><input inputMode="numeric" value={f.amt ? n(f.amt) : ''} onChange={e => set('amt', digits(e.target.value))} placeholder="0" aria-label="Amount paid" /></label>
             <small className="k-sub">Asked {P.askedT}</small>
             <div className="ff" data-field="Paid by"><span className="ff-l">Paid by</span>
@@ -36,7 +39,7 @@ function EditPay({ P }) {
             <input className="ff-search" value={f.reason} onChange={e => set('reason', e.target.value)} placeholder="Why the change? (required)" aria-label="Reason for the change" />
           </>}
           {E.history.length ? <ul className="fl-edits">{E.history.map((h, i) => <li key={i}>{h}</li>)}</ul> : null}
-          {undo ? <div className="fl-del"><p><b>Undo this payment?</b> {P.id} goes back to waiting for payment{E.fromBook ? '' : E.outside ? '' : ' and the float goes back up'}.</p>
+          {undo ? <div className="fl-del"><p><b>Undo this payment?</b> {P.id} goes back to waiting for payment{E.fromBook || E.outside ? '' : ' and the float goes back up'}.</p>
             <div className="fh-row"><input className="ff-search" autoFocus value={why} onChange={e => { setErr(''); setWhy(e.target.value); }} placeholder="Reason (required)" aria-label="Reason for undoing" /><Btn kind="dark" onClick={back}>Undo payment</Btn></div></div> : null}
           {err ? <div className="fm-err" role="alert">{err}</div> : null}
         </div>
@@ -56,45 +59,45 @@ function PaySheetNew({ P }) {
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
   const set = (k, v) => { setErr(''); setF(x => Object.assign({}, x, { [k]: v })); };
   const amt = +f.amt || 0, fee = +f.fee || 0;
-  const [mode, setMode] = useState('new'); const [pick, setPick] = useState('');
-  const out = mode === 'outside', left = P.floatLeft == null || out ? null : P.floatLeft - amt - fee;
-  // "Already in the cash book": the money went out before approval and was recorded as an expense.
+  // The one question: is this payment already recorded in the cash book? Yes = no second deduction.
+  const [inBook, setInBook] = useState(false); const [pick, setPick] = useState('');
+  const left = P.floatLeft == null || inBook ? null : P.floatLeft - amt - fee;
   const book = P.book || [], chosen = book.find(e => e.id === pick);
-  const go = () => {
-    if (mode === 'book' && !pick) { setErr('Choose the cash book record'); return; }
-    setBusy(true); const m = mode === 'book' ? P.payFromBook(pick) : out ? P.paidOutside(f) : P.pay(f); setBusy(false); if (m) setErr(m);
-  };
+  const go = () => { setBusy(true); const m = inBook ? (pick ? P.payFromBook(pick) : P.paidOutside(f)) : P.pay(f); setBusy(false); if (m) setErr(m); };
   return (
     <div className="fm-back" onClick={P.close}>
       <div className="fm fl-sheet" role="dialog" aria-label="Confirm payment" onClick={e => e.stopPropagation()}>
         <header className="fm-head"><div><h2>Pay {P.id}</h2><p>{P.who} · {P.what}</p></div><button type="button" className="fm-x" onClick={P.close} aria-label="Close">×</button></header>
         <div className="fm-body">
-          {P.paidOutside ? <div className="k-chips ps-mode" role="tablist" aria-label="How it was paid">
-            {[['new', 'Pay now'], ...(book.length ? [['book', 'Already in the cash book']] : []), ['outside', 'Already paid']].map(([k, l]) => (
-              <button key={k} type="button" role="tab" aria-selected={mode === k} className={mode === k ? 'is-on' : ''} onClick={() => { setErr(''); setMode(k); if (k === 'new' && f.at < P.minDay) set('at', P.today); }}>{l}</button>))}
+          {P.paidOutside ? <div className="ff" data-field="Already recorded in the cash book?"><span className="ff-l">Already recorded in the cash book?</span>
+            <div className="k-chips ps-mode" role="radiogroup" aria-label="Already recorded in the cash book?">
+              {[[false, 'No · pay from the float'], [true, 'Yes · already recorded']].map(([k, l]) => (
+                <button key={l} type="button" role="radio" aria-checked={inBook === k} className={inBook === k ? 'is-on' : ''} onClick={() => { setErr(''); setInBook(k); setPick(''); if (!k && f.at < P.minDay) set('at', P.today); }}>{l}</button>))}
+            </div>
           </div> : null}
-          {out ? <p className="k-sub">Paid earlier, outside the float (by the boss, the bank, or before the float started) and not in the cash book? Mark it paid here: <b>the float is not touched</b>. {P.first} still accounts for it.</p> : null}
-          {mode === 'book' ? <>
-            <p className="k-sub">Paid before it was approved and already recorded as an expense? Choose that record. {P.id} is marked paid with it and the float is <b>not</b> reduced a second time.</p>
-            <div className="fl-settle" role="radiogroup" aria-label="Cash book record">{book.map(e => (
-              <button key={e.id} type="button" role="radio" aria-checked={pick === e.id} className={'fl-req' + (pick === e.id ? ' is-on' : '')} onClick={() => { setErr(''); setPick(e.id); }}>
+          {inBook ? <p className="k-sub">The payment is already in the cash book, so {P.id} is marked paid and accounted for, and <b>the float is not reduced again</b> (no double entry).{book.length ? ' Link the record if it is listed:' : ''}</p> : null}
+          {inBook && book.length ? <div className="fl-settle" role="radiogroup" aria-label="Cash book record">
+            {book.map(e => (
+              <button key={e.id} type="button" role="radio" aria-checked={pick === e.id} className={'fl-req' + (pick === e.id ? ' is-on' : '')} onClick={() => { setErr(''); setPick(pick === e.id ? '' : e.id); }}>
                 <span><b>{e.voucher} · {e.day}</b><small>{e.what}{e.who ? ' · ' + e.who : ''} · {e.where}</small></span><em>{e.amtT}</em>
-              </button>))}</div>
-          </> : <>
-          {P.payTo ? <p className="mr-pay"><b>Pay to</b> {P.payTo}</p> : null}
+              </button>))}
+            <button type="button" role="radio" aria-checked={!pick} className={'fl-req' + (!pick ? ' is-on' : '')} onClick={() => { setErr(''); setPick(''); }}><span><b>Not listed</b><small>Recorded on another line or earlier · enter the amount and day below</small></span></button>
+          </div> : null}
+          {chosen ? null : <>
+          {P.payTo && !inBook ? <p className="mr-pay"><b>Pay to</b> {P.payTo}</p> : null}
           <label className="fh-amt fl-money"><span>TZS</span><input inputMode="numeric" value={f.amt ? n(f.amt) : ''} onChange={e => set('amt', digits(e.target.value))} placeholder="0" aria-label="Amount paid" /></label>
           <small className="k-sub">Asked {P.askedT}{amt && amt < P.asked ? ' · paying part of it' : ''}</small>
           <div className="ff" data-field="Paid by"><span className="ff-l">Paid by</span>
             <div className="ff-chips" role="radiogroup" aria-label="Paid by">{P.methods.map(m => <button key={m} type="button" role="radio" aria-checked={f.method === m} className={f.method === m ? 'is-on' : ''} onClick={() => set('method', m)}>{m}</button>)}</div>
           </div>
           <label className="fh-amt"><span>Transaction charges</span><input inputMode="numeric" value={f.fee ? n(f.fee) : ''} onChange={e => set('fee', digits(e.target.value))} placeholder="0" aria-label="Transaction charges" /></label>
-          <label className="fl-date"><span>Date paid</span><input type="date" value={f.at} min={out ? undefined : P.minDay} max={P.today} onChange={e => set('at', e.target.value || P.today)} aria-label="Date paid" /></label>
+          <label className="fl-date"><span>Date paid</span><input type="date" value={f.at} min={inBook ? undefined : P.minDay} max={P.today} onChange={e => set('at', e.target.value || P.today)} aria-label="Date paid" /></label>
           {left != null && left < 0 ? <p className="bi-ret" role="status">This takes the float below zero (−TZS {n(-left)}). It is still recorded and Management is told.</p> : null}
-          {out ? null : <p className="k-sub">{P.first} must then account for it: what was spent, the receipts and the change.</p>}
+          {inBook ? null : <p className="k-sub">{P.first} must then account for it: what was spent, the receipts and the change.</p>}
           </>}
           {err ? <div className="fm-err" role="alert">{err}</div> : null}
         </div>
-        <footer className="fm-foot"><Btn kind="ghost" onClick={P.close}>Cancel</Btn><Btn kind="dark" disabled={busy} onClick={go}>{mode === 'book' ? (chosen ? 'Mark paid · ' + chosen.voucher : 'Mark paid') : out ? 'Mark already paid · TZS ' + n(amt) : 'Pay TZS ' + n(amt)}</Btn></footer>
+        <footer className="fm-foot"><Btn kind="ghost" onClick={P.close}>Cancel</Btn><Btn kind="dark" disabled={busy} onClick={go}>{inBook ? (chosen ? 'Mark paid · ' + chosen.voucher : 'Mark paid · TZS ' + n(amt)) : 'Pay TZS ' + n(amt)}</Btn></footer>
       </div>
     </div>
   );
