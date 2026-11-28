@@ -155,7 +155,8 @@ export const financeMethods = {
     // Lists are stored newest first; the book reads them oldest first (ties keep that order).
     f.grants.slice().reverse().forEach(g => L.push({ id: g.id, at: g.at, time: g.time || '', dir: 'in', amt: g.amt, kind: 'float', p: '', cat: 'Float received from Management', who: this.grantFrom(g), method: g.method || '', ref: g.note || '', by: g.by, src: 'grant' }));
     (s.reqs || []).forEach(r => {
-      if (r.st !== 'paid' || !r.paidOn) return;
+      // Paid outside the float (marked "already paid"): not part of the float at all.
+      if (r.st !== 'paid' || !r.paidOn || r.paidOutside) return;
       const paid = r.paidAmt || r.amt, cat = r.cat || (r.alloc ? String(r.alloc).replace(/^office:/, '') : 'Request');
       L.push(Object.assign({ id: r.id, at: r.paidOn, time: r.paidAt || '', dir: 'out', amt: paid, asked: r.amt, kind: 'request', p: r.p || '', cat, who: name(r.who), whoK: r.who, method: r.paidVia || (r.pay && r.pay.by) || '', ref: r.id, by: r.paidBy || '', src: 'req' }, r.paidFrom ? { voucher: r.paidFrom.voucher || '' } : {}));
       if (r.payFee > 0) L.push({ id: r.id + '-fee', at: r.paidOn, time: r.paidAt || '', dir: 'out', amt: r.payFee, kind: 'charge', p: r.p || '', cat: CHARGES, who: (r.pay && r.pay.by) || 'Bank / mobile money', method: r.paidVia || (r.pay && r.pay.by) || '', ref: r.id, by: r.paidBy || '', src: 'req' });

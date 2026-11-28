@@ -179,7 +179,7 @@ export const floatMethods = {
       if (r.st !== 'paid') return 'Only a paid request has transaction charges';
       if ((r.payFee || 0) === v) return '';
       this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { payFee: v, feeEdits: [...(q.feeEdits || []), Object.assign(note, { was: { fee: q.payFee || 0 } })] }) : q)) }));
-      this.floatRevised(r.paidOn, 'Charges on ' + r.id + ': ' + this.fmtT(r.payFee || 0) + ' → ' + this.fmtT(v));
+      if (!r.paidOutside) this.floatRevised(r.paidOn, 'Charges on ' + r.id + ': ' + this.fmtT(r.payFee || 0) + ' → ' + this.fmtT(v));
       this.toast('Charges saved · ' + r.id + ' · ' + this.fmtT(v));
       return '';
     }
@@ -526,6 +526,7 @@ export function payVals(s) {
     floatLeft: this.fl().grants.length ? this.floatBalance() : null,
     pay: x => { const m = this.payReq(r, x.amt, x.fee, { method: x.method, date: x.at }); if (!m) this.setState({ paySheet: null }); return m; },
     book: this.canFloat() ? this.bookChoices(r) : [],
+    paidOutside: x => { const m = this.payReq(r, x.amt, x.fee, { method: x.method, date: x.at, outside: true }); if (!m) this.setState({ paySheet: null }); return m; },
     payFromBook: id => { const m = this.payFromBook(r, id); if (!m) this.setState({ paySheet: null }); return m; },
     close: () => this.setState({ paySheet: null }) };
 }

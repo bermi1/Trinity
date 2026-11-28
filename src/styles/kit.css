@@ -1727,7 +1727,7 @@
   .vc-wrap .vc-stats div { display: flex; flex-direction: column; justify-content: center; }
   .vc-wrap .vc-asof { margin-left: 0; text-align: left; }
 }
-.ps-mode { margin-bottom: 10px; }
+.ps-mode { margin-bottom: 10px; flex-wrap: wrap; overflow: visible; }
 .fl-del { background: #FDECEE; border-radius: 12px; padding: 10px 12px; margin-top: 10px; }
 .fl-del p { margin: 0 0 8px; font-size: 13px; color: #7A1E2B; }
 /* Phones: a smaller, card-sized float card */

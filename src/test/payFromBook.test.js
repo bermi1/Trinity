@@ -42,6 +42,20 @@ describe('a request paid from an expense already in the cash book', () => {
   });
 });
 
+describe('a request already paid outside the float', () => {
+  it('is marked paid on any past day and the float is not touched', () => {
+    const a = app('finance', { reqs: [req()] });
+    const P = a.payVals(Object.assign({}, a.state, { paySheet: 'REQ-0009' }));
+    expect(P.paidOutside({ amt: '50000', method: 'Bank', fee: '', at: '2026-10-02' })).toBe('');
+    const r = a.state.reqs[0];
+    expect(r).toMatchObject({ st: 'paid', paidOutside: true, paidOn: '2026-10-02', paidAmt: 50000 });
+    expect(a.floatBalance()).toBe(1e6);
+    expect(a.floatBook().some(l => l.ref === 'REQ-0009')).toBe(false);
+    expect(a.cashEntries().some(c => c.ref === 'REQ-0009')).toBe(true);
+    expect(a.payReq(a.state.reqs[0], '1', '', { outside: true, date: '2026-12-30' })).toMatch(/already paid/);
+  });
+});
+
 describe('deleting a cash book record', () => {
   it('Finance removes it and the float goes back up; staff cannot', async () => {
     const a = app('finance');
