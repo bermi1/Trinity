@@ -36,16 +36,23 @@ th:first-child{border-radius:8px 0 0 8px}th:last-child{border-radius:0 8px 8px 0
 @media print{html,body{background:#fff;width:210mm;height:297mm}.page{margin:0;box-shadow:none;page-break-after:avoid;break-after:avoid}.bar{display:none}}`;
 // Reports (daily float report, money report): normal reading size on A4, running onto more pages when
 // needed — no shrinking to one page. Table headings repeat on each page; rows never split.
-export const REPORT_CSS = `body{font-size:14px}
-.page{height:auto;min-height:297mm;overflow:visible;padding:14mm 14mm 16mm}
-.foot{position:static;margin-top:18px}
-table{font-size:12.5px!important}th{font-size:11px!important;padding:7px 8px!important}td{padding:6px 8px!important}
+export const REPORT_CSS = `body{font-size:13px;line-height:1.45;font-variant-numeric:tabular-nums}
+.page{height:auto;min-height:297mm;overflow:visible;padding:15mm 15mm 16mm}
+.foot{position:static;margin-top:22px}
+.band{margin:12px 0 16px!important}
+table{font-size:11.5px!important;border-collapse:separate!important;border-spacing:0;margin-top:6px!important}
+th{font-size:10px!important;padding:7px 9px!important;letter-spacing:.06em}
+td{padding:6px 9px!important;border-bottom:1px solid #EFEBF5!important}
+tbody tr:nth-child(even) td{background:#FAF9FC}
 thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}
-h2{font-size:13.5px!important;margin:16px 0 4px!important;break-after:avoid;page-break-after:avoid}
-.box,.sum .box div.l{font-size:13.5px}.kp b{font-size:17px!important}.lbl{font-size:11px}
-.sign{break-inside:avoid;page-break-inside:avoid}
+tfoot td{font-weight:800;border-top:1.5px solid #2B1459!important;background:#fff!important}
+h2{display:flex!important;align-items:center!important;gap:8px!important;font-size:12.5px!important;letter-spacing:.08em!important;text-transform:uppercase;color:#2B1459;margin:20px 0 6px!important;break-after:avoid;page-break-after:avoid}
+h2 span{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#2B1459;color:#fff;font-size:10.5px;letter-spacing:0}
+h2 em{margin-left:auto;font-style:normal;font-weight:600;color:#6E6A7C;letter-spacing:0;text-transform:none;font-size:11.5px}
+.box{padding:14px 16px!important}.sum .box div.l{font-size:13px;padding:4px 0!important}.kp{gap:12px!important;margin:0 0 6px!important}.kp div{padding:11px 13px!important}.kp b{font-size:17px!important}.lbl{font-size:10.5px}
+.sign{break-inside:avoid;page-break-inside:avoid;margin-top:26px!important}
 @page{size:A4;margin:12mm 0}
-@media print{html,body{height:auto}.page{width:210mm;min-height:0;padding:0 14mm;margin:0}}`;
+@media print{html,body{height:auto}.page{width:210mm;min-height:0;padding:0 15mm;margin:0}}`;
 // Reference numbers and dates never break at their hyphens in reports (REQ-0414, PCV-261128-01, 2026-11-28).
 export const keepCodes = html => html.replace(/\b(REQ|PCV|INV|PRJ|DFR|MR)-[\dA-Z-]+|\b\d{4}-\d{2}-\d{2}\b/g, m => m.replace(/-/g, '\u2011'));
 export const FIT_JS = `// One A4 page, always: when the content is taller than the page (many items), it is scaled down to fit.
@@ -441,6 +448,8 @@ export const reportMethods = {
   // The money report as a branded one-page A4 PDF (the invoice's look): the period's money in and out,
   // where it went, where it came from, what clients owe, projects and the cash book lines.
   moneyReportHtml(D) {
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const shortDay = d => (/^\d{4}-\d{2}-\d{2}$/.test(d || '') ? +d.slice(8) + ' ' + MON[+d.slice(5, 7) - 1] : d || '');
     const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const origin = typeof location !== 'undefined' ? location.origin : '';
     const ref = 'MR-' + dayKey(0).replace(/-/g, '');
@@ -465,11 +474,11 @@ ${REPORT_CSS}
 <div class=top><img src="${origin}/brand/trinity-logo-full.png" alt="Trinity Mark"><div class=inv><h1>MONEY REPORT</h1><div><b>${esc(ref)}</b></div><div>${esc(D.label)}</div></div></div>
 <div class=band></div>
 <div class=kp>${D.kpis.map(k => `<div class="${k.tone === 'green' ? 'g' : k.tone === 'red' ? 'r' : ''}"><span>${esc(k.l)}</span><b>${esc(k.v)}</b></div>`).join('')}</div>
-<div class=two><div><h2>Where the money went</h2>${D.outCat.length ? table(['What for', '>%', '>Amount (TZS)'], D.outCat.map(x => tr([x.l, { r: x.pct + '%' }, { r: x.t.replace(/^TZS /, '') }]))) : none('No spending in this period.')}</div>
-<div><h2>Where the money came from</h2>${D.inCli.length ? table(['From', '>%', '>Amount (TZS)'], D.inCli.map(x => tr([x.l, { r: x.pct + '%' }, { r: x.t.replace(/^TZS /, '') }]))) : none('No money in this period.')}</div></div>
-<h2>What clients owe us</h2><div class=half>${table(['Age', '>Invoices', '>Amount (TZS)'], D.aging.map(a => tr([a.l, { r: a.n }, { r: a.t.replace(/^TZS /, '') }])))}</div>
-<h2>Projects</h2>${D.projects.length ? table(['Project', '>Invoiced (TZS)', '>Received', '>Spent'].concat(D.showProfit ? ['>Profit'] : []), D.projects.map(p => tr([p.c + ' · ' + p.n, { r: p.invoiced.replace(/TZS /, '') }, { r: p.got.replace(/TZS /, '') }, { r: p.spent.replace(/TZS /, '') }].concat(D.showProfit ? [{ r: p.profit.replace(/TZS /, '') }] : [])))) : none('No projects.')}
-<h2>Money in and out · ${esc(D.label)}</h2>${lines.length ? '<div class=nw>' + table(['Date', 'Details', '>In', '>Out', '>Balance'], lines.map(e => tr([e.at, e.cat + [e.party, e.proj, e.ref].filter(Boolean).map(x => ' · ' + x).join(''), { r: e.dir === 'in' ? e.amt.replace(/^TZS /, '') : '' }, { r: e.dir === 'out' ? e.amt.replace(/^TZS /, '') : '' }, { r: e.run.replace(/TZS /, '') }]))) + '</div>' : none('Nothing recorded in this period.')}
+<div class=two><div><h2><span>1</span>Where the money went</h2>${D.outCat.length ? table(['What for', '>%', '>Amount (TZS)'], D.outCat.map(x => tr([x.l, { r: x.pct + '%' }, { r: x.t.replace(/^TZS /, '') }]))) : none('No spending in this period.')}</div>
+<div><h2><span>2</span>Where the money came from</h2>${D.inCli.length ? table(['From', '>%', '>Amount (TZS)'], D.inCli.map(x => tr([x.l, { r: x.pct + '%' }, { r: x.t.replace(/^TZS /, '') }]))) : none('No money in this period.')}</div></div>
+<h2><span>3</span>What clients owe us</h2><div class=half>${table(['Age', '>Invoices', '>Amount (TZS)'], D.aging.map(a => tr([a.l, { r: a.n }, { r: a.t.replace(/^TZS /, '') }])))}</div>
+<h2><span>4</span>Projects</h2>${D.projects.length ? table(['Project', '>Invoiced (TZS)', '>Received', '>Spent'].concat(D.showProfit ? ['>Profit'] : []), D.projects.map(p => tr([p.c + ' · ' + p.n, { r: p.invoiced.replace(/TZS /, '') }, { r: p.got.replace(/TZS /, '') }, { r: p.spent.replace(/TZS /, '') }].concat(D.showProfit ? [{ r: p.profit.replace(/TZS /, '') }] : [])))) : none('No projects.')}
+<h2><span>5</span>Money in and out<em>${esc(D.label)} · ${D.book.length} lines</em></h2>${lines.length ? '<div class=nw>' + table(['Date', 'Details', '>In', '>Out', '>Balance'], lines.map(e => tr([shortDay(e.at), e.cat + [e.party, e.proj, e.ref].filter(Boolean).map(x => ' · ' + x).join(''), { r: e.dir === 'in' ? e.amt.replace(/^TZS /, '') : '' }, { r: e.dir === 'out' ? e.amt.replace(/^TZS /, '') : '' }, { r: e.run.replace(/TZS /, '') }]))) + '</div>' : none('Nothing recorded in this period.')}
 ${D.book.length > MAX ? `<p class=more>Showing the latest ${MAX} of ${D.book.length} lines · the full list is in the Excel download.</p>` : ''}
 <div class=sign><div class=sig><span>Prepared by (Finance)</span><b>${esc(D.by)}</b><span>Sign · date</span></div><div class=sig><span>Received by Management</span><span>Sign · date</span></div></div>
 </div>
