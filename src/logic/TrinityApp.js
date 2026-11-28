@@ -405,8 +405,9 @@ export default class TrinityApp extends Logic {
       // Finance every day: the Float, paying and approving, and checking receipts. Invoices, the Finance
       // overview and the company cash book wait under More.
       // Finance: the same pages, in ordered groups — money first, then invoices and accounts, then her day.
-      finance:[['Money',[['float','Float','wallet',finQ],['financeportal','My queue','checkSquare',finQ],['requests','Pay & approve','banknote'],['receipts','Receipts','receipt',recN]]],
-        ['Invoices & accounts',[['invoices','Invoices','fileText'],['finance','Finance','chart'],['cashbook','Company cash book','receipt'],['freports','Finance reports','pie']]],
+      // Finance: three money items, each one page with tabs inside (see FIN_TABS): Float; Pay & approve
+      // (My queue · Requests · Receipts); Invoices & finance (Overview · Invoices · Company cash book · Finance reports).
+      finance:[['Money',[['float','Float','wallet'],['requests','Pay & approve','banknote',finQ + recN],['finance','Invoices & finance','chart']]],
         ['My day',[['today','My work','checkSquare',myOpen],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['briefing','Monday Briefing','presentation']]],
         ['More',[['proposals','Proposals','clipboard'],['procurement','Procurement','cart'],...company.filter(i => i[0] !== 'briefing')], true]],
       reception:[['Front office',[['reception','Front desk','message'],['attendance','Staff check-in','clock'],['event','Event registration','clipboard'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['payslips','My payslips','wallet'],['today','My work','checkSquare',myOpen],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['clients','Client enquiries','users']]],

@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import PAGES from '../pages';
+import FinTabs from '../components/FinTabs';
 import CUSTOM from '../pages/custom';
 import CommandPalette from '../components/CommandPalette';
 import AssistantPanel from '../components/AssistantPanel';
@@ -30,6 +31,7 @@ export default function MobileApp({ v }) {
       <MobileHeader v={v} />
       <PullToRefresh onRefresh={refresh} disabled={sheetOpen || v.aiOpen || v.cmdOpen} />
       <main key={v.pageKey} className={'m-screen is-' + v.navDir + ' page-' + v.page}>
+        <FinTabs v={v} />
         <Page v={v} />
       </main>
       <TabBar v={v} hidden={keyboard} />

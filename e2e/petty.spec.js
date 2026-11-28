@@ -31,8 +31,9 @@ test('float: a daily expense lowers the balance and shows in the day, the petty 
   await expect(book.locator('tr', { hasText: 'DHL Kariakoo' })).toContainText('−20,000');
   await expect(book.locator('tr', { hasText: 'Balance carried down' })).toContainText((before - 20000).toLocaleString('en-US'));
 
-  // The company cash book is under More.
-  await side(page, 'Company cash book');
+  // The company cash book is a tab inside Invoices & finance.
+  await side(page, 'Invoices & finance');
+  await page.getByRole('tab', { name: 'Company cash book' }).click();
   await expect(page.getByText('Daily expense · Courier').first()).toBeVisible();
   expect(errors).toEqual([]);
 });

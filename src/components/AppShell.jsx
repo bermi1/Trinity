@@ -8,6 +8,7 @@ import ProjectsPage from '../pages/ProjectsPage';
 import ProjectView from '../pages/custom/ProjectView';
 import TasksPage from '../pages/TasksPage';
 import RequestsPage from '../pages/RequestsPage';
+import FinTabs from './FinTabs';
 import FinanceHub from '../pages/custom/FinanceHub';
 import StorePage from '../pages/StorePage';
 import ProcurementPage from '../pages/ProcurementPage';
@@ -48,6 +49,7 @@ export default function AppShell({ v }) {
         <main style={{ flex: "1", minWidth: "0", display: "flex", flexDirection: "column" }}>
           <TopBar v={v} />
           <div style={{ padding: "clamp(16px,2.4vw,32px)", display: "flex", flexDirection: "column", gap: "20px", animation: "tmIn .25s ease" }}>
+            <FinTabs v={v} />
             {v.is.dashboard ? <HomeDash v={v} /> : null}
             {v.is.briefing ? <Briefing v={v} /> : null}
             {v.is.projects ? <ProjectsPage v={v} /> : null}
