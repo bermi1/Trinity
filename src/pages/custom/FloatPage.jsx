@@ -147,17 +147,20 @@ function AskSheet({ F, onClose }) {
 }
 
 function LineSheet({ l, F, onClose, onEdit }) {
-  const [why, setWhy] = useState(''); const [voiding, setVoiding] = useState(false); const [err, setErr] = useState('');
+  const [why, setWhy] = useState(''); const [voiding, setVoiding] = useState(false); const [err, setErr] = useState(''); const [del, setDel] = useState(false);
   const rows = [['Time', l.time], ['Amount', l.amt], ['What for', l.what], ['Project', l.where], ['Paid to / from', l.who], ['Method', l.method], ['Reference', l.ref], ['Recorded by', l.by]].filter(r => r[1]);
   return (
     <Sheet title={l.what} sub={l.void ? l.voidInfo : l.where} onClose={onClose} label="Line details"
-      foot={<>{l.openReq ? <Btn kind="ghost" onClick={l.openReq}>Open the request</Btn> : null}{l.canEdit ? <Btn kind="ghost" onClick={onEdit}>Change</Btn> : null}{l.canVoid && !voiding ? <Btn kind="ghost" onClick={() => setVoiding(true)}>Void</Btn> : null}</>}>
+      foot={<>{l.openReq ? <Btn kind="ghost" onClick={l.openReq}>Open the request</Btn> : null}{l.canEdit ? <Btn kind="ghost" onClick={onEdit}>Change</Btn> : null}{l.canVoid && !voiding && !del ? <Btn kind="ghost" onClick={() => setVoiding(true)}>Void</Btn> : null}{l.canDelete && !voiding && !del ? <Btn kind="ghost" onClick={() => setDel(true)}>Delete</Btn> : null}</>}>
       <dl className="fl-dl">{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd className={l.void && k === 'Amount' ? 'is-void' : ''}>{v}</dd></div>)}</dl>
       {l.setFee || l.feeN ? <div className="fl-charges"><ChargesEdit fee={l.feeN} save={l.canFee ? v => l.setFee(v) : null} /></div> : null}
       {l.photo ? <Btn kind="ghost" onClick={l.photo}>View receipt photo</Btn> : null}
       {l.edits.length ? <ul className="fl-edits">{l.edits.map((e, i) => <li key={i}>{e}</li>)}</ul> : null}
       {l.openReq && !l.canEdit ? <p className="k-sub">Request payments are changed on the request, not here.</p> : null}
       {voiding ? <div className="fh-row"><input className="ff-search" autoFocus value={why} onChange={e => setWhy(e.target.value)} placeholder="Why is it void? (required)" aria-label="Reason for voiding" /><Btn kind="dark" onClick={() => { const m = l.doVoid(why); if (m) setErr(m); else onClose(true); }}>Void it</Btn></div> : null}
+      {l.fromBook ? <p className="k-sub">{l.fromBook} · counted once, as this request’s payment.</p> : null}
+      {del ? <div className="fl-del" role="alert"><p><b>Delete {l.ref || 'this record'} for good?</b> It is removed from the cash book and the float goes back up by {l.amt.replace(/^−/, '')}{l.feeN ? ' plus its charges' : ''}. To keep it visible, use Void instead.</p>
+        <div className="fh-row"><Btn kind="ghost" onClick={() => setDel(false)}>Keep it</Btn><Btn kind="dark" onClick={() => { const m = l.doDelete(); if (m) setErr(m); else onClose(true); }}>Delete</Btn></div></div> : null}
       {F.sentToday && l.canVoid ? <p className="k-sub">Today’s report was already sent: Management will be told.</p> : null}
       {err ? <div className="fm-err" role="alert">{err}</div> : null}
     </Sheet>
