@@ -21,6 +21,16 @@ export function homeVals(s) {
   const pmax = Math.max(1, ...stages.map(x => x.n));
   const pstages = [['Brief & design', ['brief', 'design']], ['Proposal & budget', ['proposal', 'budget']], ['Approval', ['approval']], ['Execution', ['execution']]].map(([l, fs]) => ({ l, n: live.filter(p => fs.includes(this.flowOf(p))).length }));
   const hr = new Date().getHours();
+  // Today's float, for Management and the GM: the balance, what went out, what waits to be paid and
+  // whether Finance has sent today's report. The report opens on the Float page (view only for the GM).
+  const fl = (() => {
+    if (!['ceo', 'gm'].includes(role) || !this.floatDay) return null;
+    const today = this.fToday(), d = this.floatDay(today), W = this.floatWaiting(today), sent = this.floatSent(today);
+    const sg = v => (v < 0 ? '−' : '') + this.fmtT(Math.abs(v));
+    return { balance: sg(d.close), neg: d.close < 0, out: this.fmtT(d.out), waitN: W.n, waitT: this.fmtT(W.total),
+      sent: !!sent, sentLine: sent ? 'Sent ' + String(sent.sentAt || '').slice(11) + ' · ' + this.av(sent.by).n : 'Not sent yet',
+      open: () => { this.finGo('float', { flView: 'report', flDay: today }); setTimeout(() => { try { const el = document.querySelector('.fl-report'); if (el) el.scrollIntoView({ block: 'start' }); } catch (e) { /* not rendered */ } }, 120); } };
+  })();
   return {
     HD: {
       hello: (hr < 12 ? 'Good morning, ' : hr < 17 ? 'Good afternoon, ' : 'Good evening, ') + me.n.split(' ')[0],
@@ -33,7 +43,7 @@ export function homeVals(s) {
       ],
       att, stages: stages.map(x => Object.assign(x, { w: Math.round(x.n / pmax * 100), vt: '' })),
       po: (() => { const ps = live.filter(p => ['approval', 'execution'].includes(this.flowOf(p))); const miss = ps.filter(p => !p.po); return { got: ps.length - miss.length, miss: miss.length, list: miss.slice(0, 5).map(p => ({ t: p.client + ' · ' + p.name, s: this.flowOf(p) === 'execution' ? 'Work started without a PO' : 'Waiting for approval', on: () => this.go('project', { projectId: p.id }) })) }; })(),
-      pstages, customers: (s.customers || []).length, won: (s.leads || []).filter(l => this.leadStage(l) === 5).length,
+      float: fl, pstages, customers: (s.customers || []).length, won: (s.leads || []).filter(l => this.leadStage(l) === 5).length,
       team: { sent: Object.keys(s.reportsToday || {}).length, total: (s.staff || []).length },
       activity: this.visibleActivity(s).slice(0, 6),
       actions: [

@@ -22,6 +22,9 @@ export const shiftDay = (k, n) => new Date(utc(k) + n * 864e5).toISOString().sli
 export const dayLabel = (k, year) => new Date(utc(k)).toLocaleDateString('en-GB', Object.assign({ day: 'numeric', month: 'short', timeZone: 'UTC' }, year === false ? {} : { year: 'numeric' }));
 const longDay = k => new Date(utc(k)).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
+// The words for an advance's due date: "Due today" on the day, "Overdue" only from the next day.
+export const dueText = (today, due) => (today === due ? 'Due today' : today > due ? 'Overdue' : 'Due ' + dayLabel(due, false));
+
 export const floatMethods = {
   nowDate() { return new Date(); },
   fToday() { return tzDay(this.nowDate()); },
@@ -44,7 +47,8 @@ export const floatMethods = {
     const its = Array.isArray(r.items) && r.items.length ? r.items : [{ d: r.purpose || r.cat || '', amt: paid }];
     const items = its.map(x => ({ d: x.d || r.purpose || '', amt: String(its.length === 1 ? Math.min(paid, x.amt) : x.amt), asked: +x.qty > 1 ? 'Asked ' + this.reqItemCalc(x) : '' }));
     const open = !r.rec || r.rec.st === 'back';
-    return { paid, paidT: this.fmtT(paid), due, dueLabel: dayLabel(due), overdue: open && today >= due, open, items, backNote: r.rec && r.rec.st === 'back' ? r.rec.backNote || '' : '', backVia: BACK_VIA };
+    // "Due today" on the due date; overdue only from the next day.
+    return { paid, paidT: this.fmtT(paid), due, dueLabel: dayLabel(due), dueToday: open && today === due, overdue: open && today > due, dueText: dueText(today, due), open, items, backNote: r.rec && r.rec.st === 'back' ? r.rec.backNote || '' : '', backVia: BACK_VIA };
   },
   floatBalance() { return this.floatDay(this.fToday()).close; },
   floatSent(D) { return (this.fl().closes || {})[D] || null; },
@@ -60,18 +64,19 @@ export const floatMethods = {
     return ' · ⚠ float is below zero, Management told';
   },
 
-  // Money from the boss: recorded by Management or by Finance (then Management is told).
+  // Money from the boss: only Management gives it, and that IS the float's "Float received" — Finance does
+  // not record it again (the same money would count twice). Finance and the GM are told. Finance asks for
+  // float instead (askFloat).
   receiveFloat(f) {
-    if (!this.canFloat()) return 'Only Finance and Management record the float';
+    if ((this.state.role || 'ceo') !== 'ceo') return (this.state.role || 'ceo') === 'finance' ? 'Only Management gives float · ask the boss for float instead' : 'Only Management gives float';
     const amt = num(f.amt); if (amt <= 0) return 'Enter the amount';
     const d = this.floatDate(f.at); if (d.error) return d.error;
     const me = this.me(), fl = this.fl();
     const g = { id: 'FG' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + me.k, amt, note: String(f.note || '').trim(), method: METHODS.includes(f.method) ? f.method : 'Cash', from: 'Management', by: me.k, at: d.at, time: tzTime(this.nowDate()) };
     this.setFloat({ grants: [g, ...fl.grants], asks: fl.asks.map(a => (a.st === 'open' ? Object.assign({}, a, { st: 'given' }) : a)) });
-    if ((this.state.role || 'ceo') !== 'ceo') this.notify({ to: this.ROLES.ceo.k, ic: 'wallet', t: 'Float received · ' + this.fmtT(amt), s: 'Recorded by ' + me.n + ' · ' + g.method + (g.note ? ' · ' + g.note : ''), go: 'finance' });
-    else { const fk = this.ROLES.finance.k; if (fk !== me.k) this.remind(fk, 'Float received · ' + this.fmtT(amt), 'float', 'wallet', 'From ' + me.n + (g.note ? ' · ' + g.note : '')); }
+    [this.ROLES.finance && this.ROLES.finance.k, this.ROLES.gm && this.ROLES.gm.k].filter(k => k && k !== me.k).forEach(k => this.remind(k, 'Float received · ' + this.fmtT(amt) + ' from ' + me.n, 'float', 'wallet', (g.note ? g.note + ' · ' : '') + 'Balance ' + this.fmtT(this.floatBalance())));
     if (d.at !== this.fToday()) this.floatRevised(d.at, 'Float received ' + this.fmtT(amt) + ' added');
-    this.toast('Float received · ' + this.fmtT(amt) + ' · balance ' + this.fmtT(this.floatBalance()));
+    this.toast('Float given to Finance · ' + this.fmtT(amt) + ' · balance ' + this.fmtT(this.floatBalance()));
     return '';
   },
 
@@ -196,7 +201,8 @@ export const floatMethods = {
     const day = D || this.fToday(), due = this.accountDays();
     return (this.state.reqs || []).filter(r => r.st === 'paid' && r.paidOn && r.paidOn <= day && !(r.rec && r.rec.st === 'ok' && (r.rec.okAt || '') <= day))
       .map(r => { const days = Math.max(0, daysBetween(r.paidOn, day)), st = r.rec && r.rec.st !== 'ok' ? r.rec.st : 'none';
-        return { id: r.id, whoK: r.who, who: this.av(r.who).n, p: r.p || '', where: this.projLabel(r.p), paidOn: r.paidOn, paid: r.paidAmt || r.amt, days, dueOn: shiftDay(r.paidOn, due), overdue: st !== 'submitted' && days >= due, st }; })
+        const dueOn = shiftDay(r.paidOn, due);
+        return { id: r.id, whoK: r.who, who: this.av(r.who).n, p: r.p || '', where: this.projLabel(r.p), paidOn: r.paidOn, paid: r.paidAmt || r.amt, days, dueOn, overdue: st !== 'submitted' && days > due, dueToday: st !== 'submitted' && days === due, dueText: dueText(day, dueOn), st }; })
       .sort((a, b) => b.days - a.days);
   },
   // Spending per project (and the office) between two days. With net, change returned on accepted
@@ -207,8 +213,9 @@ export const floatMethods = {
       const r = m[l.p] || (m[l.p] = { p: l.p, requests: 0, expenses: 0, charges: 0, returned: 0 });
       if (l.kind === 'request') r.requests += l.amt; else if (l.kind === 'expense') r.expenses += l.amt; else if (l.kind === 'charge') r.charges += l.amt; else if (l.kind === 'returned') r.returned += l.amt;
     });
+    // Requests are the amounts paid (never negative); change returned is its own line, taken off the total.
     return Object.values(m).map(r => Object.assign(r, { name: this.projLabel(r.p), net: r.requests - (net ? r.returned : 0), total: r.requests - (net ? r.returned : 0) + r.expenses + r.charges }))
-      .filter(r => r.requests || r.expenses || r.charges)
+      .filter(r => r.requests || r.expenses || r.charges || r.returned)
       .sort((a, b) => (!a.p) - (!b.p) || b.total - a.total);
   },
 
@@ -284,7 +291,7 @@ ${sec(4, 'Daily expenses', R.expenses.length ? R.nExp + ' · ' + T(R.expensesT) 
 ${sec(5, 'Change returned', R.returned.length ? T(R.returnedT) : '', R.returned.length ? table(['Request', 'From', 'Project', '>Advance', '>Spent', '>Returned', 'Method'], R.returned.map(r => tr([r.id, r.who, r.where, R0(r.paid), R0(r.spent), R0(r.back), r.method]))) : none)}
 ${sec(6, 'Spending by project today', '', R.byProject.length || R.charges ? table(['Project', '>Requests', '>Expenses', '>Total'], [...R.byProject.map(r => tr([r.name, R0(r.requests), R0(r.expenses), R0(r.total)])), ...(R.charges ? [tr(['Transaction charges', '', '', R0(R.charges)])] : [])], ['Total out', '', '', T(R.out)]) : none)}
 ${sec(7, 'Waiting for payment', W.list.length ? W.n + ' approved · ' + T(W.total) + (W.pendingN ? ' · ' + W.pendingN + ' in approval · ' + T(W.pendingTotal) : '') + (W.oldest != null ? ' · oldest ' + W.oldest + ' d' : '') : '', W.list.length ? table(['Request', 'Who', 'Project', '>Amount', 'Status / step', '>Days'], W.list.map(r => tr([r.id, r.who, r.where, R0(r.amt), r.st, r.days == null ? '' : { r: String(r.days) }]))) : '<p class=none>Nothing waiting.</p>')}
-${sec(8, 'Advances not yet accounted for', R.advances.length ? R.advances.length + ' · ' + T(R.advancesT) : '', R.advances.length ? table(['Who', 'Request', 'Project', 'Paid on', '>Amount', '>Days', 'Status'], R.advances.map(a => tr([a.who, a.id, a.where, a.paidOn, R0(a.paid), { r: String(a.days) }, a.st === 'submitted' ? 'Receipts with Finance' : a.st === 'back' ? 'Sent back' : a.overdue ? 'Overdue' : 'Due ' + a.dueOn])), ['Total', '', '', '', T(R.advancesT), '', '']) : '<p class=none>All advances are accounted for.</p>')}
+${sec(8, 'Advances not yet accounted for', R.advances.length ? R.advances.length + ' · ' + T(R.advancesT) : '', R.advances.length ? table(['Who', 'Request', 'Project', 'Paid on', '>Amount', '>Days', 'Status'], R.advances.map(a => tr([a.who, a.id, a.where, a.paidOn, R0(a.paid), { r: String(a.days) }, a.st === 'submitted' ? 'Receipts with Finance' : a.st === 'back' ? 'Sent back' : a.dueText])), ['Total', '', '', '', T(R.advancesT), '', '']) : '<p class=none>All advances are accounted for.</p>')}
 <div class=sign><div class=sig><span>Prepared by (Finance)</span><b>${esc(R.preparedBy)}</b><span>Sign · ${esc(R.preparedAt || 'time')}</span></div><div class=sig><span>Received by Management</span><b>&nbsp;</b><span>Sign · date</span></div></div>
 </div>
 <div class=foot><span>${COMPANY.box}</span><span>${esc(R.ref)} · Trinity Mark 360</span></div>
@@ -301,16 +308,18 @@ ${sec(8, 'Advances not yet accounted for', R.advances.length ? R.advances.length
   },
   // Send to the boss: keep a snapshot of the day, file the report in Reports for Management (with a
   // notification) and open WhatsApp with a short summary.
-  async sendDailyFloat(D) {
+  // With opts.shared the phone's share sheet already sent the text (navigator.share), so WhatsApp is not opened.
+  async sendDailyFloat(D, opts) {
     if ((this.state.role || 'ceo') !== 'finance') return 'Finance sends the daily float report';
     D = D || this.fToday();
     const R0 = this.dailyFloat(D), text = this.floatSummaryText(R0);
-    try { window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener'); } catch (e) { /* pop-up blocked */ }
+    if (!(opts && opts.shared)) { try { window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener'); } catch (e) { /* pop-up blocked */ } }
     const me = this.me();
     this.setFloat({ closes: Object.assign({}, this.fl().closes || {}, { [D]: { open: R0.open, in: R0.in, out: R0.out, close: R0.close, sentAt: this.fToday() + ' ' + tzTime(this.nowDate()), by: me.k } }) });
     const html = this.floatReportHtml(this.dailyFloat(D));
     let file = null; try { if (typeof File !== 'undefined') file = new File([html], 'Daily float report ' + D + '.html', { type: 'text/html' }); } catch (e) { file = null; }
-    return this.sendReport({ to: [this.ROLES.ceo.k], kind: 'daily', title: 'Daily float report · ' + dayLabel(D), summary: text, file });
+    // Management and the General Manager both receive it (a notification each, and the report in Reports).
+    return this.sendReport({ to: [this.ROLES.ceo.k, ...(this.ROLES.gm && this.ROLES.gm.k !== this.ROLES.ceo.k ? [this.ROLES.gm.k] : [])], kind: 'daily', title: 'Daily float report · ' + dayLabel(D), summary: text, file });
   },
 
   // ---- Advances: the person accounts for the money; Finance accepts or sends it back.
@@ -320,7 +329,7 @@ ${sec(8, 'Advances not yet accounted for', R.advances.length ? R.advances.length
     if (r.rec.st !== 'submitted') return 'These receipts are not waiting to be checked';
     note = String(note || '').trim(); if (!note) return 'Say what needs fixing';
     this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { rec: Object.assign({}, q.rec, { st: 'back', backNote: note, backBy: this.me().k, backAt: this.fToday() }) }) : q)) }));
-    this.notify({ to: r.who, ic: 'receipt', t: 'Receipts sent back · ' + r.id, s: note + ' · from ' + this.me().n, go: 'requests' });
+    this.notify({ to: r.who, ic: 'receipt', t: 'Receipts sent back · ' + r.id, s: note + ' · from ' + this.me().n, go: 'request:' + r.id });
     this.toast('Sent back to ' + this.av(r.who).n);
     return '';
   },
@@ -330,7 +339,7 @@ ${sec(8, 'Advances not yet accounted for', R.advances.length ? R.advances.length
     const today = this.fToday(), due = this.accountDays(), me = this.me().k, fin = (this.state.role || 'ceo') === 'finance';
     const list = (this.state.reqs || []).filter(r => r.st === 'paid' && r.paidOn && (!r.rec || r.rec.st === 'back') && daysBetween(r.paidOn, today) >= due && r.remindOn !== today && (fin || r.who === me));
     if (!list.length) return 0;
-    list.forEach(r => this.notify({ to: r.who, ic: 'receipt', t: 'Account for ' + r.id + ' · ' + this.fmtT(r.paidAmt || r.amt) + ' · overdue', s: 'Paid ' + dayLabel(r.paidOn) + ' · add what you spent, the receipts and the change', go: 'requests' }));
+    list.forEach(r => this.notify({ to: r.who, ic: 'receipt', t: 'Account for ' + r.id + ' · ' + this.fmtT(r.paidAmt || r.amt) + ' · ' + (daysBetween(r.paidOn, today) > due ? 'overdue' : 'due today'), s: 'Paid ' + dayLabel(r.paidOn) + ' · add what you spent, the receipts and the change', go: 'request:' + r.id }));
     const ids = list.map(r => r.id);
     this.setState(x => ({ reqs: x.reqs.map(q => (ids.includes(q.id) ? Object.assign({}, q, { remindOn: today }) : q)) }));
     return list.length;
@@ -351,7 +360,7 @@ ${sec(8, 'Advances not yet accounted for', R.advances.length ? R.advances.length
 // Values for the Float page (Finance and Management record; the GM views).
 export function floatVals(s) {
   const role = s.role || 'ceo';
-  if (!['finance', 'ceo', 'gm'].includes(role)) return { FL: null, floatNudge: null };
+  if (!['finance', 'ceo', 'gm'].includes(role)) return { FL: null, floatNudge: null, PAYQ: null };
   const today = this.fToday(), book = this.floatBook(), td = this.floatDay(today, book), f = this.fmtT.bind(this);
   const sg = v => (v < 0 ? '−' : '') + f(Math.abs(v));
   const canEdit = this.canFloat(), entries = this.pt().entries;
@@ -359,7 +368,7 @@ export function floatVals(s) {
   const line = l => {
     const e = l.kind === 'expense' ? entries.find(x => x.id === l.id) : null;
     return { id: l.id, kind: l.kind, time: l.time || '', dir: l.dir, amt: (l.dir === 'in' ? '+' : '−') + f(l.amt), raw: l.amt, void: !!l.void, ic: ICON[l.kind] || 'wallet',
-      what: l.kind === 'float' ? 'Float from Management' : l.kind === 'request' ? (l.cat || 'Request') + ' · ' + l.ref : l.kind === 'charge' ? 'Charges · ' + l.ref : l.kind === 'returned' ? 'Change returned · ' + l.ref : l.cat + (l.what ? ' · ' + l.what : ''),
+      what: l.kind === 'float' ? 'Float received from Management' : l.kind === 'request' ? (l.cat || 'Request') + ' · ' + l.ref : l.kind === 'charge' ? 'Charges · ' + l.ref : l.kind === 'returned' ? 'Change returned · ' + l.ref : l.cat + (l.what ? ' · ' + l.what : ''),
       where: l.kind === 'float' ? (l.ref || '') : this.projLabel(l.p), who: l.who || '', method: l.method || '', ref: l.ref || '', by: l.by ? this.av(l.by).n : '', p: l.p || '',
       photo: e && e.photo ? () => this.openDoc({ n: e.photo.name, url: e.photo.url, path: e.photo.path }) : null,
       voidInfo: e && e.void ? 'Void · ' + e.void.reason + ' · ' + this.av(e.void.by).n + ' ' + e.void.at : '',
@@ -367,7 +376,7 @@ export function floatVals(s) {
       expense: e ? { amt: String(e.amt), cat: e.cat, note: e.what || '', p: e.p || '', who: e.who || '', method: e.method || 'Cash', fee: e.fee ? String(e.fee) : '', at: e.at } : null,
       canEdit: canEdit && !!e && !e.void && e.at === today, canVoid: canEdit && !!e && !e.void,
       edit: x => this.editExpense(l.id, x), doVoid: r => this.voidExpense(l.id, r),
-      openReq: l.src === 'req' ? () => this.go('requests', { reqSel: l.ref, reqFilter: 'all' }) : null };
+      openReq: l.src === 'req' ? () => this.openReq(l.ref) : null };
   };
   const dayView = D => { const d = this.floatDay(D, book); return { D, label: dayLabel(D), isToday: D === today, open: sg(d.open), in: f(d.in), out: f(d.out), close: sg(d.close), neg: d.close < 0, lines: d.lines.slice().reverse().map(line), sent: !!this.floatSent(D) }; };
   const W = this.floatWaiting(), adv = this.floatAdvances();
@@ -375,19 +384,32 @@ export function floatVals(s) {
   const monthStart = today.slice(0, 8) + '01', start = book.length ? book[0].at : today;
   const proj = range => { const [a, b] = range === 'month' ? [monthStart, today] : range === 'all' ? [start, today] : [today, today];
     const rows = this.floatByProject(a, b, true), t = k => rows.reduce((x, r) => x + r[k], 0);
-    return { rows: rows.map(r => ({ p: r.p, name: r.name, requests: f(r.net), expenses: f(r.expenses), charges: f(r.charges), total: f(r.total), returned: r.returned ? f(r.returned) : '' })), total: { requests: f(t('net')), expenses: f(t('expenses')), charges: f(t('charges')), total: f(t('total')) } }; };
+    // Requests = what was paid out; change returned shows on its own line; the total is net of it.
+    return { rows: rows.map(r => ({ p: r.p, name: r.name, requests: f(r.requests), expenses: f(r.expenses), charges: f(r.charges), chargesN: r.charges, total: f(r.total), returned: r.returned ? f(r.returned) : '', returnedN: r.returned })),
+      total: { requests: f(t('requests')), expenses: f(t('expenses')), charges: f(t('charges')), returned: f(t('returned')), returnedN: t('returned'), total: f(t('total')) } }; };
   const report = D => { const R = this.dailyFloat(D); return Object.assign({}, R, { text: this.floatSummaryText(R), sentLine: R.sent ? 'Sent to Management ' + R.sent.sentAt + ' · ' + this.av(R.sent.by).n : '' }); };
   const nudge = role === 'finance' && this.fl().grants.length && tzHour(this.nowDate()) >= 18 && !this.floatSent(today)
     ? { t: 'Send today’s float report', s: 'Closing balance ' + sg(td.close) + ' · it goes to Management with the PDF', go: () => this.go('float', { flView: 'report', flDay: today }) } : null;
+  // Approved requests waiting for payment: each opens the payment confirm sheet.
+  const waitList = reqs.filter(r => r.st === 'approved').map(r => ({ id: r.id, who: this.av(r.who).n, what: this.reqWhat(r), where: this.projLabel(r.p), amtT: f(r.amt), via: r.pay && r.pay.by ? r.pay.by : '', pay: () => this.setState({ floatSheet: null, paySheet: r.id }) }));
+  // Requests waiting for Finance's Verify step (Finance only): Verify sends them on, Send back returns them with a reason.
+  const verify = role !== 'finance' ? [] : this.visibleReqs(s).filter(r => r.st === 'pending' && r.step === 3).map(r => ({ id: r.id, who: this.av(r.who).n, what: this.reqWhat(r), amtT: f(r.amt),
+    verify: () => this.decide(r, true), open: () => this.openReq(r.id),
+    sendBack: () => { let why = ''; try { why = window.prompt('Send ' + r.id + ' back to ' + this.av(r.who).first + ': what needs fixing?', ''); } catch (e) { why = ''; } why = String(why || '').trim(); if (!why) return 'Say what needs fixing'; this.decide(r, false, why); return ''; } }));
+  // The open sheet lives in the app state, so the phone's back button closes it (see onPopState).
+  const closeSheet = force => { if (!force && this._floatDirty && !this.confirm('Discard this expense? What you typed is not saved.')) return false; this._floatDirty = false; this.setState({ floatSheet: null }); return true; };
   return {
     floatNudge: nudge,
+    PAYQ: this.payVals(s),
     FL: {
+      sheet: s.floatSheet || null, setSheet: x => { this._floatDirty = false; this.setState({ floatSheet: x }); }, closeSheet, setDirty: d => { this._floatDirty = !!d; },
+      waitList, verify, verifyN: verify.length, goReceipts: () => this.go('receipts'),
       role, canEdit, canSend: role === 'finance', today, yesterday: shiftDay(today, -1), minDay: shiftDay(today, -7), start,
       view: s.flView || 'day', setView: k => this.setState({ flView: k }), day: s.flDay && s.flDay <= today ? s.flDay : today, setDay: k => this.setState({ flDay: k > today ? today : k }), shift: shiftDay,
       balance: sg(td.close), balanceN: td.close, neg: td.close < 0, todayLine: { open: sg(td.open), in: f(td.in), out: f(td.out) },
       dayView, line, proj, report, dayLabel,
       waiting: { n: W.n, total: f(W.total), go: () => this.go('requests', { reqFilter: 'approved' }) },
-      advances: adv.map(a => Object.assign({}, a, { paidT: f(a.paid), open: () => this.go('requests', { reqSel: a.id, reqFilter: 'all' }) })), overdueN: adv.filter(a => a.overdue).length,
+      advances: adv.map(a => Object.assign({}, a, { paidT: f(a.paid), open: () => this.openReq(a.id) })), overdueN: adv.filter(a => a.overdue).length, accountDays: this.accountDays(),
       toCheck: toCheck.map(r => this.recView(r)),
       cats: EXP_CATS, methods: METHODS, backVia: BACK_VIA,
       projects: [{ v: '', l: 'Office' }, ...(s.projects || []).filter(p => p.st !== 'done').map(p => ({ v: p.id, l: p.client + ' · ' + p.name }))],
@@ -395,8 +417,22 @@ export function floatVals(s) {
       staffReqs: k => this.floatStaffReqs(k),
       book: (a, b) => this.pettyBook(a, b).map(r => Object.assign({}, r, { amtT: r.bf || r.cd ? '' : (r.dir === 'in' ? '+' : '−') + n0(r.amt), balT: (r.bal < 0 ? '−' : '') + n0(Math.abs(r.bal)), neg: r.bal < 0, dayT: dayLabel(r.at, false) })),
       exportBook: (a, b) => this.exportPettyBook(a, b), monthStart,
-      addExpense: x => this.addExpense(x), receive: x => this.receiveFloat(x),
-      print: D => this.printDailyFloat(D), send: D => this.sendDailyFloat(D)
+      addExpense: x => this.addExpense(x), receive: x => this.receiveFloat(x), canGive: role === 'ceo', canAsk: role === 'finance',
+      ask: x => this.askFloat(num(x.amt), x.note), shortfall: Math.max(0, W.total - td.close), asked: this.fl().asks.find(a => a.st === 'open') || null,
+      print: D => this.printDailyFloat(D), send: (D, o) => this.sendDailyFloat(D, o), shareUrl: typeof location !== 'undefined' ? location.origin + '/?go=float' : ''
     }
   };
+}
+
+// The payment confirm sheet (Float's "Waiting to be paid" list and the Requests page's "Mark paid"): the
+// amount (editable, up to what was asked), how it is paid (from the request), the charges and the day.
+export function payVals(s) {
+  const r = s.paySheet ? (s.reqs || []).find(x => x.id === s.paySheet) : null;
+  if (!r || r.st !== 'approved' || !this.canPay()) return null;
+  const by = r.pay && r.pay.by, method = METHODS.includes(by) ? by : by ? (r.pay.bank || /bank/i.test(by) ? 'Bank' : 'M-Pesa') : 'Cash';
+  return { id: r.id, who: this.av(r.who).n, first: this.av(r.who).first, what: this.reqWhat(r), where: this.projLabel(r.p), asked: r.amt, askedT: this.fmtT(r.amt),
+    payTo: r.pay ? [r.pay.by, r.pay.bank, r.pay.name, r.pay.no].filter(Boolean).join(' · ') : '', method, methods: METHODS, today: this.fToday(), minDay: this.floatMinDay(),
+    floatLeft: this.fl().grants.length ? this.floatBalance() : null,
+    pay: x => { const m = this.payReq(r, x.amt, x.method === 'Cash' ? '' : x.fee, { method: x.method, date: x.at }); if (!m) this.setState({ paySheet: null }); return m; },
+    close: () => this.setState({ paySheet: null }) };
 }

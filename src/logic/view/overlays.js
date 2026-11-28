@@ -9,7 +9,9 @@ export function overlayVals(s, IC) {
   // Each field becomes chips, faces, a searchable list, an amount, a file drop or text (see FormFields).
   const setF = k => val => this.setState(x => ({form:Object.assign({}, x.form, {[k]:val}), modalErr:''}));
   const isPerson = v => !!(this.PPL[v] || (this.people || {})[v]);
-  V.modalFields = m ? m.fields.filter(f => !f.when || f.when(s.form || {})).map(f => {
+  // Money requests: a small switch at the top changes the kind of request and keeps what was typed.
+  const typeField = m && m.typeSwitch ? [{k:'_type', l:'Type of request', kind:'chips', v:m.act, opts:m.typeSwitch, set:a => this.switchReqType(a)}] : [];
+  V.modalFields = m ? typeField.concat(m.fields.filter(f => !f.when || f.when(s.form || {})).map(f => {
     if (f.type === 'file') return {k:f.k, l:f.l, kind:'file', accept:f.accept, hint:f.hint, attached:s.form._file ? (s.form.n || 'File') + ' · ' + this.fmtSize(s.form._file.size) : '', uploading:!!s.form._uploading, on:e => this.attachFile(e.target.files && e.target.files[0])};
     // A list of items (description, quantity × unit price) with a live total; the form keeps the rows as an array.
     if (f.type === 'items') {
@@ -26,12 +28,12 @@ export function overlayVals(s, IC) {
     }
     if (f.type === 'number' && /\(TZS\)/.test(f.l)) return Object.assign(base, {kind:'money'});
     return Object.assign(base, {kind:f.area || /^(purpose|note|message)$/.test(f.k) ? 'area' : 'text'});
-  }) : [];
+  })) : [];
   V.modalClose = () => this.setState({modal:null});
   V.modalSubmit = () => this.submitModal();
   V.modalKey = e => { if (e.key === 'Enter') this.submitModal(); };
   V.stop = e => e.stopPropagation();
-  const pg = [['today','My work','checkSquare'],['dashboard','Dashboard','grid'],['briefing','Monday Briefing','presentation'],['projects','Projects','folder'],['requests','Requests & Floats','banknote'],['finance','Finance','chart'],['store','Store & Inventory','package'],['procurement','Procurement','cart'],['clients','Clients & leads','users'],['staff','Staff & Reports','user'],['notifications','Notifications','bell'],['field','Field capture app','camera'],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['logistics','Logistics','truck'],['documents','Documents','paperclip'],['reports','Reports','pie'],['calendar','Calendar','calendar'],['settings','Settings','settings'],['ceomobile','Mobile apps','phone']];
+  const pg = [['today','My work','checkSquare'],['dashboard','Dashboard','grid'],['briefing','Monday Briefing','presentation'],['projects','Projects','folder'],['requests','Pay & approve','banknote'],['finance','Finance','chart'],['store','Store & Inventory','package'],['procurement','Procurement','cart'],['clients','Clients & leads','users'],['staff','Staff & Reports','user'],['notifications','Notifications','bell'],['field','Field capture app','camera'],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['logistics','Logistics','truck'],['documents','Documents','paperclip'],['reports','Reports','pie'],['calendar','Calendar','calendar'],['settings','Settings','settings'],['ceomobile','Mobile apps','phone']];
   // Actions of parked sections (procurement, logistics, production) are left out.
   const acts = [['Create project','folder','project'],['Add task','checkSquare','task'],['Request money','banknote','req'],['Create invoice','fileText','invoice'],['Purchase request','cart','proc','procurement'],['New lead','users','lead'],['Create proposal','clipboard','proposal'],['Schedule meeting','calendar','meet'],['Schedule trip','truck','trip','logistics'],['New production job','printer','job','production']].filter(a => !a[3] || !this.isOff(a[3]));
   let items = [
@@ -55,7 +57,7 @@ export function overlayVals(s, IC) {
   V.onAiQ = e => this.setState({aiQ:e.target.value});
   V.aiKey = e => { if (e.key === 'Enter') this.askAI(); };
   V.aiSend = () => this.askAI();
-  V.aiSugs = ['Which projects are over budget?','What needs my approval?','Which stock is low?','Who has open floats?','Overdue invoices'].map(t => ({t, on:() => this.askAI(t)}));
+  V.aiSugs = ['Which projects are over budget?','What needs my approval?','Which stock is low?','Who still has money to account for?','Overdue invoices'].map(t => ({t, on:() => this.askAI(t)}));
   V.closeAI = () => this.setState({ai:false});
   V.aiScroll = el => { if (el) el.scrollTop = el.scrollHeight; };
   V.toasts = s.toasts;

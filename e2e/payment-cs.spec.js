@@ -94,14 +94,17 @@ test('Finance enters the amount paid; the request shows it; the approver sees ev
   await openAs(page, 'gm', 'requests', {}, false);
   await page.getByText(id).first().click();
   await expect(page.locator('.rq-det')).toContainText('Friday');
-  await expect(page.locator('.rq-pay')).toContainText('M-Pesa · Test Payee · 0754 123 456');
+  // Paid to the person asking by default (their name is filled in).
+  await expect(page.locator('.rq-pay')).toContainText('M-Pesa · Grace Mrema · 0754 123 456');
   // Approved; Finance pays part of it.
   await page.evaluate(id => { const d = JSON.parse(localStorage.getItem('tm360data')); d.reqs = d.reqs.map(r => (r.id === id ? Object.assign({}, r, { st: 'approved', step: 5 }) : r)); localStorage.setItem('tm360data', JSON.stringify(d)); }, id);
   await openAs(page, 'finance', 'requests', {}, false);
   await page.getByText(/^All ·/).click();
   await page.getByText(id).first().click();
-  await page.getByLabel('Amount paid').fill('120000');
-  await page.getByRole('button', { name: 'Mark paid · TZS 120,000' }).click();
+  await page.getByRole('button', { name: 'Mark paid · TZS 150,000' }).click();
+  const pay = page.getByRole('dialog', { name: 'Confirm payment' });
+  await pay.getByLabel('Amount paid').fill('120000');
+  await pay.getByRole('button', { name: 'Pay TZS 120,000' }).click();
   await expect(page.locator('.rq-paid')).toContainText('Paid TZS 120,000 of TZS 150,000');
   data = await saved(page);
   expect(data.reqs.find(r => r.id === id)).toMatchObject({ st: 'paid', paidAmt: 120000 });

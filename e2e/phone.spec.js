@@ -27,8 +27,9 @@ test('sign-in screen works like an app: show password, remember switch, one-tap 
   await expect(page.getByRole('alert')).toHaveText('Enter your first name (or email) and your password.');
   await expect(page.getByRole('button', { name: 'Google' })).toHaveCount(0);
   await page.getByRole('group', { name: 'Demo portals' }).getByRole('button', { name: 'Finance' }).click();
-  await expect(page.getByText('Rose Temba’s queue')).toBeVisible();
-  await expect(page.locator('nav')).toContainText('Queue');
+  // Finance opens on the Float.
+  await expect(page.getByText('Float balance')).toBeVisible();
+  await expect(page.locator('nav')).toContainText('Pay & approve');
   expect(await page.evaluate(() => scrollY)).toBe(0);
 });
 
@@ -71,8 +72,9 @@ test.fixme('More, profile and form sheets: open, swipe down, back closes them', 
   await expect(page.getByRole('dialog', { name: 'Account' })).toContainText('Daniel K.');
   await expect(page.getByRole('dialog').getByRole('button', { name: 'Store', exact: true })).toHaveCount(0);
   await page.getByRole('dialog').getByRole('button', { name: 'Finance', exact: true }).click();
-  await expect(page.getByText('Rose Temba’s queue')).toBeVisible();
-  await expect(page.locator('nav')).toContainText('Queue');
+  // Finance opens on the Float.
+  await expect(page.getByText('Float balance')).toBeVisible();
+  await expect(page.locator('nav')).toContainText('Pay & approve');
 
   await page.getByRole('button', { name: /^Account/ }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sign out' }).click();
@@ -157,10 +159,10 @@ test.fixme('search and the assistant are one tap away', async ({ page }) => {
   await page.getByPlaceholder('Search pages, projects, stock, or type an action…').press('Enter');
   await expect(title(page)).toHaveText('Calendar');
   await page.getByRole('button', { name: 'Trinity Intelligence' }).click();
-  await page.getByRole('button', { name: 'Who has open floats?' }).click();
-  await expect(page.getByText(/Open staff floats total/)).toBeVisible();
+  await page.getByRole('button', { name: 'Who still has money to account for?' }).click();
+  await expect(page.getByText(/Staff still to account for/)).toBeVisible();
   await page.goBack();
-  await expect(page.getByText(/Open staff floats total/)).toHaveCount(0);
+  await expect(page.getByText(/Staff still to account for/)).toHaveCount(0);
 });
 
 // Removed or redesigned in this phase: rewrite this test.
@@ -251,4 +253,30 @@ test.fixme('the sidebar opens as a drawer', async ({ page }) => {
     await expect(page.locator('aside')).toHaveCount(0);
     await expect(btn(page, 'Schedule meeting')).toBeVisible();
   });
+});
+
+// Finance on the phone: Save & next is ready for the next amount, back closes a sheet (not the page),
+// and paying from "Waiting to be paid" asks to confirm first.
+test('Finance float on the phone: save & next, back closes the sheet, pay with a confirm', async ({ page }) => {
+  page.on('dialog', d => d.accept());
+  await openAs(page, 'finance', 'float');
+  await page.getByRole('button', { name: 'Daily expense' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Daily expense' });
+  for (const [amt, cat] of [['5000', 'Water'], ['12000', 'Transport']]) {
+    await page.keyboard.type(amt);
+    await sheet.getByRole('radio', { name: cat }).click();
+    await sheet.getByRole('button', { name: 'Save & next' }).click();
+    await expect(sheet.getByLabel('Expense amount')).toHaveValue('');
+    await expect(sheet.getByLabel('Expense amount')).toBeFocused();
+  }
+  await page.goBack();
+  await expect(sheet).toHaveCount(0);
+  await expect(page.locator('.fl-bal')).toBeVisible();
+  await page.getByRole('button', { name: /^Waiting to be paid/ }).click();
+  await page.getByRole('dialog', { name: 'Waiting to be paid' }).getByRole('button', { name: 'Pay', exact: true }).first().click();
+  const pay = page.getByRole('dialog', { name: 'Confirm payment' });
+  await expect(pay).toBeVisible();
+  await pay.getByRole('button', { name: /^Pay TZS/ }).click();
+  await expect(page.getByText(/they must account for it/).last()).toBeVisible();
+  await expect(pay).toHaveCount(0);
 });

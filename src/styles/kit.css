@@ -1617,3 +1617,36 @@
 .ac-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; } .ac-items li { display: flex; justify-content: space-between; gap: 10px; }
 .ac-check { background: #fff; }
 @media (max-width: 560px) { .ac-row { grid-template-columns: minmax(0, 1fr) auto; } .ac-row .ff-search { grid-column: 1 / -1; } }
+/* Today's float on the Management / GM home */
+.hd-float .hd-fbal { font-size: clamp(24px, 7vw, 32px); letter-spacing: -.02em; color: #2B1459; white-space: nowrap; line-height: 1.1; } .hd-float .hd-fbal.is-neg { color: #B23A46; }
+.hd-float .hd-sent, .hd-float .hd-unsent { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 10px; white-space: nowrap; }
+.hd-float .hd-sent { background: #E6F4EC; color: #1F7549; } .hd-float .hd-unsent { background: #FBEDEE; color: #B23A46; }
+.hd-fl { margin: 0; display: grid; gap: 6px; } .hd-fl div { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; border-bottom: 1px solid #F3F0F7; padding-bottom: 6px; }
+.hd-fl dt { color: #6E6A7C; } .hd-fl dd { margin: 0; font-weight: 700; text-align: right; }
+.hd-fopen { height: 44px; width: 100%; }
+/* Float page: verify card, waiting list, by project on phones */
+.fl-verify .fl-srows li > span:first-child { cursor: pointer; flex: 1 1 auto; }
+.fl-vbtns { display: flex; gap: 6px; flex: none; }
+.fl-wait li { flex-wrap: wrap; } .fl-wait li > span { flex: 1 1 160px; } .fl-wait .k-btn { min-height: 40px; }
+.fl-acts button.is-on { box-shadow: 0 0 0 3px rgba(109,60,194,.25); border-color: #6D3CC2; }
+.fl-hint { margin: 0; }
+.fl-prows { list-style: none; margin: 0; padding: 0; display: grid; }
+.fl-prows li { display: grid; gap: 3px; padding: 10px 0; border-top: 1px solid #F0EDF5; } .fl-prows li:first-child { border-top: none; }
+.fl-pname { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-pfig { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: #6E6A7C; } .fl-pfig b { color: #17152A; white-space: nowrap; }
+.fl-pfig .fl-ptot { margin-left: auto; } .fl-pfig .fl-ptot b { color: #2B1459; font-size: 13.5px; }
+.fl-pret { font-size: 12.5px; color: #1F7549; } .fl-pret b { white-space: nowrap; }
+.fl-ptotal { background: #F7F5FB; border-radius: 10px; padding: 10px !important; }
+.fl-pret-row td { color: #1F7549; font-size: 12.5px; }
+.fh-note { margin: 0; }
+/* Phone tap targets: at least 40px */
+@media (max-width: 699px) {
+  .fl-chip { min-height: 40px; }
+  .fl-tap { min-height: 40px; min-width: 48px; padding: 0 8px; }
+  .k-chips button { min-height: 40px; }
+  .rq-tab { min-height: 40px; }
+  .fp-verify { height: 40px !important; min-width: 88px; }
+  .fl-vbtns .k-btn { min-height: 40px; }
+  .rq-type .ff-chips button { min-height: 40px; }
+}
+.fl-report { scroll-margin-top: 80px; }

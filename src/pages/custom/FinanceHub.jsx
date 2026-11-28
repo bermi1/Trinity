@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { PageHead, Btn, Pill, Empty } from '../../ui/kit';
 import { Reports, CashBook, CashChart, Periods } from './FinanceReports';
 import { Obligations } from './Obligations';
-import FloatPage from './FloatPage';
+import FloatPage, { Receipts } from './FloatPage';
 
 const ST = { draft: ['Draft', '#F1EEF6', '#6E6A7C'], sent: ['Sent', '#E9EFFA', '#3559A8'], partial: ['Part paid', '#FBF1DD', '#8A6414'], overdue: ['Overdue', '#FBEDEE', '#B23A46'], paid: ['Paid', '#E6F4EC', '#1F7549'], cancelled: ['Cancelled', '#EDEBF0', '#6E6A7C'] };
 const n = v => Math.round(+v || 0).toLocaleString('en-US');
@@ -175,7 +175,7 @@ function Editor({ F }) {
 // Finance: the overview, invoices (create, sign, send, payments) and the float ledger.
 export default function FinanceHub({ v }) {
   const F = v.FH, R = v.REP;
-  const HEAD = { overview: ['Finance', 'Money in and out, who owes us and what needs attention.'], invoices: ['Invoices', 'Create, sign, send and record payments.'], cash: ['Cash book', 'Every shilling in and out, with a running balance.'], reports: ['Reports', 'Income and spending by period, category, client and project.'], float: ['Float', 'The money from Management: what was paid from it, what is left, and the daily report.'] }[F.tab];
+  const HEAD = { overview: ['Finance', 'Money in and out, who owes us and what needs attention.'], invoices: ['Invoices', 'Create, sign, send and record payments.'], cash: ['Company cash book', 'All money in and out of the company (clients, bank, float). The float balance is on the Float page.'], reports: ['Reports', 'Income and spending by period, category, client and project.'], float: ['Float', 'The money from Management: what was paid from it, what is left, and the daily report.'], receipts: ['Receipts', 'Receipts to check, and the money staff still have to account for.'] }[F.tab];
   const openInv = F.invoices.filter(i => i.st !== 'paid' && !i.cancelled).slice(0, 6);
   // Cancelled invoices have their own filter; in "All" they come last, greyed.
   const list = F.invoices.filter(i => (F.filter === 'open' ? i.st !== 'paid' && !i.cancelled : F.filter === 'paid' ? i.st === 'paid' : F.filter === 'sign' ? i.needsSign : F.filter === 'cancelled' ? i.cancelled : true))
@@ -185,7 +185,7 @@ export default function FinanceHub({ v }) {
       <PageHead kicker="Finance" title={F.showTabs ? 'Finance & Invoices' : HEAD[0]} sub={F.showTabs ? 'Money in and out, invoices, the cash book, reports and the float.' : HEAD[1]}>
         {F.canInvoice && (F.tab === 'overview' || F.tab === 'invoices') ? <Btn kind="dark" onClick={F.newInvoice}>New invoice</Btn> : null}
       </PageHead>
-      {F.showTabs ? <div className="rc-smart fh-tabs" role="tablist">{[['overview', 'Overview'], ['invoices', 'Invoices'], ...(R ? [['cash', 'Cash book'], ['reports', 'Reports']] : []), ...(v.FL ? [['float', 'Float']] : [])].map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={F.tab === k} className={F.tab === k ? 'is-on' : ''} onClick={() => F.setTab(k)}><span>{l}</span></button>)}</div> : null}
+      {F.showTabs ? <div className="rc-smart fh-tabs" role="tablist">{[['overview', 'Overview'], ['invoices', 'Invoices'], ...(R ? [['cash', 'Company cash book'], ['reports', 'Reports']] : []), ...(v.FL ? [['float', 'Float']] : [])].map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={F.tab === k} className={F.tab === k ? 'is-on' : ''} onClick={() => F.setTab(k)}><span>{l}</span></button>)}</div> : null}
 
       {v.floatNudge && F.tab !== 'float' ? <button type="button" className="fl-nudge" onClick={v.floatNudge.go}><b>{v.floatNudge.t}</b><small>{v.floatNudge.s}</small></button> : null}
       {F.tab === 'overview' ? (
@@ -204,7 +204,7 @@ export default function FinanceHub({ v }) {
         </>
       ) : null}
 
-      {F.tab === 'cash' && R ? <CashBook R={R} canAdd={F.moneyTop} /> : null}
+      {F.tab === 'cash' && R ? <>{F.showTabs ? <p className="k-sub fh-note">All money in and out of the company (clients, bank, float). The float balance is on the Float page.</p> : null}<CashBook R={R} canAdd={F.moneyTop} /></> : null}
       {F.tab === 'reports' && R ? <Reports R={R} /> : null}
       {F.tab === 'invoices' ? (
         <section className="fh-card">
@@ -214,6 +214,7 @@ export default function FinanceHub({ v }) {
       ) : null}
 
       {F.tab === 'float' && v.FL ? <FloatPage v={v} /> : null}
+      {F.tab === 'receipts' && v.FL ? <Receipts F={v.FL} /> : null}
       {F.editing ? <Editor key={F.editing} F={F} /> : null}
     </>
   );

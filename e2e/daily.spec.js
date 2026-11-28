@@ -110,8 +110,9 @@ test('a small project request goes GM → Finance and skips Management', async (
   await expect(page.getByText('Not needed for this request').first()).toBeVisible();
 
   await switchTo(page, 'Finance portal');
-  const row = page.locator('div').filter({ hasText: /^Grace Mrema/ }).filter({ has: page.getByRole('button', { name: 'Verify & send to Management' }) }).last();
-  await btn(row, 'Verify & send to Management').click();
+  // Finance opens on the Float: the requests waiting for its Verify step are at the top.
+  const row = page.getByRole('region', { name: 'Requests to verify' }).locator('li', { hasText: 'Grace Mrema' }).first();
+  await btn(row, 'Verify').click();
   await toast(page, 'REQ-0427 approved · sent to Finance for payment');
   const r = (await saved(page)).reqs.find(x => x.id === 'REQ-0427');
   expect(r).toMatchObject({ step: 5, st: 'approved' });

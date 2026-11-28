@@ -13,7 +13,7 @@ export default function FinancePortalPage({ v }) {
           {v.FP.title}
         </h1>
         <span style={{ fontSize: "13px", color: "#6E6A7C" }}>
-          Verify requests, chase invoices, watch open floats
+          Verify requests, chase invoices, check money to account for
         </span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: "14px" }}>
@@ -48,8 +48,8 @@ export default function FinancePortalPage({ v }) {
                     <span>{r.cat}</span>{" · "}<span>{r.proj}</span>
                   </span>
                 </div>
-                <button className="tm-h2" onClick={r.verify} style={{ height: "34px", padding: "0 14px", border: "none", borderRadius: "8px", background: "#2B1459", color: "#fff", fontSize: "12.5px", fontWeight: "600" }}>
-                  Verify & send to Management
+                <button className="tm-h2 fp-verify" onClick={r.verify} style={{ height: "34px", padding: "0 14px", border: "none", borderRadius: "8px", background: "#2B1459", color: "#fff", fontSize: "12.5px", fontWeight: "600" }}>
+                  Verify
                 </button>
               </div>
             </Fragment>
@@ -94,7 +94,7 @@ export default function FinancePortalPage({ v }) {
       </div>
       <div style={{ background: "#fff", border: "1px solid #E8E4EF", borderRadius: "14px", padding: "18px 20px", display: "flex", flexDirection: "column", gap: "10px" }}>
         <h3 style={{ margin: "0", fontSize: "15px", fontWeight: "700" }}>
-          Open floats to reconcile
+          Money to account for
         </h3>
         {(v.FP.floats || []).map((f, _i0) => (
           <Fragment key={_i0}>
@@ -114,7 +114,7 @@ export default function FinancePortalPage({ v }) {
                 {f.amt}
               </b>
               <button className="tm-h3" onClick={f.rec} style={{ height: "32px", padding: "0 12px", border: "1px solid #E8E4EF", background: "#fff", borderRadius: "8px", fontSize: "12px", fontWeight: "600" }}>
-                Reconcile
+                Check
               </button>
             </div>
           </Fragment>

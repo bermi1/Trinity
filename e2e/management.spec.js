@@ -18,7 +18,7 @@ test.fixme('dashboard: figures, chart, shortcuts and every quick action', async 
 
   // KPI card and donut legend go to the right place.
   await page.getByText('Pending approvals', { exact: true }).click();
-  await expect(page.getByText('Requests & Floats').first()).toBeVisible();
+  await expect(page.getByText('Approvals').first()).toBeVisible();
   await side(page, 'Dashboard');
   await page.locator('div').filter({ hasText: /^At risk2$/ }).click();
   await expect(btn(page, 'At risk · 2')).toHaveCSS('background-color', 'rgb(43, 20, 89)');
@@ -158,7 +158,7 @@ test.fixme('menus stay short: everyday pages first, the rest folded under More',
     ceo: ['Dashboard', 'Daily to-do', 'Monday Briefing', 'Approvals', 'Projects', 'Tasks', 'CRM', 'Finance & Invoices'],
     gm: ['Dashboard', 'Daily to-do', 'Monday Briefing', 'Approvals', 'Projects', 'Tasks', 'CRM', 'Finance & Invoices'],
     staff: ['My Day', 'Daily to-do', 'My tasks', 'My requests', 'Field capture'],
-    finance: ['My queue', 'Daily to-do', 'Finance & Invoices', 'Requests & Floats'],
+    finance: ['Float', 'Pay & approve', 'Receipts', 'My queue'],
     reception: ['Front desk', 'Daily to-do', 'Meeting rooms', 'Calendar', 'Client enquiries'],
     production: ['Print floor', 'Daily to-do']
   };

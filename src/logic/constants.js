@@ -54,7 +54,7 @@ export const ROLES = {
   creative:{k:'RS',n:'Rehema Said',t:'Creative Lead',label:'Creative',home:'dept',email:'creative@trinitymark.co.tz'},
   operations:{k:'MM',n:'Michael Mushi',t:'Operations Manager',label:'Operations',home:'dept',email:'operations@trinitymark.co.tz'},
   staff:{k:'GM',n:'Grace Mrema',t:'Field Officer',label:'Staff',home:'staffportal',email:'grace.m@trinitymark.co.tz'},
-  finance:{k:'RT',n:'Rose Temba',t:'Finance Officer',label:'Finance',home:'financeportal',email:'rose.t@trinitymark.co.tz'},
+  finance:{k:'RT',n:'Rose Temba',t:'Finance Officer',label:'Finance',home:'float',email:'rose.t@trinitymark.co.tz'},
   reception:{k:'AM',n:'Aisha Mbwana',t:'Front Office',label:'Reception',home:'reception',email:'reception@trinitymark.co.tz'},
   store:{k:'FH',n:'Fatma Hassan',t:'Storekeeper',label:'Store',home:'storekeeper',email:'store@trinitymark.co.tz'},
   production:{k:'JA',n:'Juma Ally',t:'Print Production Lead',label:'Printing',home:'dept',email:'print@trinitymark.co.tz'},
@@ -68,7 +68,8 @@ export const TABS = {
   operations:[['dept','Home','home'],['projects','Projects','folder'],['today','My work','checkSquare'],['requests','Requests','banknote']],
   // Staff quick buttons: Requests, Reports and Calendar; everything else is under More.
   staff:[['requests','Requests','banknote'],['reporting','Reports','fileText'],['meetings','Calendar','calendar']],
-  finance:[['financeportal','Queue','wallet'],['float','Float','wallet'],['requests','Requests','banknote'],['finance','Finance','chart']],
+  // Finance on the phone: the Float (home), paying and approving, checking receipts; the rest is under More.
+  finance:[['float','Float','wallet'],['requests','Pay & approve','banknote'],['receipts','Receipts','receipt']],
   reception:[['reception','Desk','message'],['today','My work','checkSquare'],['clients','Clients','users'],['requests','Requests','banknote']],
   store:[['storekeeper','Store','home'],['today','My work','checkSquare'],['requests','Requests','banknote'],['projects','Projects','folder']],
   pa:[['meetings','Calendar','calendar'],['projects','Projects','folder'],['today','My work','checkSquare'],['clients','Clients','users']],

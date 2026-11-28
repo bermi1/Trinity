@@ -30,7 +30,8 @@ describe('sign in', () => {
     expect(screen.queryByRole('button', { name: 'Store' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Finance' }));
     expect(screen.queryByText('Not now')).toBeNull();
-    expect(screen.getByText('Rose Temba’s queue')).toBeTruthy();
+    // Finance opens on the Float (its home).
+    expect(screen.getAllByText('Float balance').length).toBeGreaterThan(0);
   });
 });
 
@@ -116,7 +117,7 @@ describe('requests', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /^All ·/ }));
     fireEvent.click(screen.getAllByText('REQ-0412')[0]);
-    expect(screen.getAllByText('Paid · float open').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^Paid · (to account for|accounted for)$/).length).toBeGreaterThan(0);
   });
 });
 

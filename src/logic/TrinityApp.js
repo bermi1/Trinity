@@ -21,7 +21,7 @@ import { deptMethods, deptVals } from './depts';
 import { crmMethods, crmVals, SOURCES } from './crm';
 import { projectMethods, projectVals, reqFlowMethods } from './projectview';
 import { financeMethods, financeVals, reportMethods, reportVals, parseFee, tzDay, tzTime } from './finance';
-import { floatMethods, floatVals, METHODS } from './float';
+import { floatMethods, floatVals, payVals, METHODS } from './float';
 import { homeVals } from './home';
 import { targetVals, targetMethods } from './targets';
 import { teamVals, teamMethods } from './team';
@@ -82,7 +82,7 @@ export default class TrinityApp extends Logic {
   componentDidMount() {
     this._key = e => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); this.setState(s => ({cmd:!s.cmd,cmdQ:''})); }
-      if (e.key === 'Escape') this.setState({cmd:false,ai:false,modal:null,menu:false,drawer:false});
+      if (e.key === 'Escape') { if (this.state.floatSheet && this._floatDirty && !this.confirm('Discard this expense? What you typed is not saved.')) return; this._floatDirty = false; this.setState({cmd:false,ai:false,modal:null,menu:false,drawer:false,floatSheet:null,paySheet:null}); }
     };
     this._rs = () => this.setState({w:window.innerWidth});
     window.addEventListener('keydown', this._key); window.addEventListener('resize', this._rs);
@@ -392,6 +392,7 @@ export default class TrinityApp extends Logic {
     const unread = this.myNotes(s).filter(n => !n.read).length, vreqs = this.visibleReqs(s), myReq = vreqs.filter(q => q.st === 'pending' && q.step === 4).length, openTasks = s.tasks.filter(t => t.st !== 'done').length;
     const srqN = s.requisitions.filter(q => q.st === 'pending' || q.st === 'partial').length;
     const rptN = (s.reports || []).filter(r => r.by !== this.me().k && this.reportVisibleTo(r, this.me().k) && !(r.readBy || {})[this.me().k]).length;
+    const recN = vreqs.filter(q => q.st === 'paid' && q.rec && q.rec.st === 'submitted').length;
     const lowN = s.stock.filter(i => i.q < i.min).length, finQ = vreqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === this.me().k && t.st !== 'done' && t.kind !== 'brief').length;
     // Each portal shows only what that person uses every day; everything else waits under "More".
     const mob = ['ceomobile','Mobile app','phone',0,{mobileRole:role}];
@@ -401,8 +402,10 @@ export default class TrinityApp extends Logic {
         ['More',[['calendar','Calendar','calendar'],['notifications','Notifications','bell',unread],['proposals','Sales & Proposals','clipboard'],['production','Production','printer'],['procurement','Procurement','cart'],['store','Store & Inventory','package'],['requisitions','Store requisitions','clipboard',srqN],['movements','Stock ledger','receipt'],['logistics','Logistics','truck'],['staff','Staff & Reports','user'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['ceomobile','Mobile apps','phone',0,{mobileRole:'ceo'}],['field','Field capture app','camera'],...(this.canSetup() ? [['company','Company setup','settings']] : []),...(this.canManageStaff() ? [['users','Users & access','shield']] : []),['settings','Settings','settings']], true]],
       staff:[['My work',[['staffportal','My Day','home'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['payslips','My payslips','wallet'],['today','My work','checkSquare',myOpen],['requests','My requests','banknote'],['field','Field capture','camera']]],
         ['More',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
-      finance:[['Finance',[['financeportal','My queue','wallet',finQ],['float','Float','wallet'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['briefing','Monday Briefing','presentation'],['today','My work','checkSquare',myOpen],['finance','Finance','chart'],['invoices','Invoices','fileText'],['cashbook','Cash book','receipt'],['freports','Finance reports','pie'],['requests','Requests & Floats','banknote']]],
-        ['More',[['proposals','Proposals','clipboard'],['procurement','Procurement','cart'],...company], true]],
+      // Finance every day: the Float, paying and approving, and checking receipts. Invoices, the Finance
+      // overview and the company cash book wait under More.
+      finance:[['Finance',[['float','Float','wallet',finQ],['requests','Pay & approve','banknote'],['receipts','Receipts','receipt',recN],['financeportal','My queue','checkSquare',finQ],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['briefing','Monday Briefing','presentation'],['today','My work','checkSquare',myOpen]]],
+        ['More',[['invoices','Invoices','fileText'],['finance','Finance','chart'],['cashbook','Company cash book','receipt'],['freports','Finance reports','pie'],['proposals','Proposals','clipboard'],['procurement','Procurement','cart'],...company.filter(i => i[0] !== 'briefing')], true]],
       reception:[['Front office',[['reception','Front desk','message'],['attendance','Staff check-in','clock'],['event','Event registration','clipboard'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['payslips','My payslips','wallet'],['today','My work','checkSquare',myOpen],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['clients','Client enquiries','users']]],
         ['More',[['staff','Staff directory','user'],['briefing','Monday Briefing','presentation'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
       store:[['Store',[['storekeeper','My store','home',lowN],['today','My work','checkSquare',myOpen],['requisitions','Requisitions','clipboard',srqN],['store','Inventory','package'],['movements','Stock ledger','receipt'],['procurement','Procurement','cart']]],
@@ -481,7 +484,7 @@ export default class TrinityApp extends Logic {
     // Finance tools: Float for Management and Finance; the rest also for the GM.
     if (page === 'finance' && !['ceo','gm','finance'].includes(role)) return home;
     // Separate finance pages belong to the Finance portal; Management and the GM use the tabs on Finance.
-    if (['invoices','cashbook','freports','float','petty'].includes(page) && role !== 'finance') return ['ceo','gm'].includes(role) ? 'finance' : home;
+    if (['invoices','cashbook','freports','float','petty','receipts'].includes(page) && role !== 'finance') return ['ceo','gm'].includes(role) ? 'finance' : home;
     return page;
   }
   // Opens a finance tool: its own page in the Finance portal, a tab on Finance for Management and the GM.
@@ -503,12 +506,18 @@ export default class TrinityApp extends Logic {
     this._depth = (this._depth || 0) + 1;
     try { history.pushState(Object.assign({tm:1, depth:this._depth}, entry), ''); } catch (e) {}
   }
-  overlayOpen(s) { return !!(s.modal || s.more || s.menu || s.ai || s.cmd); }
+  // Sheets count as overlays too: on a phone the back button closes them instead of leaving the page.
+  overlayOpen(s) { return !!(s.modal || s.more || s.menu || s.ai || s.cmd || s.floatSheet || s.paySheet); }
   onPopState(e) {
     if (this._ignorePop) { this._ignorePop = false; return; }
     const s = this.state, st = e.state || {};
     this._depth = st.depth || 0;
-    if (this.overlayOpen(s)) { this._closingByBack = true; this.setState({modal:null, more:false, menu:false, ai:false, cmd:false}); return; }
+    if (this.overlayOpen(s)) {
+      // A half-filled expense is not thrown away without asking; if they keep it, the sheet stays open.
+      if (s.floatSheet && this._floatDirty && !this.confirm('Discard this expense? What you typed is not saved.')) { this.pushHistory({page:s.page, projectId:s.projectId, overlay:true}); return; }
+      this._floatDirty = false;
+      this._closingByBack = true; this.setState({modal:null, more:false, menu:false, ai:false, cmd:false, floatSheet:null, paySheet:null}); return;
+    }
     if (st.page && s.auth) {
       this.setState({page:st.page, projectId:st.projectId || s.projectId, jobId:st.jobId || s.jobId, navDir:'back', tip:-1});
       try { window.scrollTo(0,0); } catch (err) {}
@@ -527,7 +536,9 @@ export default class TrinityApp extends Logic {
   }
   haptic(ms) { try { if (this.state.w < 700 && navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) {} }
   asRole(r, page, extra) { return () => { if (this.state.db && this.account && !this.account.isAdmin && r !== this.account.role) { this.setState({menu:false, more:false}); this.toast('Your account uses the ' + this.ROLES[this.account.role].label + ' portal'); return; } this.setState(Object.assign({role:r, menu:false, drawer:false, more:false, page:page || this.ROLES[r].home, tip:-1, taskFilter:r === 'staff' ? 'mine' : 'all'}, extra || {})); try { window.scrollTo(0,0); } catch (e) {} }; }
-  goTarget(g) { if (g && g.indexOf('project:') === 0) this.go('project',{projectId:g.slice(8)}); else if (g && g.indexOf('memo:') === 0) this.openMemo(g.slice(5)); else this.go(g || 'dashboard'); }
+  // 'request:REQ-0001' opens that request on the Requests page, selected and scrolled into view.
+  goTarget(g) { if (g && g.indexOf('request:') === 0) this.openReq(g.slice(8)); else if (g && g.indexOf('project:') === 0) this.go('project',{projectId:g.slice(8)}); else if (g && g.indexOf('memo:') === 0) this.openMemo(g.slice(5)); else this.go(g || 'dashboard'); }
+  openReq(id) { this.go('requests', {reqSel:id, reqFilter:'all', reqFocus:id}); }
   toast(t) { this.haptic(10); const id = Date.now() + Math.random(); this.setState(s => ({toasts:[...s.toasts,{id,t}]})); setTimeout(() => this.setState(s => ({toasts:s.toasts.filter(x => x.id !== id)})), 3200); }
   notify(n) {
     // The PA sees everything that reaches Management (except salaries), to follow it up.
@@ -538,7 +549,7 @@ export default class TrinityApp extends Logic {
   }
   // Alerts that should reach people outside the system (WhatsApp, SMS, email) go to an outbox.
   // A server function sends them once the gateway keys are set; until then each one can be sent by hand.
-  alertKind(n) { const g = n.go || ''; return g === 'clients' ? 'clients' : g === 'requests' ? 'approvals' : g === 'finance' ? 'payments' : /design/i.test(n.t || '') ? 'designs' : g === 'today' || g === 'tasks' ? 'tasks' : 'other'; }
+  alertKind(n) { const g = n.go || ''; return g === 'clients' ? 'clients' : g === 'requests' || g.indexOf('request:') === 0 ? 'approvals' : g === 'finance' ? 'payments' : /design/i.test(n.t || '') ? 'designs' : g === 'today' || g === 'tasks' ? 'tasks' : 'other'; }
   queueOutside(n) {
     const c = this.state.company || {}, N = Object.assign({ wa: true, sms: false, email: false, events: { clients: true, approvals: true, designs: true, payments: true, tasks: false } }, c.notify || {});
     const phone = (c.phones || {})[n.to], kind = this.alertKind(n);
@@ -554,6 +565,8 @@ export default class TrinityApp extends Logic {
 
   openModal(act, preset) {
     // Invoices open the full invoice editor (works on the phone too).
+    // Request money opens the project request straight away; a small switch at the top changes the kind.
+    if (act === 'req') { act = 'reqProject'; preset = Object.assign({}, preset || {}); delete preset.type; }
     if (act === 'invoice') { if (!this.canInvoice()) { this.toast('Invoices are created by Management, the GM and Finance'); return; } this.finGo('invoices', {invEdit:'new'}); return; }
     const PO = this.state.projects.filter(p => p.st !== 'done').map(p => ({v:p.id,l:p.client + ' · ' + p.name}));
     const PP = Object.keys(this.PPL).map(k => ({v:k,l:this.PPL[k][0]}));
@@ -585,13 +598,24 @@ export default class TrinityApp extends Logic {
       proc:{title:'Purchase request',sub:'Request → Approved → Delivered. The store then receives it.',submit:'Submit purchase request',fields:[{k:'t',l:'Item',ph:'e.g. Vinyl rolls × 10',req:1},{k:'p',l:'Project',opts:PO},{k:'v',l:'Estimated cost (TZS M)',type:'number',ph:'1.5'}]}
     };
     const m = Object.assign({act}, defs[act], preset && preset._meta ? preset._meta : {});
+    const isReq = /^req(Project|Internal|Emergency|Mgmt)$/.test(act);
+    if (isReq) m.typeSwitch = [{v:'reqProject',l:'Project'},{v:'reqInternal',l:'Office'},{v:'reqEmergency',l:'Emergency'},...((this.state.role || 'ceo') === 'ceo' ? [{v:'reqMgmt',l:'Management'}] : [])];
     const form = {}; m.fields.forEach(f => { form[f.k] = f.type === 'items' ? [{d:'', qty:'1', price:''}] : f.opts ? f.opts[0].v : ''; });
     // Money requests: the project is searched and chosen on purpose (no silent first project).
-    if (/^req(Project|Internal|Emergency|Mgmt)$/.test(act) && 'p' in form) form.p = '';
+    if (isReq && 'p' in form) form.p = '';
+    // Paid to the person asking unless they change it: their name (and phone, when known), by M-Pesa.
+    if (isReq) { const me = this.me(), ph = ((this.state.company || {}).phones || {})[me.k] || ((this.state.staff || []).find(p => p.k === me.k) || {}).phone || ''; Object.assign(form, {payBy:'M-Pesa', payName:me.n, payNo:ph}); }
     Object.assign(form, preset || {}); delete form._meta;
     // New project: the client is chosen on purpose (no silent default); with no clients yet it starts on "+ New client".
     if (act === 'project' && !(preset && preset.client)) form.client = (this.state.customers || []).length ? '' : NEW_CLIENT;
     this.setState({modal:m, form, modalErr:'', cmd:false, menu:false});
+  }
+  // Changes the kind of money request without losing what was typed (items, purpose, payment details…).
+  switchReqType(act) {
+    const s = this.state; if (!s.modal || s.modal.act === act) return;
+    const keep = {}; ['items','purpose','title','need','p','who','payBy','payName','payNo','payBank'].forEach(k => { if (s.form && s.form[k] !== undefined) keep[k] = s.form[k]; });
+    if (act === 'reqMgmt' || act === 'reqInternal') delete keep.p;
+    this.openModal(act, keep);
   }
   submitModal() {
     const s = this.state, m = s.modal, f = s.form;
@@ -763,7 +787,7 @@ export default class TrinityApp extends Logic {
     const r = {id, type, who, at:tzDay(this.nowDate()), ...(who !== this.me().k ? {by:this.me().k} : {}), amt, ...(it ? {items:it.items} : {}), pay:(this.payInfo(f).pay || null), cat:type === 'project' ? (f.cat || 'Operations') : type === 'internal' && f.cat ? f.cat : REQ_TYPES[type].l.replace(' request', ''), title:(f.title || '').trim(), purpose:(f.purpose || '').trim(), p:f.p || '', alloc:f.alloc || '', need:f.need || (type === 'emergency' ? 'Today' : 'This week'), step, st:step >= 5 ? 'approved' : 'pending', log};
     this.setState(x => ({reqs:[r, ...x.reqs], reqSel:id}));
     const to = step >= 5 ? this.roleKey('finance', 'RT') : this.approverAt(r, step);
-    this.remind(to, step >= 5 ? id + ' is ready to pay' : id + ' needs your approval', 'requests', 'banknote', this.av(who).n + ' · ' + this.fmtT(amt));
+    this.remind(to, step >= 5 ? id + ' is ready to pay' : id + ' needs your approval', 'request:' + id, 'banknote', this.av(who).n + ' · ' + this.fmtT(amt));
     this.smsTo(to, (step >= 5 ? id + ' is ready to pay. ' : id + ' needs your approval. ') + this.av(who).n + ' requests ' + this.fmtT(amt) + ' - ' + this.reqWhat(r) + '. Open the system to act.');
     this.toast(id + ' submitted · waiting for ' + (step >= 5 ? 'payment' : this.CHAIN[step]));
     this.log('banknote','amber',this.av(who).first + ' requested ' + this.fmtT(amt), this.reqWhat(r) + ' · ' + id, id);
@@ -771,16 +795,17 @@ export default class TrinityApp extends Logic {
   }
   // What a request is for, in a few words.
   reqWhat(r) { const t = r.type || 'project'; return t === 'project' ? (r.cat || 'Project') + ' · ' + (this.proj(r.p).name || 'Project') : (t === 'internal' && r.cat && r.cat !== 'Internal office' ? 'Internal · ' + r.cat : REQ_TYPES[t].l.replace(' request', '')) + ' · ' + (r.title || r.purpose || ''); }
-  decide(r, ok) {
+  // `reason` (optional) is kept on a rejected request so the person sees what to fix (Finance's "Send back").
+  decide(r, ok, reason) {
     const t = this.now(), skip = [];
     const n = this.nextStep(r, r.step);
     for (let i = r.step + 1; i < n; i++) skip.push(i);
     const last = n >= 5;
-    const patch = ok ? (last ? {step:5, st:'approved'} : {step:n}) : {st:'rejected'};
+    const patch = ok ? (last ? {step:5, st:'approved'} : {step:n}) : Object.assign({st:'rejected'}, reason ? {reason:String(reason).trim()} : {});
     this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, patch, {log:[...q.log, t, ...(ok ? skip.map(() => 'Not needed') : [])]}) : q)}));
     const next = ok ? (last ? this.roleKey('finance', 'RT') : this.approverAt(r, n)) : r.who;
-    if (ok) this.remind(next, last ? r.id + ' is approved · ready to pay' : r.id + ' needs your approval', 'requests', 'banknote', this.av(r.who).n + ' · ' + this.fmtT(r.amt));
-    else this.remind(r.who, r.id + ' was not approved', 'requests', 'x', 'Rejected by ' + this.me().n);
+    if (ok) this.remind(next, last ? r.id + ' is approved · ready to pay' : r.id + ' needs your approval', 'request:' + r.id, 'banknote', this.av(r.who).n + ' · ' + this.fmtT(r.amt));
+    else this.remind(r.who, r.id + (reason ? ' was sent back' : ' was not approved'), 'request:' + r.id, 'x', (reason ? reason + ' · ' : 'Rejected by ') + this.me().n);
     if (ok) this.smsTo(next, (last ? r.id + ' is approved and ready to pay. ' : r.id + ' needs your approval. ') + this.av(r.who).n + ' requests ' + this.fmtT(r.amt) + ' - ' + this.reqWhat(r) + '. Open the system to act.');
     if (ok && last) this.smsTo(r.who, 'Your request ' + r.id + ' for ' + this.fmtT(r.amt) + ' is approved and sent to Finance for payment.');
     if (!ok) this.smsTo(r.who, 'Your request ' + r.id + ' for ' + this.fmtT(r.amt) + ' was not approved (' + this.me().n + '). Open the system for details.');
@@ -804,11 +829,11 @@ export default class TrinityApp extends Logic {
     this.setState(x => ({reqs:x.reqs.map(q => q.id === r.id ? Object.assign({}, q, {step:6,st:'paid',paidOn:d.at,paidAt:t,paidAmt:amt,paidBy:this.me().k,log:[...q.log,this.now()]}, via ? {paidVia:via} : {}, fee ? {payFee:fee} : {}) : q), staff:x.staff.map(p => p.k === r.who ? Object.assign({}, p, {fl:(p.fl || 0) + amt}) : p)}));
     const warn = this.fl().grants.length ? this.floatCheckBelowZero('Paid ' + r.id + ' · ' + this.fmtT(amt)) : '';
     if (d.at !== this.fToday()) this.floatRevised(d.at, r.id + ' paid ' + this.fmtT(amt));
-    this.toast('Paid ' + this.fmtT(amt) + ' · float opened for ' + this.av(r.who).n + (fee ? ' · charges ' + this.fmtT(fee) : '') + warn);
+    this.toast('Paid ' + this.fmtT(amt) + ' to ' + this.av(r.who).first + ' · they must account for it' + (fee ? ' · charges ' + this.fmtT(fee) : '') + warn);
     const due = this.accountDays();
-    this.remind(r.who, 'Account for ' + r.id + ' · ' + this.fmtT(amt) + ' paid', 'requests', 'wallet', (amt < r.amt ? 'Part of ' + this.fmtT(r.amt) + ' · ' : '') + 'within ' + due + ' days: what you spent, the receipts and the change');
+    this.remind(r.who, 'Account for ' + r.id + ' · ' + this.fmtT(amt) + ' paid', 'request:' + r.id, 'wallet', (amt < r.amt ? 'Part of ' + this.fmtT(r.amt) + ' · ' : '') + 'within ' + due + ' days: what you spent, the receipts and the change');
     this.smsTo(r.who, 'Your request ' + r.id + ' has been paid: ' + this.fmtT(amt) + (amt < r.amt ? ' of ' + this.fmtT(r.amt) : '') + (via ? ' by ' + via : '') + '. Please account for it (receipts and change) within ' + due + ' days.');
-    this.log('wallet','green','Float opened · ' + this.fmtT(amt), this.av(r.who).n + ' · receipts due in ' + due + ' days', r.id);
+    this.log('wallet','green','Paid · to account for · ' + this.fmtT(amt), this.av(r.who).n + ' · receipts due in ' + due + ' days', r.id);
     return '';
   }
   answer(q) {
@@ -820,12 +845,12 @@ export default class TrinityApp extends Logic {
     if (/approv|pending|request|money/.test(q)) { const r = waiting; const tot = r.reduce((a,b) => a + b.amt, 0); return r.length ? r.length + ' requests are waiting for you (' + this.fmtT(tot) + '):\n• ' + list(r.map(x => this.av(x.who).first + ' — ' + this.fmtT(x.amt) + ' · ' + x.cat + ' · needed ' + x.need)) : 'Nothing is waiting for your approval.'; }
     if (/stock|inventory|material|low|vinyl|ink/.test(q)) { const l = s.stock.filter(i => i.q < i.min); return l.length + ' items are below minimum:\n• ' + list(l.map(i => i.n + ' — ' + i.q + ' ' + i.u + ' (min ' + i.min + ')')); }
     // Floats of other people are for Management, the GM, the PA and Finance; everyone else hears about their own.
-    if (/float/.test(q)) { const allF = ['ceo', 'gm', 'pa', 'finance'].includes(role), f = s.staff.filter(p => p.fl > 0 && (allF || p.k === this.me().k)); if (!f.length) return 'No open floats.'; return 'Open staff floats total ' + this.fmtT(f.reduce((a,b) => a + b.fl, 0)) + ':\n• ' + list(f.map(p => this.av(p.k).n + ' — ' + this.fmtT(p.fl))) + (allF ? '\n\nPeter Laizer\u2019s float is 12 days old with no receipts.' : ''); }
+    if (/float/.test(q)) { const allF = ['ceo', 'gm', 'pa', 'finance'].includes(role), f = s.staff.filter(p => p.fl > 0 && (allF || p.k === this.me().k)); if (!f.length) return 'No staff money to account for.'; return 'Staff still to account for ' + this.fmtT(f.reduce((a,b) => a + b.fl, 0)) + ':\n• ' + list(f.map(p => this.av(p.k).n + ' — ' + this.fmtT(p.fl))) + (allF ? '\n\nPeter Laizer\u2019s advance is 12 days old with no receipts.' : ''); }
     if (/report|staff|missing|who/.test(q)) { const m = s.staff.filter(p => !p.rep); return m.length ? m.length + ' staff have not submitted yesterday\u2019s report:\n• ' + list(m.map(p => this.av(p.k).n + ' · ' + p.role)) : 'Everyone has submitted their report.'; }
     if (/risk|late|delay/.test(q)) { const r = s.projects.filter(p => p.st === 'risk' || p.st === 'late'); return r.length + ' projects need attention:\n• ' + list(r.map(p => p.client + ' · ' + p.name + ' — ' + this.ST[p.st].l + ', due ' + p.due)); }
     if (/invoice|receiv|owe|overdue|cash/.test(q)) { const o = s.invoices.filter(i => i.st === 'overdue'); return 'Overdue invoices total ' + this.fmtM(o.reduce((a,b) => a + b.v, 0)) + ':\n• ' + list(o.map(i => i.c + ' — ' + this.fmtM(i.v) + ' · ' + i.due)); }
     const act = s.projects.filter(p => p.st !== 'done').length, pend = waiting.length;
-    return 'Today at a glance: ' + act + ' active projects, ' + pend + ' approvals waiting for you, ' + s.stock.filter(i => i.q < i.min).length + ' stock items below minimum, and ' + s.staff.filter(p => !p.rep).length + ' missing staff reports. Try asking about budgets, floats, stock or overdue invoices.';
+    return 'Today at a glance: ' + act + ' active projects, ' + pend + ' approvals waiting for you, ' + s.stock.filter(i => i.q < i.min).length + ' stock items below minimum, and ' + s.staff.filter(p => !p.rep).length + ' missing staff reports. Try asking about budgets, money to account for, stock or overdue invoices.';
   }
   askAI(q) {
     q = (q || this.state.aiQ).trim(); if (!q) return;
@@ -833,7 +858,7 @@ export default class TrinityApp extends Logic {
     setTimeout(() => this.setState(s => ({aiMsgs:[...s.aiMsgs,{r:'ai',t:this.answer(q)}], aiBusy:false})), 650);
   }
   tst(k) { return ({todo:['To do','#F1EEF6','#6E6A7C','#A9A3B8'],prog:['In progress','#EFE8FA','#5A2FA8','#6D3CC2'],review:['Submitted','#FBF1DD','#8A6414','#D89B2B'],done:['Done','#E6F4EC','#1F7549','#2E9B63']})[k]; }
-  rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return ['Paid · float open','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
+  rst(r) { if (r.st === 'rejected') return ['Rejected','#FBEDEE','#B23A46']; if (r.st === 'paid') return r.rec && r.rec.st === 'ok' ? ['Paid · accounted for','#E6F4EC','#1F7549'] : ['Paid · to account for','#E6F4EC','#1F7549']; if (r.st === 'approved') return ['Awaiting payment','#E9EFFA','#3559A8']; if (this.state && this.canAct(r) && (r.step === 4 || (this.state.role || 'ceo') !== 'ceo')) return ['Awaiting you','#FBF1DD','#8A6414']; return ['At ' + this.CHAIN[r.step],'#F1EEF6','#5A2FA8']; }
 }
 
-Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, targetVals, teamVals, attendanceVals, myCheckinVals, memoVals, officeVals, reportingVals, pettyVals, floatVals, briefingVals, payrollVals }, storeMethods, floatMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods, briefingMethods, payrollMethods, targetMethods, teamMethods, attendanceMethods, memoMethods);
+Object.assign(TrinityApp.prototype, { renderVals, pageVals, pageVals2, overlayVals, storeVals, todayVals, deptVals, crmVals, projectVals, financeVals, reportVals, homeVals, targetVals, teamVals, attendanceVals, myCheckinVals, memoVals, officeVals, reportingVals, pettyVals, floatVals, payVals, briefingVals, payrollVals }, storeMethods, floatMethods, adminMethods, todoMethods, deptMethods, crmMethods, projectMethods, financeMethods, reportMethods, officeMethods, reqFlowMethods, flowMethods, reportChannel, pettyMethods, briefingMethods, payrollMethods, targetMethods, teamMethods, attendanceMethods, memoMethods);
