@@ -44,11 +44,11 @@ export async function saved(page) {
   return page.evaluate(() => JSON.parse(localStorage.getItem('tm360data') || '{}'));
 }
 
-// Request money first asks which kind of request; this picks it.
+// Request money opens the project request at once; the switch at the top picks another kind.
+const REQ_SWITCH = { 'Project request': 'Project', 'Internal office request': 'Office', 'Emergency request': 'Emergency', 'Management request': 'Management' };
 export async function chooseRequest(page, type = 'Project request') {
   const m = modal(page);
-  await m.locator('[data-field="Type of request"]').getByRole('radio', { name: type, exact: true }).click();
-  await m.getByRole('button', { name: 'Continue', exact: true }).click();
+  await m.locator('[data-field="Type of request"]').getByRole('radio', { name: REQ_SWITCH[type] || type, exact: true }).click();
   await expect(modal(page).getByText(type, { exact: true }).first()).toBeVisible();
 }
 
@@ -71,11 +71,13 @@ export async function fillModal(page, values) {
   // Money requests ask how to pay; fill a mobile-money payee unless the test chose its own.
   const payBy = m.locator('[data-field="Pay by"]').first();
   const payName = m.locator('[data-field="Name on the account / recipient"] input').first();
+  // (The name is filled in with the person asking; the number is added when it is not known.)
+  const payNo = m.locator('[data-field="Phone or account number"] input').first();
   if (!('Pay by' in values) && !('Name on the account / recipient' in values) && await payBy.count() && !(await payName.inputValue())) {
     await payBy.getByRole('radio', { name: 'M-Pesa', exact: true }).click();
     await m.locator('[data-field="Name on the account / recipient"] input').first().fill('Test Payee');
-    await m.locator('[data-field="Phone or account number"] input').first().fill('0754 123 456');
-  }
+    await payNo.fill('0754 123 456');
+  } else if (!('Phone or account number' in values) && await payNo.count() && !(await payNo.inputValue())) await payNo.fill('0754 123 456');
   return m;
 }
 export const modal = page => page.locator('.fm, .m-sheet');

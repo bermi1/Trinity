@@ -59,7 +59,7 @@ function Approvals({ v }) {
           <div style={{ padding: "10px", borderBottom: "1px solid #E8E4EF", display: "flex", gap: "2px", flexWrap: "wrap" }}>
             {(v.reqTabs || []).map((t, _i0) => (
               <Fragment key={_i0}>
-                <button onClick={t.on} style={{ border: "none", padding: "7px 11px", borderRadius: "7px", background: t.bg, color: t.c, fontSize: "12px", fontWeight: "600" }}>
+                <button className="rq-tab" onClick={t.on} style={{ border: "none", padding: "7px 11px", borderRadius: "7px", background: t.bg, color: t.c, fontSize: "12px", fontWeight: "600" }}>
                   {t.l}
                 </button>
               </Fragment>

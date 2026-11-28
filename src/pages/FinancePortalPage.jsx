@@ -48,7 +48,7 @@ export default function FinancePortalPage({ v }) {
                     <span>{r.cat}</span>{" · "}<span>{r.proj}</span>
                   </span>
                 </div>
-                <button className="tm-h2" onClick={r.verify} style={{ height: "34px", padding: "0 14px", border: "none", borderRadius: "8px", background: "#2B1459", color: "#fff", fontSize: "12.5px", fontWeight: "600" }}>
+                <button className="tm-h2 fp-verify" onClick={r.verify} style={{ height: "34px", padding: "0 14px", border: "none", borderRadius: "8px", background: "#2B1459", color: "#fff", fontSize: "12.5px", fontWeight: "600" }}>
                   Verify
                 </button>
               </div>

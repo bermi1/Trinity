@@ -565,6 +565,8 @@ export default class TrinityApp extends Logic {
 
   openModal(act, preset) {
     // Invoices open the full invoice editor (works on the phone too).
+    // Request money opens the project request straight away; a small switch at the top changes the kind.
+    if (act === 'req') { act = 'reqProject'; preset = Object.assign({}, preset || {}); delete preset.type; }
     if (act === 'invoice') { if (!this.canInvoice()) { this.toast('Invoices are created by Management, the GM and Finance'); return; } this.finGo('invoices', {invEdit:'new'}); return; }
     const PO = this.state.projects.filter(p => p.st !== 'done').map(p => ({v:p.id,l:p.client + ' · ' + p.name}));
     const PP = Object.keys(this.PPL).map(k => ({v:k,l:this.PPL[k][0]}));
@@ -596,13 +598,24 @@ export default class TrinityApp extends Logic {
       proc:{title:'Purchase request',sub:'Request → Approved → Delivered. The store then receives it.',submit:'Submit purchase request',fields:[{k:'t',l:'Item',ph:'e.g. Vinyl rolls × 10',req:1},{k:'p',l:'Project',opts:PO},{k:'v',l:'Estimated cost (TZS M)',type:'number',ph:'1.5'}]}
     };
     const m = Object.assign({act}, defs[act], preset && preset._meta ? preset._meta : {});
+    const isReq = /^req(Project|Internal|Emergency|Mgmt)$/.test(act);
+    if (isReq) m.typeSwitch = [{v:'reqProject',l:'Project'},{v:'reqInternal',l:'Office'},{v:'reqEmergency',l:'Emergency'},...((this.state.role || 'ceo') === 'ceo' ? [{v:'reqMgmt',l:'Management'}] : [])];
     const form = {}; m.fields.forEach(f => { form[f.k] = f.type === 'items' ? [{d:'', qty:'1', price:''}] : f.opts ? f.opts[0].v : ''; });
     // Money requests: the project is searched and chosen on purpose (no silent first project).
-    if (/^req(Project|Internal|Emergency|Mgmt)$/.test(act) && 'p' in form) form.p = '';
+    if (isReq && 'p' in form) form.p = '';
+    // Paid to the person asking unless they change it: their name (and phone, when known), by M-Pesa.
+    if (isReq) { const me = this.me(), ph = ((this.state.company || {}).phones || {})[me.k] || ((this.state.staff || []).find(p => p.k === me.k) || {}).phone || ''; Object.assign(form, {payBy:'M-Pesa', payName:me.n, payNo:ph}); }
     Object.assign(form, preset || {}); delete form._meta;
     // New project: the client is chosen on purpose (no silent default); with no clients yet it starts on "+ New client".
     if (act === 'project' && !(preset && preset.client)) form.client = (this.state.customers || []).length ? '' : NEW_CLIENT;
     this.setState({modal:m, form, modalErr:'', cmd:false, menu:false});
+  }
+  // Changes the kind of money request without losing what was typed (items, purpose, payment details…).
+  switchReqType(act) {
+    const s = this.state; if (!s.modal || s.modal.act === act) return;
+    const keep = {}; ['items','purpose','title','need','p','who','payBy','payName','payNo','payBank'].forEach(k => { if (s.form && s.form[k] !== undefined) keep[k] = s.form[k]; });
+    if (act === 'reqMgmt' || act === 'reqInternal') delete keep.p;
+    this.openModal(act, keep);
   }
   submitModal() {
     const s = this.state, m = s.modal, f = s.form;
