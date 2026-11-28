@@ -9,7 +9,7 @@ export default function StorePage({ v }) {
           <span style={{ font: "600 11px 'IBM Plex Mono',monospace", letterSpacing: ".16em", color: "#8A7239" }}>
             OPERATIONS
           </span>
-          <h1 style={{ margin: "0", fontSize: "clamp(22px,2.4vw,28px)", fontWeight: "700", letterSpacing: "-.02em" }}>
+          <h1 style={{ margin: "0", fontSize: "22px", fontWeight: "700", letterSpacing: "-.02em" }}>
             Store & inventory
           </h1>
         </div>
@@ -24,10 +24,10 @@ export default function StorePage({ v }) {
         {(v.stockKpis || []).map((k, _i0) => (
           <Fragment key={_i0}>
             <div style={{ background: "#fff", border: "1px solid #E8E4EF", borderRadius: "14px", padding: "16px 18px", display: "flex", flexDirection: "column", gap: "6px" }}>
-              <span style={{ fontSize: "11.5px", fontWeight: "700", color: "#6E6A7C", letterSpacing: ".06em", textTransform: "uppercase" }}>
+              <span style={{ fontSize: "12px", fontWeight: "600", color: "#6E6A7C" }}>
                 {k.l}
               </span>
-              <b style={{ fontSize: "24px", color: k.vc }}>
+              <b style={{ fontSize: "22px", color: k.vc }}>
                 {k.v}
               </b>
               <span style={{ fontSize: "12px", color: "#6E6A7C" }}>

@@ -20,7 +20,7 @@ export default function ProjectDetailPage({ v }) {
               {v.P.stl}
             </span>
           </div>
-          <h1 style={{ margin: "0", fontSize: "clamp(22px,2.4vw,28px)", fontWeight: "700", letterSpacing: "-.02em" }}>
+          <h1 style={{ margin: "0", fontSize: "22px", fontWeight: "700", letterSpacing: "-.02em" }}>
             <span>{v.P.client}</span>{" — "}<span>{v.P.name}</span>
           </h1>
           <div style={{ display: "flex", gap: "18px", flexWrap: "wrap", fontSize: "13px", color: "#6E6A7C" }}>

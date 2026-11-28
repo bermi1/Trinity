@@ -9,7 +9,7 @@ export default function NotificationsPage({ v }) {
           <span style={{ font: "600 11px 'IBM Plex Mono',monospace", letterSpacing: ".16em", color: "#8A7239" }}>
             OVERVIEW
           </span>
-          <h1 style={{ margin: "0", fontSize: "clamp(22px,2.4vw,28px)", fontWeight: "700", letterSpacing: "-.02em" }}>
+          <h1 style={{ margin: "0", fontSize: "22px", fontWeight: "700", letterSpacing: "-.02em" }}>
             Notifications
           </h1>
         </div>

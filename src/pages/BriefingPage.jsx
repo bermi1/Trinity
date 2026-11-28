@@ -9,7 +9,7 @@ export default function BriefingPage({ v }) {
           <span style={{ font: "600 11px 'IBM Plex Mono',monospace", letterSpacing: ".16em", color: "#8A7239" }}>
             MONDAY BRIEFING · W39
           </span>
-          <h1 style={{ margin: "0", fontSize: "clamp(22px,2.4vw,28px)", fontWeight: "700", letterSpacing: "-.02em" }}>
+          <h1 style={{ margin: "0", fontSize: "22px", fontWeight: "700", letterSpacing: "-.02em" }}>
             Week of 21 – 25 September 2026
           </h1>
         </div>
@@ -51,7 +51,7 @@ export default function BriefingPage({ v }) {
             ))}
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: "11.5px", fontWeight: "700", color: "#6E6A7C", letterSpacing: ".06em", textTransform: "uppercase", paddingBottom: "6px" }}>
+            <span style={{ fontSize: "12px", fontWeight: "600", color: "#6E6A7C", paddingBottom: "6px" }}>
               Major issues
             </span>
             {(v.issues || []).map((x, _i0) => (
@@ -248,7 +248,7 @@ export default function BriefingPage({ v }) {
           </Fragment>
         ))}
         <div style={{ display: "flex", flexDirection: "column", gap: "10px", paddingTop: "12px", borderTop: "1px solid #F1EEF6" }}>
-          <span style={{ fontSize: "11.5px", fontWeight: "700", color: "#6E6A7C", letterSpacing: ".06em", textTransform: "uppercase" }}>
+          <span style={{ fontSize: "12px", fontWeight: "600", color: "#6E6A7C" }}>
             Add your update
           </span>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-start" }}>

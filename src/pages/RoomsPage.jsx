@@ -9,7 +9,7 @@ export default function RoomsPage({ v }) {
           <span style={{ font: "600 11px 'IBM Plex Mono',monospace", letterSpacing: ".16em", color: "#8A7239" }}>
             FRONT OFFICE
           </span>
-          <h1 style={{ margin: "0", fontSize: "clamp(22px,2.4vw,28px)", fontWeight: "700", letterSpacing: "-.02em" }}>
+          <h1 style={{ margin: "0", fontSize: "22px", fontWeight: "700", letterSpacing: "-.02em" }}>
             Meeting rooms · today
           </h1>
           <span style={{ fontSize: "13px", color: "#6E6A7C" }}>

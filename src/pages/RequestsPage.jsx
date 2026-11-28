@@ -27,7 +27,7 @@ function Approvals({ v }) {
           <span style={{ font: "600 11px 'IBM Plex Mono',monospace", letterSpacing: ".16em", color: "#8A7239" }}>
             MONEY
           </span>
-          <h1 style={{ margin: "0", fontSize: "clamp(22px,2.4vw,28px)", fontWeight: "700", letterSpacing: "-.02em" }}>
+          <h1 style={{ margin: "0", fontSize: "22px", fontWeight: "700", letterSpacing: "-.02em" }}>
             {v.showFloats ? 'Pay & approve' : 'Approvals'}
           </h1>
         </div>
@@ -42,10 +42,10 @@ function Approvals({ v }) {
         {(v.floatKpis || []).map((k, _i0) => (
           <Fragment key={_i0}>
             <div style={{ background: k.bg, border: `1px solid ${k.bd}`, borderRadius: "14px", padding: "16px 18px", display: "flex", flexDirection: "column", gap: "6px" }}>
-              <span style={{ fontSize: "11.5px", fontWeight: "700", color: k.lc, letterSpacing: ".06em", textTransform: "uppercase" }}>
+              <span style={{ fontSize: "12px", fontWeight: "600", color: k.lc }}>
                 {k.l}
               </span>
-              <b style={{ fontSize: "24px", color: k.vc, letterSpacing: "-.01em" }}>
+              <b style={{ fontSize: "22px", color: k.vc, letterSpacing: "-.01em" }}>
                 {k.v}
               </b>
               <span style={{ fontSize: "12px", color: k.nc }}>
@@ -113,7 +113,7 @@ function Approvals({ v }) {
                     <span>{v.R.id}</span>{" · "}<span>{v.R.cat}</span>
                   </span>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                    <h2 style={{ margin: "0", fontSize: "30px", fontWeight: "700", letterSpacing: "-.02em" }}>
+                    <h2 style={{ margin: "0", fontSize: "24px", fontWeight: "700", letterSpacing: "-.02em" }}>
                       {v.R.amt}
                     </h2>
                     <span style={{ fontSize: "11px", fontWeight: "700", padding: "4px 9px", borderRadius: "6px", background: v.R.stbg, color: v.R.stfg }}>
@@ -242,7 +242,7 @@ function Approvals({ v }) {
                 ) : null}
               </div>
               <div style={{ flex: "1 1 260px", minWidth: "0", padding: "22px 24px", borderLeft: "1px solid #E8E4EF", background: "#FDFCFF", display: "flex", flexDirection: "column" }}>
-                <span style={{ fontSize: "11.5px", fontWeight: "700", color: "#6E6A7C", letterSpacing: ".06em", textTransform: "uppercase", paddingBottom: "14px" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#6E6A7C", paddingBottom: "14px" }}>
                   Approval chain · audit trail
                 </span>
                 {(v.R.chain || []).map((c, _i0) => (
