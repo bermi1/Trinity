@@ -24,7 +24,7 @@ export default function HomeDash({ v }) {
             <div><dt>Waiting to be paid</dt><dd>{H.float.waitN} · {H.float.waitT}</dd></div>
             <div><dt>Daily report</dt><dd>{H.float.sentLine}</dd></div>
           </dl>
-          <button type="button" className="hd-btn is-pri hd-fopen" onClick={H.float.open}><span>Open today’s report</span></button>
+          <button type="button" className="k-btn is-dark hd-fopen" onClick={H.float.open}>Open today’s report</button>
         </section>
       ) : null}
 
