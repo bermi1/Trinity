@@ -93,6 +93,23 @@ describe('changing a paid request', () => {
   });
 });
 
+describe('recorded manually: only requests of 27 – 28 Nov', () => {
+  it('later requests cannot skip the float without a cash book record; linking still works', async () => {
+    const a = app('finance', { reqs: [req({ at: '2026-11-29' }), req({ id: 'REQ-0010', at: '2026-11-28' })] });
+    expect(a.manualOk(a.state.reqs[0])).toBe(false);
+    expect(a.manualOk(a.state.reqs[1])).toBe(true);
+    expect(a.payReq(a.state.reqs[0], '50000', '', { outside: true })).toMatch(/27 – 28 Nov/);
+    expect(a.state.reqs[0].st).toBe('approved');
+    expect(a.payReq(a.state.reqs[1], '50000', '', { outside: true })).toBe('');
+    // Paid from the float, then switched to "recorded manually": refused for the later request.
+    expect(a.payReq(a.state.reqs[0], '50000', '')).toBe('');
+    expect(a.editPayment(a.state.reqs[0], { amt: '50000', outside: true, reason: 'x' })).toMatch(/recorded manually/);
+    await a.addExpense({ amt: '20000', cat: 'Fuel', method: 'Cash', payee: 'GM' });
+    a.setState(x => ({ reqs: [...x.reqs, req({ id: 'REQ-0011', at: '2026-11-30', amt: 20000 })] }));
+    expect(a.payFromBook(a.state.reqs[2], a.pt().entries[0].id)).toBe('');
+  });
+});
+
 describe('deleting a cash book record', () => {
   it('Finance removes it and the float goes back up; staff cannot', async () => {
     const a = app('finance');

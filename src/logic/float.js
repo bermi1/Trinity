@@ -25,7 +25,14 @@ const longDay = k => new Date(utc(k)).toLocaleDateString('en-GB', { weekday: 'lo
 // The words for an advance's due date: "Due today" on the day, "Overdue" only from the next day.
 export const dueText = (today, due) => (today === due ? 'Due today' : today > due ? 'Overdue' : 'Due ' + dayLabel(due, false));
 
+// The switch-over to the app: requests of these days were paid and written in the cash book by hand,
+// so they may be marked paid "recorded manually" without touching the float. After this day a request's
+// payment either comes from the float or is linked to its cash book record (never a second entry).
+export const MANUAL_LAST = '2026-11-28';
+export const MANUAL_FIRST = '2026-11-27';
+
 export const floatMethods = {
+  manualOk(r) { return !!r && (!r.at || (r.at >= MANUAL_FIRST && r.at <= MANUAL_LAST)); },
   nowDate() { return new Date(); },
   fToday() { return tzDay(this.nowDate()); },
   canFloat() { return ['finance', 'ceo'].includes(this.state.role || 'ceo'); },
@@ -275,6 +282,7 @@ export const floatMethods = {
     const patch = { paidAmt: amt, paidOn: at, paidVia: method, payFee: fee, paidOutside: out, payEdits: [...(cur.payEdits || []), edit] };
     const owed = q => (q.paidOutside || (q.rec && q.rec.st === 'ok') ? 0 : q.paidAmt || q.amt);
     const next = Object.assign({}, cur, patch);
+    if (out && !cur.paidOutside && !this.manualOk(cur)) return 'Only requests of ' + dayLabel(MANUAL_FIRST, false) + ' – ' + dayLabel(MANUAL_LAST, false) + ' can be marked recorded manually';
     if (out) next.rec = { st: 'ok', spent: amt, back: 0, at, okAt: today, okTime: tzTime(this.nowDate()), by: this.me().k, inBook: true, note: 'Already recorded in the cash book' };
     else if (cur.rec && cur.rec.inBook) delete next.rec;
     const d = owed(next) - owed(cur);
@@ -587,7 +595,7 @@ export function payVals(s) {
     payTo: r.pay ? [r.pay.by, r.pay.bank, r.pay.name, r.pay.no].filter(Boolean).join(' · ') : '', method, methods: METHODS, today: this.fToday(), minDay: this.floatMinDay(),
     floatLeft: this.fl().grants.length ? this.floatBalance() : null,
     pay: x => { const m = this.payReq(r, x.amt, x.fee, { method: x.method, date: x.at }); if (!m) this.setState({ paySheet: null }); return m; },
-    book: this.canFloat() ? this.bookChoices(r) : [],
+    book: this.canFloat() && r.st === 'approved' ? this.bookChoices(r) : [], manualOk: this.manualOk(r) || !!r.paidOutside, manualDays: dayLabel(MANUAL_FIRST, false) + ' – ' + dayLabel(MANUAL_LAST, false),
     paidOutside: x => { const m = this.payReq(r, x.amt, x.fee, { method: x.method, date: x.at, outside: true }); if (!m) this.setState({ paySheet: null }); return m; },
     payFromBook: id => { const m = this.payFromBook(r, id); if (!m) this.setState({ paySheet: null }); return m; },
     close: () => this.setState({ paySheet: null }),
