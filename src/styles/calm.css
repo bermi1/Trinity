@@ -49,6 +49,8 @@
 }
 
 body { font-size: var(--fs-base); line-height: 1.45; }
+/* Bold inside a semibold line stays bold, never black */
+b, strong { font-weight: var(--fw-bold); }
 
 /* ---------- Page titles ---------- */
 .k-head h1, .rc-title h1, .hd-top h1, .pv-head h1, .tp-head h1, .mm-top h1 {
