@@ -56,6 +56,8 @@ describe('presentation data in the live workspace', () => {
 
   it('Finance sees the invoices', async () => {
     await signIn('ll@tm.co.tz', 'Trinity@2026');
+    // Invoices are under "More" in the Finance menu.
+    if (!screen.queryAllByText(/^Invoices/).length) fireEvent.click((await screen.findAllByRole('button', { name: /^More/ }))[0]);
     fireEvent.click((await screen.findAllByText(/^Invoices/))[0]);
     expect(await screen.findByText(/DEMO-INV1/)).toBeTruthy();
   });

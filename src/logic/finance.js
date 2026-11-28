@@ -314,7 +314,7 @@ export function financeVals(s) {
   const month = dayKey(0).slice(0, 7);
   const collected = (s.invoices || []).reduce((a, i) => a + (i.payments || []).filter(p => p.ok && (p.at || '').slice(0, 7) === month).reduce((x, p) => x + p.amt, 0), 0);
   const F = {
-    tab: ({ invoices: 'invoices', cashbook: 'cash', freports: 'reports', float: 'float', petty: 'float' })[s.page] || (role === 'finance' ? 'overview' : s.finTab || 'overview'), showTabs: role !== 'finance', setTab: k => this.setState({ finTab: k, invSel: null }), moneyTop, isCeo: role === 'ceo', isFin: role === 'finance',
+    tab: ({ invoices: 'invoices', cashbook: 'cash', freports: 'reports', float: 'float', petty: 'float', receipts: 'receipts' })[s.page] || (role === 'finance' ? 'overview' : s.finTab || 'overview'), showTabs: role !== 'finance', setTab: k => this.setState({ finTab: k, invSel: null }), moneyTop, isCeo: role === 'ceo', isFin: role === 'finance',
     kpis: [
       { l: 'Owed by clients', v: this.fmtT(unpaid.reduce((a, b) => a + b.due, 0)), n: unpaid.length + ' invoices open', tone: 'dark', pct: Math.round(unpaid.reduce((a, b) => a + b.paid, 0) / Math.max(1, unpaid.reduce((a, b) => a + b.total, 0)) * 100) },
       { l: 'Overdue', v: this.fmtT(inv.filter(i => i.st === 'overdue').reduce((a, b) => a + b.due, 0)), n: inv.filter(i => i.st === 'overdue').length + ' invoices', tone: 'red', pct: Math.round(inv.filter(i => i.st === 'overdue').length / Math.max(1, unpaid.length) * 100) },

@@ -84,7 +84,7 @@ export function pageVals2(s, IC, ST, narrow) {
   const spTasks = s.tasks.filter(t => t.who === SPk);
   V.SP = {
     greet:(hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening') + ', ' + this.av(SPk).n.split(' ')[0],
-    kpis:[{l:'Open tasks', v:String(spTasks.filter(t => t.st !== 'done').length)}, {l:'My requests', v:String(s.reqs.filter(r => r.who === SPk).length)}, {l:'Open float', v:this.fmtT((s.staff.find(p => p.k === SPk) || {fl:0}).fl)}, {l:'Report today', v:(s.reportsToday || {})[SPk] ? 'Sent' : 'Not yet'}],
+    kpis:[{l:'Open tasks', v:String(spTasks.filter(t => t.st !== 'done').length)}, {l:'My requests', v:String(s.reqs.filter(r => r.who === SPk).length)}, {l:'To account for', v:this.fmtT((s.staff.find(p => p.k === SPk) || {fl:0}).fl)}, {l:'Report today', v:(s.reportsToday || {})[SPk] ? 'Sent' : 'Not yet'}],
     tasks:spTasks.map(t => ({t:t.t, proj:this.proj(t.p).client, due:t.due, td:t.st === 'done' ? 'line-through' : 'none', chkBg:t.st === 'done' ? '#2E9B63' : '#fff', chkBd:t.st === 'done' ? '#2E9B63' : '#D5CFE0', toggle:() => this.setState(x => ({tasks:x.tasks.map(y => y.id === t.id ? Object.assign({}, y, {st:y.st === 'done' ? 'prog' : 'done'}) : y)}))})),
     tasksEmpty:spTasks.length === 0,
     reqs:s.reqs.filter(r => r.who === SPk).map(r => Object.assign({amt:this.fmtT(r.amt), cat:r.cat}, (a => ({stl:a[0], stbg:a[1], stfg:a[2]}))(this.rst(r)))), reqsEmpty:s.reqs.filter(r => r.who === SPk).length === 0,
@@ -97,7 +97,7 @@ export function pageVals2(s, IC, ST, narrow) {
   const fReqs = this.visibleReqs(s).filter(r => r.st === 'pending' && r.step === 3);
   V.FP = {
     title:FK.n + '\u2019s queue',
-    kpis:[{l:'Awaiting verification', v:String(fReqs.length)}, {l:'Overdue invoices', v:String(s.invoices.filter(i => i.st === 'overdue').length), c:'#B23A46'}, {l:'Open floats', v:String(s.staff.filter(p => p.fl > 0).length)}, {l:'Paid this week', v:String(this.visibleReqs(s).filter(r => r.st === 'paid').length)}],
+    kpis:[{l:'Awaiting verification', v:String(fReqs.length)}, {l:'Overdue invoices', v:String(s.invoices.filter(i => i.st === 'overdue').length), c:'#B23A46'}, {l:'Staff to account', v:String(s.staff.filter(p => p.fl > 0).length)}, {l:'Paid this week', v:String(this.visibleReqs(s).filter(r => r.st === 'paid').length)}],
     reqs:fReqs.map(r => ({who:this.av(r.who).n, amt:this.fmtT(r.amt), cat:this.reqWhat(r).split(' · ')[0], proj:this.reqWhat(r).split(' · ').slice(1).join(' · '), verify:() => this.decide(r, true)})),
     reqsEmpty:fReqs.length === 0,
     overdue:s.invoices.filter(i => i.st === 'overdue').map(i => ({id:i.id, c:i.c, due:i.due, v:this.fmtM(i.v)})), overdueEmpty:s.invoices.filter(i => i.st === 'overdue').length === 0,
@@ -107,7 +107,7 @@ export function pageVals2(s, IC, ST, narrow) {
       const oldest = mine.reduce((m, r) => (r.paidOn && (!m || r.paidOn < m) ? r.paidOn : m), ''), days = oldest ? Math.max(0, Math.round((Date.parse(this.fToday()) - Date.parse(oldest)) / 864e5)) : 0;
       return {n:a.n, i:a.i, c:a.c, ph:a.ph, amt:this.fmtT(p.fl), age:days ? days + (days === 1 ? ' day' : ' days') : 'today', rec:() => {
         if (sub.length) { const errs = sub.map(r => this.confirmRec(r.id)).filter(Boolean); if (errs.length) this.toast(errs[0]); return; }
-        this.remind(p.k, 'Please account for your float: ' + this.fmtT(p.fl), 'requests', 'receipt', (mine.map(r => r.id).join(', ') || 'Your float') + ' · what you spent, the receipts and the change');
+        this.remind(p.k, 'Please account for the money you received: ' + this.fmtT(p.fl), 'requests', 'receipt', (mine.map(r => r.id).join(', ') || 'Your float') + ' · what you spent, the receipts and the change');
         this.toast('Reminder sent to ' + a.n); }}; })
   };
 

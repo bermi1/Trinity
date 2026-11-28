@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Btn, Empty } from '../../ui/kit';
 import Icon from '../../mobile/Icon';
 import { Pick } from '../../components/FormFields';
 import { RecCheck } from '../../components/AccountForm';
+import PaySheet from '../../components/PaySheet';
 
 const n = v => Math.round(+v || 0).toLocaleString('en-US');
 const digits = v => String(v || '').replace(/\D/g, '');
@@ -11,8 +12,8 @@ const QUICK = [1e6, 2e6, 5e6, 10e6];
 function Chips({ opts, v, set, label }) {
   return <div className="ff-chips" role="radiogroup" aria-label={label}>{opts.map(o => { const [k, l] = Array.isArray(o) ? o : [o, o]; return <button key={k} type="button" role="radio" aria-checked={v === k} className={v === k ? 'is-on' : ''} onClick={() => set(k)}>{l}</button>; })}</div>;
 }
-function Money({ value, set, label, autoFocus }) {
-  return <label className="fh-amt fl-money"><span>TZS</span><input inputMode="numeric" autoFocus={autoFocus} value={value ? n(value) : ''} onChange={e => set(digits(e.target.value))} placeholder="0" aria-label={label} /></label>;
+function Money({ value, set, label, autoFocus, inRef }) {
+  return <label className="fh-amt fl-money"><span>TZS</span><input ref={inRef} inputMode="numeric" autoFocus={autoFocus} value={value ? n(value) : ''} onChange={e => set(digits(e.target.value))} placeholder="0" aria-label={label} /></label>;
 }
 function Sheet({ title, sub, onClose, children, foot, label }) {
   return (
@@ -36,9 +37,9 @@ function Payee({ F, payee, setPayee, who, setWho, settle, setSettle }) {
   return (
     <div className="ff" data-field="Paid to"><span className="ff-l">Paid to</span>
       {cur ? (
-        <div className="fl-payee"><span className="ff-face" style={{ background: cur.c }}>{cur.i}</span><b>{cur.l}</b><button type="button" className="td-link" onClick={() => { setPayee(''); setSettle(''); setQ(''); }}>Change</button></div>
+        <div className="fl-payee"><span className="ff-face" style={{ background: cur.c }}>{cur.i}</span><b>{cur.l}</b><button type="button" className="td-link fl-tap" onClick={() => { setPayee(''); setSettle(''); setQ(''); }}>Change</button></div>
       ) : payee === 'other' ? (
-        <div className="fh-row"><input className="ff-search" autoFocus value={who} onChange={e => setWho(e.target.value)} placeholder="Shop, supplier or person" aria-label="Paid to (name)" /><button type="button" className="td-link" onClick={() => { setPayee(''); setWho(''); }}>Staff</button></div>
+        <div className="fh-row"><input className="ff-search" autoFocus value={who} onChange={e => setWho(e.target.value)} placeholder="Shop, supplier or person" aria-label="Paid to (name)" /><button type="button" className="td-link fl-tap" onClick={() => { setPayee(''); setWho(''); }}>Staff</button></div>
       ) : (
         <>
           <input className="ff-search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search staff, or choose Other" aria-label="Search staff" />
@@ -65,7 +66,13 @@ function ExpenseSheet({ F, onClose, edit, day }) {
   const blank = () => ({ amt: '', cat: '', note: '', p: '', who: '', payee: '', method: 'Cash', fee: '', at: day || F.today, photo: null, settle: '', reason: '' });
   const [f, setF] = useState(() => (e0 ? Object.assign(blank(), e0, { payee: e0.who ? 'other' : '' }) : blank()));
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false); const [done, setDone] = useState(0);
+  const amtRef = useRef(null);
   const set = (k, v) => { setErr(''); setF(x => Object.assign({}, x, { [k]: v })); };
+  // Something typed: closing (×, outside, the phone's back button) asks before throwing it away.
+  const dirty = !edit && !!(f.amt || f.cat || f.note || f.p || f.who || f.payee || f.photo || f.settle);
+  const setDirty = F.setDirty;
+  useEffect(() => { if (setDirty) setDirty(dirty); }, [dirty, setDirty]);
+  useEffect(() => () => { if (setDirty) setDirty(false); }, [setDirty]);
   const total = (+f.amt || 0) + (f.method === 'Cash' ? 0 : +f.fee || 0);
   const after = F.balanceN - total + (e0 ? (+e0.amt || 0) + (+e0.fee || 0) : 0);
   const save = async again => {
@@ -74,12 +81,13 @@ function ExpenseSheet({ F, onClose, edit, day }) {
     const m = edit ? edit.edit(x) : await F.addExpense(x);
     setBusy(false);
     if (m) { setErr(m); return; }
-    if (again) { setDone(d => d + 1); setF(Object.assign(blank(), { at: f.at, method: f.method })); } else onClose();
+    // Save & next: the fields are cleared (the method and date stay) and the amount is ready for the next one.
+    if (again) { setDone(d => d + 1); setF(Object.assign(blank(), { at: f.at, method: f.method })); setTimeout(() => { if (amtRef.current) amtRef.current.focus(); }, 0); } else { if (setDirty) setDirty(false); onClose(true); }
   };
   return (
     <Sheet title={edit ? 'Change expense ' + edit.ref : 'Daily expense'} sub={edit ? 'Same day only · say why it changes' : 'Paid from the float' + (done ? ' · ' + done + ' saved' : '')} onClose={onClose} label="Daily expense"
       foot={<>{edit ? null : <Btn kind="ghost" disabled={busy} onClick={() => save(true)}>Save &amp; next</Btn>}<Btn kind="dark" disabled={busy} onClick={() => save(false)}>{edit ? 'Save change' : f.settle ? 'Pay ' + f.settle : 'Save expense'}</Btn></>}>
-      <Money value={f.amt} set={v => set('amt', v)} label="Expense amount" autoFocus />
+      <Money value={f.amt} set={v => set('amt', v)} label="Expense amount" autoFocus inRef={amtRef} />
       {edit ? null : <Payee F={F} payee={f.payee} setPayee={v => set('payee', v)} who={f.who} setWho={v => set('who', v)} settle={f.settle} setSettle={(id, r) => setF(x => Object.assign({}, x, { settle: id, amt: id && r && !x.amt ? String(r.amt) : x.amt, method: id && r && r.method ? r.method : x.method }))} />}
       {f.settle ? <p className="k-sub">Recorded as the payment of {f.settle}: its project, and an advance for the person to account for. It is not counted again as an expense.</p> : (
         <>
@@ -109,7 +117,7 @@ function GrantSheet({ F, onClose }) {
   const set = (k, v) => { setErr(''); setF(x => Object.assign({}, x, { [k]: v })); };
   return (
     <Sheet title="Float received" sub={F.role === 'ceo' ? 'Money you give Finance' : 'Money from Management · Management is told'} onClose={onClose}
-      foot={<Btn kind="dark" onClick={() => { const m = F.receive(f); if (m) setErr(m); else onClose(); }}>Record float</Btn>}>
+      foot={<Btn kind="dark" onClick={() => { const m = F.receive(f); if (m) setErr(m); else onClose(true); }}>Record float</Btn>}>
       <Money value={f.amt} set={v => set('amt', v)} label="Float amount" autoFocus />
       <div className="ff-quick">{QUICK.map(v => <button key={v} type="button" onClick={() => set('amt', String(v))}>{v / 1e6}M</button>)}</div>
       <div className="ff"><span className="ff-l">Received by</span><Chips opts={F.methods} v={f.method} set={v => set('method', v)} label="Float method" /></div>
@@ -130,7 +138,7 @@ function LineSheet({ l, F, onClose, onEdit }) {
       {l.photo ? <Btn kind="ghost" onClick={l.photo}>View receipt photo</Btn> : null}
       {l.edits.length ? <ul className="fl-edits">{l.edits.map((e, i) => <li key={i}>{e}</li>)}</ul> : null}
       {l.openReq && !l.canEdit ? <p className="k-sub">Request payments are changed on the request, not here.</p> : null}
-      {voiding ? <div className="fh-row"><input className="ff-search" autoFocus value={why} onChange={e => setWhy(e.target.value)} placeholder="Why is it void? (required)" aria-label="Reason for voiding" /><Btn kind="dark" onClick={() => { const m = l.doVoid(why); if (m) setErr(m); else onClose(); }}>Void it</Btn></div> : null}
+      {voiding ? <div className="fh-row"><input className="ff-search" autoFocus value={why} onChange={e => setWhy(e.target.value)} placeholder="Why is it void? (required)" aria-label="Reason for voiding" /><Btn kind="dark" onClick={() => { const m = l.doVoid(why); if (m) setErr(m); else onClose(true); }}>Void it</Btn></div> : null}
       {F.sentToday && l.canVoid ? <p className="k-sub">Today’s report was already sent: Management will be told.</p> : null}
       {err ? <div className="fm-err" role="alert">{err}</div> : null}
     </Sheet>
@@ -236,19 +244,36 @@ function AddRow({ F, D }) {
   );
 }
 
-function ByProject({ F }) {
+// Spending per project. "Requests" is what was paid out; change brought back is its own line and comes off
+// the total. On a phone each project is two lines (the name, then the figures), so it fits 360px.
+function ByProject({ F, phone }) {
   const [range, setRange] = useState('today');
   const P = F.proj(range);
+  const figs = r => [['Requests', r.requests], ['Expenses', r.expenses], ...(r.chargesN ? [['Charges', r.charges]] : [])];
   return (
     <section className="fh-card" aria-label="By project">
       <div className="k-chips">{[['today', 'Today'], ['month', 'This month'], ['all', 'Since start']].map(([k, l]) => <button key={k} type="button" className={range === k ? 'is-on' : ''} onClick={() => setRange(k)}>{l}</button>)}</div>
-      {P.rows.length ? (
+      {!P.rows.length ? <Empty>No spending in this period.</Empty> : phone ? (
+        <ul className="fl-prows">
+          {P.rows.map(r => (
+            <li key={r.p || 'office'}>
+              <b className="fl-pname">{r.name}</b>
+              <span className="fl-pfig">{figs(r).map(([k, v]) => <span key={k}>{k} <b>{v}</b></span>)}<span className="fl-ptot">Total <b>{r.total}</b></span></span>
+              {r.returned ? <span className="fl-pret">Change returned <b>−{r.returned}</b></span> : null}
+            </li>
+          ))}
+          <li className="fl-ptotal"><b className="fl-pname">All projects</b><span className="fl-pfig"><span>Requests <b>{P.total.requests}</b></span><span>Expenses <b>{P.total.expenses}</b></span>{P.total.returnedN ? <span>Returned <b>−{P.total.returned}</b></span> : null}<span className="fl-ptot">Total <b>{P.total.total}</b></span></span></li>
+        </ul>
+      ) : (
         <div className="fr-table-wrap"><table className="fr-table fl-ptable">
           <thead><tr><th>Project</th><th className="r">Requests</th><th className="r">Expenses</th><th className="r">Charges</th><th className="r">Total</th></tr></thead>
-          <tbody>{P.rows.map(r => <tr key={r.p || 'office'}><td><b>{r.name}</b>{r.returned ? <small>change returned {r.returned} taken off</small> : null}</td><td className="r">{r.requests}</td><td className="r">{r.expenses}</td><td className="r">{r.charges}</td><td className="r"><b>{r.total}</b></td></tr>)}</tbody>
+          <tbody>{P.rows.map(r => [
+            <tr key={r.p || 'office'}><td><b>{r.name}</b></td><td className="r">{r.requests}</td><td className="r">{r.expenses}</td><td className="r">{r.charges}</td><td className="r"><b>{r.total}</b></td></tr>,
+            r.returned ? <tr key={(r.p || 'office') + '-ret'} className="fl-pret-row"><td>Change returned</td><td /><td /><td /><td className="r">−{r.returned}</td></tr> : null
+          ])}</tbody>
           <tfoot><tr><td>Total</td><td className="r">{P.total.requests}</td><td className="r">{P.total.expenses}</td><td className="r">{P.total.charges}</td><td className="r">{P.total.total}</td></tr></tfoot>
         </table></div>
-      ) : <Empty>No spending in this period.</Empty>}
+      )}
     </section>
   );
 }
@@ -264,6 +289,15 @@ const Rows = ({ list }) => <ul className="fl-srows">{list.map((r, i) => <li key=
 // The daily float report on the phone: the summary and the sections, with Download PDF and Send.
 function Report({ F, D }) {
   const R = F.report(D); const [busy, setBusy] = useState(false); const [msg, setMsg] = useState('');
+  // Send to boss: the phone's share sheet when there is one (WhatsApp, email…), otherwise WhatsApp with the
+  // summary. Either way the report is filed for Management and the GM. The PDF is saved first and attached.
+  const send = async () => {
+    setBusy(true); let shared = false;
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try { await navigator.share({ title: 'Daily float report · ' + R.short, text: R.text, url: F.shareUrl }); shared = true; } catch (e) { if (e && e.name === 'AbortError') { setBusy(false); return; } }
+    }
+    const m = await F.send(D, { shared }); setBusy(false); setMsg(m || 'Sent to the boss');
+  };
   const T = v => n(v), S = v => (v < 0 ? '−' : '') + n(Math.abs(v)), W = R.waiting;
   return (
     <section className="fh-card fl-report" aria-label="Daily float report">
@@ -281,18 +315,63 @@ function Report({ F, D }) {
       <p className="fl-check">{S(R.open)} + {T(R.in)} − {T(R.out)} = {S(R.close)} {R.check ? '✓' : '✗'}</p>
       {R.shortBy ? <p className="bi-ret" role="status">⚠ Approved requests waiting ({T(W.total)}) are more than the closing balance: short {T(R.shortBy)}.</p> : null}
       <div className="fh-row fl-rbtns">
-        <Btn kind="ghost" onClick={() => F.print(D)}>Download PDF</Btn>
-        {F.canSend ? <Btn kind="dark" disabled={busy} onClick={async () => { setBusy(true); const m = await F.send(D); setBusy(false); setMsg(m || 'Sent to the boss'); }}>{R.sent ? 'Send again' : 'Send to the boss'}</Btn> : null}
+        <Btn kind="ghost" onClick={() => F.print(D)}>Save PDF</Btn>
+        {F.canSend ? <Btn kind="dark" disabled={busy} onClick={send}>{R.sent ? 'Send again' : 'Send to boss'}</Btn> : null}
       </div>
-      {msg ? <p className={msg === 'Sent to the boss' ? 'td-sent' : 'fm-err'} role="status">{msg === 'Sent to the boss' ? '✓ ' : ''}{msg}</p> : null}
+      {F.canSend ? <p className="k-sub fl-hint">Attach the PDF you saved.</p> : null}
+      {msg ? <p className={msg === 'Sent to the boss' ? 'td-sent' : 'fm-err'} role="status">{msg === 'Sent to the boss' ? '✓ Sent to the boss · attach the PDF you saved' : msg}</p> : null}
       <Sec no={1} title="Float received" extra={R.grants.length ? T(R.float) : ''} empty={!R.grants.length}><Rows list={R.grants.map(g => ({ t: g.from + (g.note ? ' · ' + g.note : ''), s: [g.time, g.method].filter(Boolean).join(' · '), v: T(g.amt) }))} /></Sec>
       <Sec no={2} title="Requests submitted today" extra={R.submitted.length ? R.submitted.length + ' · ' + T(R.submittedT) : ''} empty={!R.submitted.length}><Rows list={R.submitted.map(r => ({ t: r.id + ' · ' + r.who, s: r.where + ' · ' + r.st, v: T(r.amt) }))} /></Sec>
       <Sec no={3} title="Requests paid today" extra={R.paid.length ? R.paid.length + ' · ' + T(R.requestsT) : ''} empty={!R.paid.length}><Rows list={R.paid.map(r => ({ t: r.id + ' · ' + r.who, s: [r.time, r.where, r.method, r.paid < r.asked ? 'asked ' + T(r.asked) : '', r.fee ? 'charges ' + T(r.fee) : ''].filter(Boolean).join(' · '), v: T(r.paid) }))} /></Sec>
       <Sec no={4} title="Daily expenses" extra={R.expenses.length ? R.nExp + ' · ' + T(R.expensesT) : ''} empty={!R.expenses.length}><Rows list={R.expenses.map(e => ({ void: e.void, t: e.cat + (e.what ? ' · ' + e.what : ''), s: [e.time, e.who, e.where, e.method, e.fee ? 'charges ' + T(e.fee) : '', e.voucher, e.void ? 'VOID' : ''].filter(Boolean).join(' · '), v: T(e.amt) }))} /></Sec>
       <Sec no={5} title="Change returned" extra={R.returned.length ? T(R.returnedT) : ''} empty={!R.returned.length}><Rows list={R.returned.map(r => ({ t: r.id + ' · ' + r.who, s: 'Advance ' + T(r.paid) + ' · spent ' + T(r.spent) + ' · ' + r.method, v: T(r.back) }))} /></Sec>
       <Sec no={6} title="Spending by project today" extra={R.out ? T(R.out) : ''} empty={!R.byProject.length && !R.charges}><Rows list={[...R.byProject.map(r => ({ t: r.name, s: 'Requests ' + T(r.requests) + ' · expenses ' + T(r.expenses), v: T(r.total) })), ...(R.charges ? [{ t: 'Transaction charges', s: '', v: T(R.charges) }] : [])]} /></Sec>
-      <Sec no={7} title="Waiting for payment" extra={W.n + ' · ' + T(W.total)} empty={!W.list.length && 'Nothing waiting.'}><Rows list={W.list.map(r => ({ t: r.id + ' · ' + r.who, s: r.where + ' · ' + r.st + (r.days != null ? ' · ' + r.days + ' d' : ''), v: T(r.amt) }))} /></Sec>
-      <Sec no={8} title="Advances not yet accounted for" extra={R.advances.length ? R.advances.length + ' · ' + T(R.advancesT) : ''} empty={!R.advances.length && 'All accounted for.'}><Rows list={R.advances.map(a => ({ t: a.who + ' · ' + a.id, s: a.where + ' · paid ' + a.paidOn + ' · ' + a.days + ' d' + (a.overdue ? ' · overdue' : a.st === 'submitted' ? ' · receipts with Finance' : ''), v: T(a.paid) }))} /></Sec>
+      <Sec no={7} title="Waiting for payment" extra={W.list.length ? W.n + ' approved · ' + T(W.total) + (W.pendingN ? ' · ' + W.pendingN + ' in approval · ' + T(W.pendingTotal) : '') : ''} empty={!W.list.length && 'Nothing waiting.'}><Rows list={W.list.map(r => ({ t: r.id + ' · ' + r.who, s: r.where + ' · ' + r.st + (r.days != null ? ' · ' + r.days + ' d' : ''), v: T(r.amt) }))} /></Sec>
+      <Sec no={8} title="Advances not yet accounted for" extra={R.advances.length ? R.advances.length + ' · ' + T(R.advancesT) : ''} empty={!R.advances.length && 'All accounted for.'}><Rows list={R.advances.map(a => ({ t: a.who + ' · ' + a.id, s: a.where + ' · paid ' + a.paidOn + ' · ' + a.days + ' d · ' + (a.st === 'submitted' ? 'receipts with Finance' : a.st === 'back' ? 'sent back' : a.dueText.toLowerCase()), v: T(a.paid) }))} /></Sec>
+    </section>
+  );
+}
+
+// Approved requests waiting for payment: each one opens the payment confirm sheet.
+function WaitingSheet({ F, onClose }) {
+  return (
+    <Sheet title="Waiting to be paid" sub={F.waiting.n + ' approved · ' + F.waiting.total} onClose={onClose} label="Waiting to be paid">
+      {F.waitList.length ? <ul className="fl-srows fl-wait">{F.waitList.map(r => (
+        <li key={r.id}><span><b>{r.who} · {r.id}</b><small>{r.what}{r.via ? ' · ' + r.via : ''}</small></span><em>{r.amtT}</em>{F.canPay ? <Btn kind="dark" onClick={r.pay}>Pay</Btn> : null}</li>
+      ))}</ul> : <Empty>Nothing waiting to be paid.</Empty>}
+    </Sheet>
+  );
+}
+
+// Receipts to check, and the money staff still have to account for (Finance's Receipts tab).
+export function Receipts({ F, compact }) {
+  return (
+    <>
+      <section className="fh-card" id="fl-check" aria-label="Receipts to check">
+        <h3>Receipts to check · {F.toCheck.length}</h3>
+        {F.toCheck.length ? F.toCheck.map(c => <RecCheck key={c.id} c={c} compact />) : <Empty>No receipts waiting to be checked.</Empty>}
+      </section>
+      <details className="fh-card fl-adv" id="fl-adv" open={!compact || F.overdueN > 0}>
+        <summary><h3>Money to account for · {F.advances.length}</h3></summary>
+        {F.advances.length ? <ul className="fl-srows">{F.advances.map(a => <li key={a.id} onClick={a.open}><span><b>{a.who} · {a.id}</b><small>{a.where} · paid {a.paidOn} · {a.days} d · {a.st === 'submitted' ? 'receipts with Finance' : a.st === 'back' ? 'sent back' : a.dueText.toLowerCase()}</small></span><em className={a.overdue ? 'is-red' : ''}>{a.paidT}</em></li>)}</ul> : <Empty>Everyone has accounted for the money they received.</Empty>}
+      </details>
+    </>
+  );
+}
+
+// Requests waiting for Finance's Verify step.
+function VerifyCard({ F }) {
+  const [err, setErr] = useState('');
+  return (
+    <section className="fh-card fl-verify" aria-label="Requests to verify">
+      <h3>Requests to verify · {F.verify.length}</h3>
+      <ul className="fl-srows">{F.verify.map(r => (
+        <li key={r.id}>
+          <span onClick={r.open}><b>{r.who} · {r.amtT}</b><small>{r.id} · {r.what}</small></span>
+          <span className="fl-vbtns"><Btn kind="ghost" onClick={() => setErr(r.sendBack())}>Send back</Btn><Btn kind="dark" onClick={r.verify}>Verify</Btn></span>
+        </li>
+      ))}</ul>
+      {err ? <div className="fm-err" role="alert">{err}</div> : null}
     </section>
   );
 }
@@ -300,13 +379,17 @@ function Report({ F, D }) {
 // The Float page: the money from Management, what was paid from it, and the daily report.
 export default function FloatPage({ v }) {
   const F = v.FL;
-  const [sheet, setSheet] = useState(null);
   if (!F) return null;
   const D = F.day, phone = v.phone || (typeof window !== 'undefined' && window.innerWidth < 700);
-  const Fx = Object.assign({}, F, { ic: v.ic || {}, sentToday: !!F.dayView(F.today).sent });
-  const openLine = l => setSheet({ line: l });
-  const openById = (id, at) => { const l = F.dayView(at).lines.find(x => x.id === id); if (l) openLine(l); };
-  const views = [['day', 'Day'], ['book', 'Cash book'], ['project', 'By project'], ['report', 'Daily report']];
+  const Fx = Object.assign({}, F, { ic: v.ic || {}, sentToday: !!F.dayView(F.today).sent, canPay: !!F.canEdit });
+  const sheet = F.sheet, close = force => F.closeSheet(force === true);
+  const openLine = l => F.setSheet({ line: l.id, at: l.at || D });
+  const lineOf = x => (x ? F.dayView(x.at).lines.find(l => l.id === x.line || l.id === x.edit) : null);
+  const openById = (id, at) => { const l = F.dayView(at).lines.find(x => x.id === id); if (l) F.setSheet({ line: id, at }); };
+  const lineSheet = sheet && sheet.line ? lineOf(sheet) : null, editSheet = sheet && sheet.edit ? lineOf(sheet) : null;
+  const views = [['day', 'Day'], ['book', 'Petty cash book'], ['project', 'By project']];
+  // Finance checks receipts on its own Receipts tab; Management and the GM see them here.
+  const ownReceipts = F.role === 'finance';
   return (
     <div className="fl">
       {v.floatNudge && F.view !== 'report' ? <button type="button" className="fl-nudge" onClick={v.floatNudge.go}><b>{v.floatNudge.t}</b><small>{v.floatNudge.s}</small></button> : null}
@@ -315,33 +398,25 @@ export default function FloatPage({ v }) {
         <small><span>Opened today {F.todayLine.open}</span> · <span>In +{F.todayLine.in}</span> · <span>Out −{F.todayLine.out}</span></small>
       </section>
       <div className={'fl-acts' + (F.canEdit ? '' : ' is-view')}>
-        {F.canEdit ? <button type="button" onClick={() => setSheet('grant')}><Icon d={Fx.ic.wallet} size={22} /><b>Float received</b></button> : null}
-        {F.canEdit ? <button type="button" onClick={() => setSheet('expense')}><Icon d={Fx.ic.receipt} size={22} /><b>Daily expense</b></button> : null}
-        <button type="button" onClick={() => F.setView('report')}><Icon d={Fx.ic.fileText} size={22} /><b>Daily report</b></button>
+        {F.canEdit ? <button type="button" onClick={() => F.setSheet('grant')}><Icon d={Fx.ic.wallet} size={22} /><b>Float received</b></button> : null}
+        {F.canEdit ? <button type="button" onClick={() => F.setSheet('expense')}><Icon d={Fx.ic.receipt} size={22} /><b>Daily expense</b></button> : null}
+        <button type="button" className={F.view === 'report' ? 'is-on' : ''} aria-pressed={F.view === 'report'} onClick={() => F.setView('report')}><Icon d={Fx.ic.fileText} size={22} /><b>Daily report</b></button>
       </div>
       <div className="fl-chips">
-        <button type="button" className="fl-chip" onClick={F.waiting.go}>Waiting to be paid · <b>{F.waiting.n}</b> · {F.waiting.total}</button>
-        {F.toCheck.length ? <a href="#fl-check" className="fl-chip is-gold">Receipts to check · <b>{F.toCheck.length}</b></a> : null}
-        {F.overdueN ? <a href="#fl-adv" className="fl-chip is-red">Not accounted for after {3} days · <b>{F.overdueN}</b></a> : null}
+        <button type="button" className="fl-chip" onClick={() => F.setSheet('waiting')}>Waiting to be paid · <b>{F.waiting.n}</b> · {F.waiting.total}</button>
+        {F.toCheck.length ? (ownReceipts ? <button type="button" className="fl-chip is-gold" onClick={F.goReceipts}>Receipts to check · <b>{F.toCheck.length}</b></button> : <a href="#fl-check" className="fl-chip is-gold">Receipts to check · <b>{F.toCheck.length}</b></a>) : null}
+        {F.overdueN ? (ownReceipts ? <button type="button" className="fl-chip is-red" onClick={F.goReceipts}>Not accounted for after {F.accountDays} days · <b>{F.overdueN}</b></button> : <a href="#fl-adv" className="fl-chip is-red">Not accounted for after {F.accountDays} days · <b>{F.overdueN}</b></a>) : null}
       </div>
+      {F.verify.length ? <VerifyCard F={Fx} /> : null}
       <div className="rc-smart fl-views" role="tablist">{views.map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={F.view === k} className={F.view === k ? 'is-on' : ''} onClick={() => F.setView(k)}><span>{l}</span></button>)}</div>
-      {F.view === 'report' ? <Report F={Fx} D={D} /> : F.view === 'project' ? <ByProject F={Fx} /> : F.view === 'book' ? <CashBook F={Fx} D={D} phone={phone} openLine={openById} /> : <DayList F={Fx} D={D} open={openLine} />}
-      {F.toCheck.length ? (
-        <section className="fh-card" id="fl-check" aria-label="Receipts to check">
-          <h3>Receipts to check · {F.toCheck.length}</h3>
-          {F.toCheck.map(c => <RecCheck key={c.id} c={c} compact />)}
-        </section>
-      ) : null}
-      {F.advances.length ? (
-        <details className="fh-card fl-adv" id="fl-adv" open={F.overdueN > 0}>
-          <summary><h3>Advances to account for · {F.advances.length}</h3></summary>
-          <ul className="fl-srows">{F.advances.map(a => <li key={a.id} onClick={a.open}><span><b>{a.who} · {a.id}</b><small>{a.where} · paid {a.paidOn} · {a.days} d · {a.st === 'submitted' ? 'receipts with Finance' : a.st === 'back' ? 'sent back' : a.overdue ? 'overdue' : 'due ' + a.dueOn}</small></span><em className={a.overdue ? 'is-red' : ''}>{a.paidT}</em></li>)}</ul>
-        </details>
-      ) : null}
-      {sheet === 'expense' ? <ExpenseSheet F={Fx} day={D >= F.minDay && D <= F.today ? D : F.today} onClose={() => setSheet(null)} /> : null}
-      {sheet === 'grant' ? <GrantSheet F={Fx} onClose={() => setSheet(null)} /> : null}
-      {sheet && sheet.line ? <LineSheet l={sheet.line} F={Fx} onClose={() => setSheet(null)} onEdit={() => setSheet({ edit: sheet.line })} /> : null}
-      {sheet && sheet.edit ? <ExpenseSheet F={Fx} edit={sheet.edit} onClose={() => setSheet(null)} /> : null}
+      {F.view === 'report' ? <Report F={Fx} D={D} /> : F.view === 'project' ? <ByProject F={Fx} phone={phone} /> : F.view === 'book' ? <CashBook F={Fx} D={D} phone={phone} openLine={openById} /> : <DayList F={Fx} D={D} open={openLine} />}
+      {!ownReceipts && (F.toCheck.length || F.advances.length) ? <Receipts F={Fx} compact /> : null}
+      {sheet === 'expense' ? <ExpenseSheet F={Fx} day={D >= F.minDay && D <= F.today ? D : F.today} onClose={close} /> : null}
+      {sheet === 'grant' ? <GrantSheet F={Fx} onClose={close} /> : null}
+      {sheet === 'waiting' ? <WaitingSheet F={Fx} onClose={close} /> : null}
+      {lineSheet ? <LineSheet l={lineSheet} F={Fx} onClose={close} onEdit={() => F.setSheet({ edit: lineSheet.id, at: sheet.at })} /> : null}
+      {editSheet ? <ExpenseSheet F={Fx} edit={editSheet} onClose={close} /> : null}
+      {v.PAYQ ? <PaySheet key={v.PAYQ.id} P={v.PAYQ} /> : null}
     </div>
   );
 }

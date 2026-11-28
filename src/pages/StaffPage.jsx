@@ -41,7 +41,7 @@ export default function StaffPage({ v }) {
                 Tasks
               </span>
               <span>
-                Open float
+                To account for
               </span>
               <span>
                 Yesterday

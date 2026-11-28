@@ -195,7 +195,7 @@ export const reqFlowMethods = {
     const t = String(text || '').trim(); if (!t) return 'Write your question';
     const r = this.state.reqs.find(x => x.id === id); if (!r) return 'Request not found';
     this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { info: 'asked', thread: [...(q.thread || []), { by: this.me().k, t, at: this.today() + ' ' + this.now() }] }) : q)) }));
-    if (r.who !== this.me().k) this.notify({ to: r.who, ic: 'message', t: this.me().n + ' asks about ' + r.id, s: t, go: 'requests' });
+    if (r.who !== this.me().k) this.notify({ to: r.who, ic: 'message', t: this.me().n + ' asks about ' + r.id, s: t, go: 'request:' + r.id });
     this.toast('Question sent to ' + this.av(r.who).n);
     return '';
   },
@@ -231,18 +231,18 @@ export const reqFlowMethods = {
     this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, patch) : q)) }));
     if (!resubmit && edited) {
       const to = this.approverAt(Object.assign({}, r, patch), patch.step != null ? patch.step : r.step);
-      this.remind(to, r.id + ' was changed before approval', 'requests', 'banknote', note.replace(/\n/g, ' · ').slice(0, 120));
+      this.remind(to, r.id + ' was changed before approval', 'request:' + r.id, 'banknote', note.replace(/\n/g, ' · ').slice(0, 120));
       this.toast(r.id + ' updated');
       return '';
     }
     if (resubmit) {
       const to = this.approverAt(Object.assign({}, r, patch), step);
-      this.remind(to, r.id + ' was corrected and needs your approval', 'requests', 'banknote', this.av(r.who).n + ' · ' + this.fmtT(r.amt));
+      this.remind(to, r.id + ' was corrected and needs your approval', 'request:' + r.id, 'banknote', this.av(r.who).n + ' · ' + this.fmtT(r.amt));
       this.smsTo(to, r.id + ' was corrected and needs your approval. ' + this.av(r.who).n + ' requests ' + this.fmtT(r.amt) + '. Open the system to act.');
       this.toast(r.id + ' resubmitted');
     } else {
       const asker = [...(r.thread || [])].reverse().find(m => m.by !== r.who), to = asker ? asker.by : this.approverAt(r, r.step);
-      this.notify({ to, ic: 'message', t: this.me().n + ' updated ' + r.id, s: note.slice(0, 120), go: 'requests' });
+      this.notify({ to, ic: 'message', t: this.me().n + ' updated ' + r.id, s: note.slice(0, 120), go: 'request:' + r.id });
       this.toast(r.id + ' updated');
     }
     return '';
@@ -254,7 +254,7 @@ export const reqFlowMethods = {
     const r = this.state.reqs.find(x => x.id === id); if (!r) return 'Request not found';
     const asker = [...(r.thread || [])].reverse().find(m => m.by !== r.who);
     this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { info: 'answered', thread: [...(q.thread || []), { by: this.me().k, t, at: this.today() + ' ' + this.now() }] }) : q)) }));
-    if (asker) this.notify({ to: asker.by, ic: 'message', t: this.me().n + ' answered on ' + r.id, s: t, go: 'requests' });
+    if (asker) this.notify({ to: asker.by, ic: 'message', t: this.me().n + ' answered on ' + r.id, s: t, go: 'request:' + r.id });
     this.toast('Answer sent');
     return '';
   },
@@ -301,8 +301,8 @@ export const reqFlowMethods = {
     const ok = { st: 'ok', by: this.me().k, okAt: this.fToday(), okTime: tzTime(this.nowDate()) };
     if (back > 0) ok.backVia = via;
     this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { rec: Object.assign({}, q.rec, ok) }) : q)), staff: x.staff.map(p => (p.k === r.who ? Object.assign({}, p, { fl: Math.max(0, (p.fl || 0) - paid) }) : p)) }));
-    if (r.who !== this.me().k) this.notify({ to: r.who, ic: 'check', t: 'Receipts accepted · ' + r.id, s: 'Your advance for this request is closed' + (back > 0 ? ' · change ' + this.fmtT(back) + ' received' : ''), go: 'requests' });
-    this.toast('Reconciled · ' + r.id + (back > 0 ? ' · ' + this.fmtT(back) + ' back in the float' : ''));
+    if (r.who !== this.me().k) this.notify({ to: r.who, ic: 'check', t: 'Receipts accepted · ' + r.id, s: 'Your advance for this request is closed' + (back > 0 ? ' · change ' + this.fmtT(back) + ' received' : ''), go: 'request:' + r.id });
+    this.toast('Receipts accepted · ' + r.id + (back > 0 ? ' · ' + this.fmtT(back) + ' back in the float' : ''));
     return '';
   }
 };

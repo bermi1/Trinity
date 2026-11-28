@@ -218,9 +218,11 @@ describe('the daily float report', () => {
     const snap = a.fl().closes[D];
     expect(snap).toMatchObject({ open: 0, close: a.dailyFloat(D).close, by: 'RT' });
     const rp = a.state.reports[0];
-    expect(rp).toMatchObject({ kind: 'daily', to: ['DK'], title: 'Daily float report · 27 Nov 2026' });
+    // Management and the General Manager both receive it.
+    expect(rp).toMatchObject({ kind: 'daily', to: ['DK', 'GN'], title: 'Daily float report · 27 Nov 2026' });
     expect(rp.file.name).toBe('Daily float report 2026-11-27.html');
     expect(a.state.notes.some(n => n.to === 'DK' && /Daily float report/.test(n.t))).toBe(true);
+    expect(a.state.notes.some(n => n.to === 'GN' && /Daily float report/.test(n.t))).toBe(true);
     expect(a.dailyFloat(D).revised).toBeNull();
     // Voiding after the report was sent tells Management and marks the day revised.
     const id = a.state.petty.entries[0].id;

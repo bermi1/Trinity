@@ -21,7 +21,7 @@ export function renderVals() {
   const phone = s.w < 700;
   const flatNav = []; G.forEach(g => g[1].forEach(i => flatNav.push(i)));
   const tabDefs = (this.TABS[role] || this.TABS.ceo).filter(t => !this.isOff(t[0]));
-  const BADGE = {notifications:unread, requests:role === 'ceo' ? myReq.length : 0, financeportal:finQ, storekeeper:lowN, tasks:myOpen};
+  const BADGE = {notifications:unread, requests:role === 'ceo' ? myReq.length : 0, financeportal:finQ, float:role === 'finance' ? finQ : 0, receipts:role === 'finance' ? vreqs.filter(q => q.st === 'paid' && q.rec && q.rec.st === 'submitted').length : 0, storekeeper:lowN, tasks:myOpen};
   const curNav = flatNav.find(i => i[0] === navPage);
   const pageTitle = s.page === 'job' ? ((s.jobs.find(j => j.id === s.jobId) || {}).id || 'Production job') : s.page === 'project' ? this.proj(s.projectId).client : curNav ? curNav[1] : 'Trinity Mark 360';
   const moreActive = !!s.more || !tabDefs.some(t => t[0] === navPage);

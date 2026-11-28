@@ -1,7 +1,7 @@
 import FixRequest from './FixRequest';
 import ReqItems from '../../components/ReqItems';
 import { AccountForm } from '../../components/AccountForm';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PageHead, Card, Btn, Pill, Chips, Empty } from '../../ui/kit';
 
 const TONE = { amber: ['#FBF1DD', '#8A6414'], green: ['#E6F4EC', '#1F7549'], red: ['#FBEDEE', '#B23A46'], blue: ['#E9EFFA', '#3559A8'] };
@@ -10,9 +10,14 @@ function Reply({ r }) {
   const [t, setT] = useState(''); const [e, setE] = useState('');
   return <div className="mr-reply"><input className="ff-search" value={t} onChange={x => setT(x.target.value)} placeholder="Your answer" aria-label="Your answer" /><Btn kind="dark" onClick={() => { const m = r.answer(t); if (m) setE(m); else setT(''); }}>Send</Btn>{e ? <span className="fm-err">{e}</span> : null}</div>;
 }
-function Req({ r, showWho }) {
+function Req({ r, showWho, focus, focusDone }) {
+  const ref = useRef(null);
+  // Opened on purpose (a tap, a notification): bring the request into view.
+  useEffect(() => {
+    if (focus && focus === r.id && r.sel && ref.current) { try { ref.current.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (e) { /* old browser */ } if (focusDone) focusDone(); }
+  }, [focus, r.id, r.sel, focusDone]);
   return (
-    <li className={'mr-item' + (r.sel ? ' is-open' : '')} data-req={r.id}>
+    <li ref={ref} className={'mr-item' + (r.sel ? ' is-open' : '')} data-req={r.id}>
       <button type="button" className="mr-row" onClick={r.toggle} aria-expanded={r.sel}>
         <span className="mr-left"><b>{r.what}</b><small>{showWho ? r.who + ' · ' : ''}{r.where}{r.need ? ' · needed ' + r.need : ''}</small></span>
         <span className="mr-right"><b>{r.amt}</b><Pill l={r.asked ? 'Question for you' : r.canRec ? (r.account && r.account.overdue ? 'Account for it · overdue' : 'Account for it') : r.status} bg={r.asked || r.canRec ? '#FBF1DD' : TONE[r.tone][0]} fg={r.asked || r.canRec ? '#8A6414' : TONE[r.tone][1]} /></span>
@@ -49,11 +54,17 @@ export default function MyRequests({ M }) {
         <Btn kind="dark" onClick={M.newReq}>New request</Btn>
       </PageHead>
       {M.mgr ? <Chips items={[{ l: 'Mine', on: !team, set: () => M.setScope('mine') }, { l: M.deptL, on: team, set: () => M.setScope('team') }]} /> : null}
+      {(M.todo || []).length ? (
+        <Card title={'To do · ' + M.todo.length}>
+          <p className="k-sub">You were paid: say what you spent, add the receipts and return the change.</p>
+          <ul className="mr-list">{M.todo.map(r => <Req key={r.id} r={r} showWho={team} focus={M.focus} focusDone={M.focusDone} />)}</ul>
+        </Card>
+      ) : null}
       <Card title={'In progress · ' + M.open.length}>
-        {M.open.length ? <ul className="mr-list">{M.open.map(r => <Req key={r.id} r={r} showWho={team} />)}</ul> : <Empty>Nothing waiting. Tap “New request” to ask for money.</Empty>}
+        {M.open.length ? <ul className="mr-list">{M.open.map(r => <Req key={r.id} r={r} showWho={team} focus={M.focus} focusDone={M.focusDone} />)}</ul> : <Empty>Nothing waiting. Tap “New request” to ask for money.</Empty>}
       </Card>
       <Card title={'Finished · ' + M.done.length}>
-        {M.done.length ? <ul className="mr-list">{M.done.map(r => <Req key={r.id} r={r} showWho={team} />)}</ul> : <Empty>No paid or rejected requests yet.</Empty>}
+        {M.done.length ? <ul className="mr-list">{M.done.map(r => <Req key={r.id} r={r} showWho={team} focus={M.focus} focusDone={M.focusDone} />)}</ul> : <Empty>Nothing finished yet.</Empty>}
       </Card>
     </>
   );

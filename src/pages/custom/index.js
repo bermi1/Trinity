@@ -35,6 +35,7 @@ export default {
   cashbook: FinanceHub,
   freports: FinanceHub,
   float: FinanceHub,
+  receipts: FinanceHub,
   reporting: ReportingPage,
   petty: FinanceHub,
   payroll: PayrollPage,

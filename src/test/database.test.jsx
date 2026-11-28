@@ -119,7 +119,7 @@ describe('live database', () => {
     const group = screen.getByRole('group', { name: 'Open a dashboard' });
     for (const l of ['Management', 'Finance', 'Reception', 'Creative', 'Operations']) expect(within(group).getAllByRole('button').some(b => b.textContent.includes(l))).toBe(true);
     fireEvent.click(within(group).getAllByRole('button').find(b => b.textContent.includes('Finance')));
-    expect(await screen.findByText(/FINANCE/)).toBeTruthy();
+    expect((await screen.findAllByText('Float balance')).length).toBeGreaterThan(0);
   });
 
   it('keeps non-management staff in their own portal', async () => {

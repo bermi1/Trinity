@@ -1,12 +1,24 @@
 // Generated from the Claude Design file by scripts/dc-to-jsx.mjs.
-import { Fragment } from 'react';
+import { Fragment, useEffect, useRef } from 'react';
 import MyRequests from './custom/MyRequests';
 import FixRequest from './custom/FixRequest';
 import ReqItems from '../components/ReqItems';
 import { RecCheck } from '../components/AccountForm';
+import PaySheet from '../components/PaySheet';
 
 export default function RequestsPage({ v }) {
   if (v.MR) return <MyRequests M={v.MR} />;
+  return <Approvals v={v} />;
+}
+
+function Approvals({ v }) {
+  const detail = useRef(null), selId = v.hasSel ? v.R.id : null, focus = v.reqFocus, done = v.reqFocusDone;
+  // A request opened on purpose (row tap, "Open the request", a notification) scrolls into view.
+  useEffect(() => {
+    if (!focus || focus !== selId || !detail.current) return;
+    try { detail.current.scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (e) { /* old browser */ }
+    if (done) done();
+  }, [focus, selId, done]);
   return (
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "16px", flexWrap: "wrap" }}>
@@ -15,7 +27,7 @@ export default function RequestsPage({ v }) {
             MONEY
           </span>
           <h1 style={{ margin: "0", fontSize: "clamp(22px,2.4vw,28px)", fontWeight: "700", letterSpacing: "-.02em" }}>
-            {v.showFloats ? 'Requests & floats' : 'Approvals'}
+            {v.showFloats ? 'Pay & approve' : 'Approvals'}
           </h1>
         </div>
         <button className="tm-h9" onClick={v.newReq} style={{ height: "40px", padding: "0 16px", border: "none", background: "#6D3CC2", color: "#fff", borderRadius: "10px", display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: "600" }}>
@@ -93,7 +105,7 @@ export default function RequestsPage({ v }) {
         </div>
         {v.hasSel ? (
           <>
-            <div style={{ flex: "2 1 560px", minWidth: "0", background: "#fff", border: "1px solid #E8E4EF", borderRadius: "14px", display: "flex", flexWrap: "wrap" }}>
+            <div ref={detail} className="rq-detail" data-req={v.R.id} style={{ flex: "2 1 560px", minWidth: "0", background: "#fff", border: "1px solid #E8E4EF", borderRadius: "14px", display: "flex", flexWrap: "wrap", scrollMarginTop: "72px" }}>
               <div style={{ flex: "1.4 1 320px", minWidth: "0", padding: "22px 24px", display: "flex", flexDirection: "column", gap: "20px" }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   <span style={{ font: "600 11.5px 'IBM Plex Mono',monospace", color: "#6E6A7C" }}>
@@ -173,7 +185,7 @@ export default function RequestsPage({ v }) {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                           <path d={v.ic.check} />
                         </svg>
-                        Approve
+                        {v.R.approveL || 'Approve'}
                       </button>
                       <button className="tm-h3" onClick={v.R.ask} style={{ height: "44px", padding: "0 18px", border: "1px solid #E8E4EF", background: "#fff", borderRadius: "10px", fontSize: "14px", fontWeight: "600", display: "flex", alignItems: "center", gap: "8px" }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -192,19 +204,12 @@ export default function RequestsPage({ v }) {
                 ) : null}
                 {v.R.paidLine ? <div className="rq-paid" role="status">{v.R.paidLine}</div> : null}
                 {v.R.canPay ? (
-                  <>
-                    <label className="rq-payamt"><span>Amount paid (TZS)</span><input value={v.R.payAmt} onChange={v.R.setPayAmt} inputMode="numeric" aria-label="Amount paid" /></label>
-                    <div className="rq-payamt"><span>Paid by</span><div className="ff-chips" role="radiogroup" aria-label="Paid by">{v.R.payMethods.map(m => <button key={m} type="button" role="radio" aria-checked={v.R.payVia === m} className={v.R.payVia === m ? 'is-on' : ''} onClick={() => v.R.setPayVia(m)}>{m}</button>)}</div></div>
-                    <label className="rq-payamt"><span>Date paid</span><input type="date" value={v.R.payDate} min={v.R.payDateMin} max={v.R.payDateMax} onChange={v.R.setPayDate} aria-label="Date paid" /></label>
-                    {v.R.floatLeft != null && v.R.floatLeft - (Number(String(v.R.payAmt || '').replace(/[^0-9]/g, '')) || 0) < 0 ? <p className="bi-ret" role="status">This takes the float below zero (balance TZS {Math.round(v.R.floatLeft).toLocaleString('en-US')}). It is still recorded and Management is told.</p> : null}
-                    <label className="rq-payamt"><span>Transaction charges (TZS) · bank or mobile money fee</span><input value={v.R.payFee} onChange={v.R.setPayFee} inputMode="numeric" placeholder="0" aria-label="Transaction charges" /></label>
-                    <button className="tm-h2" onClick={v.R.pay} style={{ alignSelf: "flex-start", height: "44px", padding: "0 20px", border: "none", borderRadius: "10px", background: "#2B1459", color: "#fff", fontSize: "14px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d={v.ic.wallet} />
-                      </svg>
-                      {'Mark paid · TZS ' + (Number(String(v.R.payAmt || '').replace(/[^0-9]/g, '')) || 0).toLocaleString('en-US')}
-                    </button>
-                  </>
+                  <button className="tm-h2" onClick={v.R.pay} style={{ alignSelf: "flex-start", height: "44px", padding: "0 20px", border: "none", borderRadius: "10px", background: "#2B1459", color: "#fff", fontSize: "14px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d={v.ic.wallet} />
+                    </svg>
+                    {'Mark paid · ' + v.R.amt}
+                  </button>
                 ) : null}
                 {v.R.waiting ? (
                   <>
@@ -267,7 +272,7 @@ export default function RequestsPage({ v }) {
       <div style={{ background: "#fff", border: "1px solid #E8E4EF", borderRadius: "14px", overflow: "hidden" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #E8E4EF" }}>
           <h3 style={{ margin: "0", fontSize: "15px", fontWeight: "700" }}>
-            Open staff floats
+            Staff still to account
           </h3>
           <span style={{ fontSize: "12px", color: "#6E6A7C" }}>
             Receipts due within 3 days of payment
@@ -299,7 +304,7 @@ export default function RequestsPage({ v }) {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6D3CC2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d={v.ic.receipt} />
                 </svg>
-                {f.recLabel || 'Reconcile'}
+                {f.recLabel || 'Check'}
               </button>
             </div>
           </Fragment>
@@ -307,12 +312,13 @@ export default function RequestsPage({ v }) {
         {v.floatsEmpty ? (
           <>
             <div style={{ padding: "30px", textAlign: "center", color: "#6E6A7C", fontSize: "13px" }}>
-              No open floats.
+              Nobody has money to account for.
             </div>
           </>
         ) : null}
       </div>
       ) : null}
+      {v.PAYQ ? <PaySheet key={v.PAYQ.id} P={v.PAYQ} /> : null}
     </>
   );
 }
