@@ -23,11 +23,11 @@ function EditPay({ P }) {
         <div className="fm-body">
           <p className="mr-pay"><b>Paid</b> {E.paidLine}</p>
           {E.fromBook ? <p className="k-sub">Paid with {E.fromBook} from the cash book. To change it, undo this payment ({E.fromBook} becomes a normal expense again), then mark it paid the right way.</p> : <>
-            <div className="ff" data-field="Already recorded in the cash book?"><span className="ff-l">Already recorded in the cash book?</span>
+            {P.manualOk ? <div className="ff" data-field="Already recorded in the cash book?"><span className="ff-l">Already recorded in the cash book?</span>
               <div className="k-chips ps-mode" role="radiogroup" aria-label="Already recorded in the cash book?">
-                {[[false, 'No · paid from the float'], [true, 'Yes · already recorded']].map(([k, l]) => <button key={l} type="button" role="radio" aria-checked={f.outside === k} className={f.outside === k ? 'is-on' : ''} onClick={() => set('outside', k)}>{l}</button>)}
+                {[[false, 'No · paid from the float'], [true, 'Yes · recorded manually']].map(([k, l]) => <button key={l} type="button" role="radio" aria-checked={f.outside === k} className={f.outside === k ? 'is-on' : ''} onClick={() => set('outside', k)}>{l}</button>)}
               </div>
-            </div>
+            </div> : null}
             {f.outside ? <p className="k-sub">Already in the cash book: it is <b>not</b> taken from the float again and nothing is left for {P.first} to account for.</p> : null}
             <label className="fh-amt fl-money"><span>TZS</span><input inputMode="numeric" value={f.amt ? n(f.amt) : ''} onChange={e => set('amt', digits(e.target.value))} placeholder="0" aria-label="Amount paid" /></label>
             <small className="k-sub">Asked {P.askedT}</small>
@@ -63,27 +63,28 @@ function PaySheetNew({ P }) {
   const [inBook, setInBook] = useState(false); const [pick, setPick] = useState('');
   const left = P.floatLeft == null || inBook ? null : P.floatLeft - amt - fee;
   const book = P.book || [], chosen = book.find(e => e.id === pick);
-  const go = () => { setBusy(true); const m = inBook ? (pick ? P.payFromBook(pick) : P.paidOutside(f)) : P.pay(f); setBusy(false); if (m) setErr(m); };
+  const manual = inBook && !pick;
+  const go = () => { if (manual && !P.manualOk) { setErr('Choose the cash book record'); return; } setBusy(true); const m = inBook ? (pick ? P.payFromBook(pick) : P.paidOutside(f)) : P.pay(f); setBusy(false); if (m) setErr(m); };
   return (
     <div className="fm-back" onClick={P.close}>
       <div className="fm fl-sheet" role="dialog" aria-label="Confirm payment" onClick={e => e.stopPropagation()}>
         <header className="fm-head"><div><h2>Pay {P.id}</h2><p>{P.who} · {P.what}</p></div><button type="button" className="fm-x" onClick={P.close} aria-label="Close">×</button></header>
         <div className="fm-body">
-          {P.paidOutside ? <div className="ff" data-field="Already recorded in the cash book?"><span className="ff-l">Already recorded in the cash book?</span>
+          {P.manualOk || book.length ? <div className="ff" data-field="Already recorded in the cash book?"><span className="ff-l">Already recorded in the cash book?</span>
             <div className="k-chips ps-mode" role="radiogroup" aria-label="Already recorded in the cash book?">
-              {[[false, 'No · pay from the float'], [true, 'Yes · already recorded']].map(([k, l]) => (
+              {[[false, 'No · pay from the float'], [true, P.manualOk ? 'Yes · recorded manually' : 'Yes · in the cash book']].map(([k, l]) => (
                 <button key={l} type="button" role="radio" aria-checked={inBook === k} className={inBook === k ? 'is-on' : ''} onClick={() => { setErr(''); setInBook(k); setPick(''); if (!k && f.at < P.minDay) set('at', P.today); }}>{l}</button>))}
             </div>
           </div> : null}
-          {inBook ? <p className="k-sub">The payment is already in the cash book, so {P.id} is marked paid and accounted for, and <b>the float is not reduced again</b> (no double entry).{book.length ? ' Link the record if it is listed:' : ''}</p> : null}
+          {inBook ? <p className="k-sub">The payment is already in the cash book, so {P.id} is marked paid and accounted for, and <b>the float is not reduced again</b> (no double entry).{book.length ? (P.manualOk ? ' Link the record if it is listed:' : ' Choose its record:') : ''}{P.manualOk ? ' Requests of ' + P.manualDays + ' were paid and written in the cash book by hand.' : ''}</p> : null}
           {inBook && book.length ? <div className="fl-settle" role="radiogroup" aria-label="Cash book record">
             {book.map(e => (
               <button key={e.id} type="button" role="radio" aria-checked={pick === e.id} className={'fl-req' + (pick === e.id ? ' is-on' : '')} onClick={() => { setErr(''); setPick(pick === e.id ? '' : e.id); }}>
                 <span><b>{e.voucher} · {e.day}</b><small>{e.what}{e.who ? ' · ' + e.who : ''} · {e.where}</small></span><em>{e.amtT}</em>
               </button>))}
-            <button type="button" role="radio" aria-checked={!pick} className={'fl-req' + (!pick ? ' is-on' : '')} onClick={() => { setErr(''); setPick(''); }}><span><b>Not listed</b><small>Recorded on another line or earlier · enter the amount and day below</small></span></button>
+            {P.manualOk ? <button type="button" role="radio" aria-checked={!pick} className={'fl-req' + (!pick ? ' is-on' : '')} onClick={() => { setErr(''); setPick(''); }}><span><b>Not listed</b><small>Recorded on another line or earlier · enter the amount and day below</small></span></button> : null}
           </div> : null}
-          {chosen ? null : <>
+          {chosen || (inBook && !P.manualOk) ? null : <>
           {P.payTo && !inBook ? <p className="mr-pay"><b>Pay to</b> {P.payTo}</p> : null}
           <label className="fh-amt fl-money"><span>TZS</span><input inputMode="numeric" value={f.amt ? n(f.amt) : ''} onChange={e => set('amt', digits(e.target.value))} placeholder="0" aria-label="Amount paid" /></label>
           <small className="k-sub">Asked {P.askedT}{amt && amt < P.asked ? ' · paying part of it' : ''}</small>

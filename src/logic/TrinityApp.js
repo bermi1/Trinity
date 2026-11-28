@@ -865,6 +865,7 @@ export default class TrinityApp extends Logic {
     // Already recorded in the cash book (paid before, written there as an expense): the request is marked
     // paid and accounted for, and its amount is NOT taken from the float again (no double entry). Any past day.
     const out = !!o.outside;
+    if (out && !this.manualOk(cur)) { const m = 'Only requests of 27 – 28 Nov can be marked recorded manually · link the cash book record instead'; this.toast(m); return m; }
     const d = out ? (!/^\d{4}-\d{2}-\d{2}$/.test(o.date || '') ? { at: this.fToday() } : o.date > this.fToday() ? { error: 'The date cannot be in the future' } : { at: o.date }) : this.floatDate(o.date);
     if (d.error) { this.toast(d.error); return d.error; }
     const via = METHODS.includes(o.method) ? o.method : (r.pay && r.pay.by) || '';
