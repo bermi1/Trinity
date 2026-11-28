@@ -213,6 +213,14 @@ function Approvals({ v }) {
                     {'Mark paid · ' + v.R.amt}
                   </button>
                 ) : null}
+                {v.R.viewOnly ? <div className="rq-viewonly" role="note" data-testid="req-view-only">{v.R.viewOnly}</div> : null}
+                {v.R.remindTo ? (
+                  <div className="rq-remind">
+                    <button type="button" className="me-save" onClick={() => v.R.remind(false)}>Remind {v.R.remindTo}</button>
+                    <button type="button" className="td-start wa-btn" onClick={() => v.R.remind(true)}>Remind on WhatsApp</button>
+                    {v.R.lastReminder ? <small className="k-sub">{v.R.lastReminder}</small> : null}
+                  </div>
+                ) : null}
                 {v.R.waiting ? (
                   <>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>

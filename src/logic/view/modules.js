@@ -144,7 +144,7 @@ export function pageVals2(s, IC, ST, narrow) {
       else this.toast('Booked by ' + this.av(b[0]).n + ' · ' + b[1]);
     }}; })}));
   V.roomsFree = s.rooms.reduce((a, rm) => a + H.filter(hh => !rm.b[hh]).length, 0) + ' free slots today';
-  const appr = this.visibleReqs(s).filter(q => q.st === 'pending' && q.step === 4);
+  const appr = this.visibleReqs(s).filter(q => q.st === 'pending' && q.step === 4 && this.canAct(q));
   const unreadN = this.myNotes(s).filter(n => !n.read).length;
   const rv = this.CH['12W'].rev, sx = i => i * 300 / (rv.length - 1), sy = v => 76 - v / 100 * 70;
   const sl = this.smooth(rv.map((v,i) => [sx(i), sy(v)]));

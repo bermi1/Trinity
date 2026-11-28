@@ -1456,6 +1456,7 @@
 .mwa.is-set { padding: 8px 12px; font-size: 13px; color: #14532D; } .mwa.is-set button { height: 30px; padding: 0 10px; background: transparent; color: #128C7E; border: 1px solid #BFE8CD; }
 .wa-btn { display: inline-flex; align-items: center; gap: 6px; } .wa-btn svg { flex: none; }
 .rq-paid { align-self: flex-start; padding: 8px 12px; border-radius: 9px; background: #E6F4EC; color: #1F7549; font-weight: 700; font-size: 13.5px; }
+.rq-viewonly { align-self: stretch; padding: 10px 14px; border-radius: 10px; background: #F4F1FA; color: #5A2FA8; font-weight: 600; font-size: 13.5px; border: 1px dashed #D5CFE0; }
 .rq-payamt { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: #6E6A7C; max-width: 240px; } .rq-payamt input { height: 40px; border: 1px solid #E8E4EF; border-radius: 9px; padding: 0 12px; font: inherit; font-size: 15px; font-weight: 700; color: #17152A; }
 .pdf-msg { display: grid; justify-items: center; gap: 12px; text-align: center; } .pdf-msg p { margin: 0; }
 .pdf-open { display: inline-flex; align-items: center; height: 42px; padding: 0 18px; border-radius: 10px; background: #E3C27A; color: #1B1036; font-weight: 800; text-decoration: none; }
@@ -1670,3 +1671,5 @@
 .fin-tabs { margin: 0 0 4px; }
 .fin-tabs .fin-n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #B23A46; color: #fff; font-size: 11px; }
 @media (max-width: 700px) { .fin-tabs { margin: 0 0 8px; } .fin-tabs button { min-height: 40px; } }
+.rq-remind { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rq-remind .me-save, .rq-remind .td-start { min-height: 40px; }
