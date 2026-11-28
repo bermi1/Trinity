@@ -1,0 +1,266 @@
+/* ==========================================================================
+   Calm type, buttons and cards.
+   Loaded last: one modest type scale, one button system, one card style,
+   applied over the screens' own styles. Visual only.
+   ========================================================================== */
+
+:root {
+  /* Type scale */
+  --fs-2xs: 11px;    /* tiny tags, table headings */
+  --fs-xs: 12px;     /* small labels, meta lines */
+  --fs-sm: 13px;     /* secondary text, buttons */
+  --fs-base: 14px;   /* body */
+  --fs-md: 15px;     /* section titles */
+  --fs-lg: 18px;     /* sheet and dialog titles */
+  --fs-title: 22px;  /* page titles */
+  --fs-fig: 22px;    /* money figures on cards */
+  --fs-hero: 28px;   /* the one hero figure (float balance) */
+  --fw-medium: 500;
+  --fw-semi: 600;
+  --fw-bold: 700;
+
+  /* Buttons */
+  --btn-h: 38px;
+  --btn-h-lg: 44px;  /* full-width actions at the foot of a sheet */
+  --btn-px: 16px;
+  --btn-fs: 13.5px;
+  --btn-r: 10px;
+
+  /* Cards */
+  --card-r: 14px;
+  --card-line: #ECE8F2;
+  --card-shadow: 0 1px 2px rgba(23, 21, 42, .04);
+  --ink: #17152A;
+  --muted: #6E6A7C;
+  --brand: #2B1459;
+  --brand-2: #5A2FA8;
+}
+@media (max-width: 699px) {
+  :root {
+    --fs-title: 20px;
+    --fs-fig: 18px;
+    --fs-hero: 26px;
+    --fs-lg: 17px;
+    --btn-h: 40px;
+    --btn-h-lg: 46px;
+    --card-r: 16px;
+    --card-shadow: 0 1px 4px rgba(29, 16, 61, .06);
+  }
+}
+
+body { font-size: var(--fs-base); line-height: 1.45; }
+/* Bold inside a semibold line stays bold, never black */
+b, strong { font-weight: var(--fw-bold); }
+
+/* ---------- Page titles ---------- */
+.k-head h1, .rc-title h1, .hd-top h1, .pv-head h1, .tp-head h1, .mm-top h1 {
+  font-size: var(--fs-title); font-weight: var(--fw-bold); letter-spacing: -.015em;
+}
+.mm-head h1 { font-size: 22px; font-weight: var(--fw-bold); }
+.hd-top p, .k-head p { font-size: var(--fs-sm); }
+.cr-panel-head h2 { font-size: 19px; font-weight: var(--fw-bold); }
+.att-sheetc h2 { font-size: 20px; }
+.tg-mine h3 { font-size: 18px; }
+.tg-empty h3, .tg-sheet h3 { font-size: 16px; }
+.ck-card h2 { font-size: 16px; }
+.pin-top h1 { font-size: 22px; font-weight: var(--fw-bold); }
+
+/* Section titles */
+.k-card-head h3, .fh-card h3, .hd-card h3, .tg-chart h3, .tg-depts h3, .tg-team h3, .mm-box h3, .att-today h2 {
+  font-size: var(--fs-md); font-weight: var(--fw-semi);
+}
+.hd-card h3 { font-size: 14.5px; }
+
+/* Dialog and sheet titles */
+.fm-head h3, .m-sheet-title { font-size: var(--fs-lg); font-weight: var(--fw-bold); letter-spacing: -.01em; }
+.fm-head p, .m-sheet-sub { font-size: var(--fs-sm); }
+
+/* ---------- Labels: sentence case, no shouting ---------- */
+.k-kpi-l, .fh-kpi span, .tg-card small, .vc-stats span, .vc-top > span {
+  font-size: var(--fs-xs); font-weight: var(--fw-semi); letter-spacing: 0; text-transform: none;
+}
+.mw-h, .rc-sec h3, .cr-step h3, .cr-h3, .m-group-label {
+  font-size: var(--fs-xs); font-weight: var(--fw-semi); letter-spacing: .04em;
+}
+.mw-h, .rc-sec h3 { text-transform: none; letter-spacing: 0; font-size: var(--fs-sm); color: #4A4560; }
+.k-table th, .fr-table th, .att-table th, .cr-facts dt, .pv-event dt, .rp-body h4, .td-person h4, .co-h4, .tg-metric small, .pm-money small {
+  letter-spacing: .04em; font-weight: var(--fw-semi);
+}
+.tg-hero small, .tg-mine small, .mm-top small, .tp-leadc small, .mw-hero small, .fl-bal > span, .tg-empty small {
+  letter-spacing: .06em; font-weight: var(--fw-semi);
+}
+.k-kicker, .tp-head small { letter-spacing: .1em; }
+.vc-brand b { letter-spacing: .2em; }
+.cr-stage { letter-spacing: .04em; font-weight: var(--fw-semi); }
+.ff-l, .m-field { font-weight: var(--fw-semi); }
+
+/* ---------- Figures ---------- */
+.k-kpi b, .fh-kpi b, .hd-kpi b, .tg-card b { font-size: var(--fs-fig); font-weight: var(--fw-bold); letter-spacing: -.01em; }
+.tg-clock b { font-size: 20px; font-weight: var(--fw-bold); }
+.hd-stages b, .rd-stats b, .att-counts b { font-size: 20px; }
+.fh-ring b { font-size: 20px; }
+.tg-hero h2 { font-size: 26px; font-weight: var(--fw-bold); letter-spacing: -.02em; }
+.tg-hero h2 span { font-size: 15px; }
+.tg-speed b { font-size: 28px; font-weight: var(--fw-bold); }
+.tg-won > b { font-size: 16px; }
+.vc-bal b { font-size: 28px; font-weight: var(--fw-bold); }
+.hd-float .hd-fbal { font-size: 24px; }
+.fl-bal b { font-size: clamp(24px, 7vw, 30px); font-weight: var(--fw-bold); }
+.att-head h1 { font-size: 32px; font-weight: var(--fw-bold); }
+.ck-live b { font-size: 21px; }
+.att-msg { font-size: 16px; } .att-msg b { font-size: 18px; }
+.mw-hero b { font-size: 18px; }
+.fl-rhead b { font-size: 16px; }
+.br-show-h b { font-size: 16px; }
+.br-kpis .hd-kpi b { font-size: 20px; }
+
+/* ---------- Buttons: one size system ---------- */
+.k-btn, .hd-btn, .fm-cancel, .fm-go, .me-save, .tp-go, .fx-go, .tg-btn, .inst-go, .inst-later, .pdf-open, .dv-acts a, .dv-acts button {
+  height: var(--btn-h); min-height: 0; padding: 0 var(--btn-px); border-radius: var(--btn-r);
+  font-size: var(--btn-fs); font-weight: var(--fw-semi); letter-spacing: 0;
+}
+.me-cancel { height: var(--btn-h); font-size: var(--btn-fs); }
+.k-btn.is-primary { background: var(--brand); color: #fff; }
+.k-btn.is-primary:hover { background: var(--brand-2); }
+.fm-go { min-width: 120px; }
+.fm-cancel { border-color: #DED8E9; }
+.tg-btn.is-pri { font-weight: var(--fw-semi); }
+.mwa button, .att-cambtn, .att-camoff, .att-cancel, .bi-up, .tp-phone button { font-weight: var(--fw-semi); }
+.att-cancel { height: 42px; }
+.cr-step-acts .k-btn { height: var(--btn-h); padding: 0 var(--btn-px); }
+.hd-fopen { height: 40px; }
+.fl-wait .k-btn, .fl-vbtns .k-btn, .rq-remind .me-save { min-height: 0; }
+
+/* Big one-tap actions (check-in, reception, PIN) stay easy to hit but calmer */
+.att-go, .rd-go { height: 48px; font-size: 16px; font-weight: var(--fw-bold); border-radius: 12px; }
+.ck-big { height: 56px; font-size: 17px; }
+.pin-go { height: 48px; font-size: 15px; font-weight: var(--fw-bold); border-radius: 12px; }
+.att-search { height: 46px; font-size: 16px; }
+.rd-form input { height: 48px !important; font-size: 16px !important; }
+.rd-tiles button { min-height: 48px; font-size: 14px; font-weight: var(--fw-semi); }
+
+/* Chips and segmented tabs */
+.k-chips button, .tp-filters button, .tp-pick button, .fl-chip, .me-cats button {
+  height: auto; min-height: 34px; padding: 0 14px; font-size: 13px; font-weight: var(--fw-semi);
+}
+.ff-chips button { min-height: 36px; padding: 0 14px; font-size: 13px; font-weight: var(--fw-semi); border-width: 1px; }
+.ff-chips button.is-on { box-shadow: none; }
+.ff-quick button, .ff-item-add, .fh-addline, .fh-asks button, .fx-chips button, .att-regpick button { font-weight: var(--fw-semi); }
+
+/* ---------- Form fields ---------- */
+.ff { gap: 6px; }
+.ff input:not([type=file]), .ff textarea, .ff-search, .ff-pick-btn { height: 44px; font-size: 14px; border-width: 1px; border-radius: 10px; }
+.ff textarea { height: auto; }
+.ff-pick-list, .ff-money-in, .ff-item-q, .ff-item-a { border-width: 1px; }
+.ff-item-q, .ff-item-a { height: 44px; border-radius: 10px; }
+.ff-money-in { border-radius: 12px; }
+
+/* Amount inputs: clear, not oversized */
+.me-amt input { font-size: 28px; }
+.ff .ff-money-in input { font-size: 22px; font-weight: var(--fw-bold); }
+.fl-money { height: 54px; } .fl-money input { font-size: 22px; }
+.ff-money-in { height: 52px; }
+.tg-money.is-big input { font-size: 22px; height: 50px; }
+.fh-amt input { font-size: 16px; }
+.ff .ff-money-in input, .ff .ff-item-q input, .ff .ff-item-a input { height: 100%; border-radius: 0; }
+.ff .ff-item-q input, .ff .ff-item-a input { font-size: 15px; font-weight: var(--fw-semi); }
+.ff-item-t { font-weight: var(--fw-bold); font-size: 14px; }
+
+/* ---------- Cards: one radius, one hairline, a whisper of shadow ---------- */
+.k-card, .fh-card, .mw-card, .rc-sheet, .rc-feed, .hd-card, .hd-kpis, .k-kpi, .fh-kpi, .tg-card, .tg-chart, .tg-depts, .tg-team, .tg-sheet,
+.mm-box, .mm-compose, .ck-card, .att-today, .k-req, .tp-list, .cr-cust-card, .rp-item, .pn, .att-reg, .td-person {
+  border-radius: var(--card-r);
+}
+.fh-kpi { padding: 16px 18px; box-shadow: var(--card-shadow); }
+.tg-card, .tg-chart, .tg-depts, .tg-team { padding: 16px 18px; }
+.mw-card { box-shadow: var(--card-shadow); }
+.tg-hero, .tg-mine, .mm-head, .att-head, .fl-bal, .mw-hero, .vc { border-radius: 16px; }
+.tg-hero { padding: 22px 24px; box-shadow: 0 10px 28px -14px rgba(27, 16, 54, .45); }
+.fh-kpi.is-dark, .mw-hero { box-shadow: 0 8px 22px -12px rgba(43, 20, 89, .45); }
+.vc { box-shadow: 0 12px 26px -16px rgba(43, 20, 89, .6), inset 0 1px 0 rgba(255, 255, 255, .12); }
+.cr-card { box-shadow: none; }
+.cr-card:hover { box-shadow: 0 6px 16px -12px rgba(43, 20, 89, .45); }
+.mm-card button { border-radius: 12px; }
+.mm-main b { font-size: var(--fs-base); }
+.mm-pop-text { font-size: 15px; }
+
+/* Lists: body text at 14px, meta at 12px */
+.tp-who b, .hd-att li span, .fl-what, .rp-main, .mr-left { font-size: var(--fs-base); }
+.cr-card-top { font-size: var(--fs-base); }
+
+/* ---------- Sidebar and top bar ---------- */
+.sn-item { font-size: 13.5px; }
+.sn-item.is-on { font-weight: var(--fw-semi); }
+.sb-more, .sn-more { letter-spacing: .08em; font-size: 11px; }
+
+/* ---------- Phone ---------- */
+@media (max-width: 699px) {
+  .k-head h1, .rc-title h1, .hd-top h1, .pv-head h1, .tp-head h1, .mm-top h1 { font-size: var(--fs-title); }
+  .m-screen .att-head h1 { font-size: 26px !important; }
+  .mm-head h1 { font-size: 19px; }
+
+  .k-btn, .fm-cancel, .fm-go, .me-save, .tp-go, .fx-go, .tg-btn { height: var(--btn-h); }
+  .k-chips button, .tp-filters button, .tp-pick button, .fl-chip, .me-cats button, .ff-chips button { min-height: 38px; }
+  .dp-team-acts .k-btn, .dp-brief-side .k-btn, .td-foot .k-btn { height: var(--btn-h); }
+  .rc-acts > * { height: 36px; }
+
+  /* Fields stay 16px on phones so the page never zooms in */
+  .ff input:not([type=file]), .ff textarea, .ff-search, .ff-pick-btn { height: 46px; font-size: 16px; }
+  .ff textarea { height: auto; }
+  .ff .ff-money-in input, .ff .ff-item-q input, .ff .ff-item-a input { height: 100%; }
+  .k-form input, .k-form select { height: 44px; }
+
+  /* Home dashboard actions: the round icon buttons keep their own look */
+  .hd-btn, .hd-btn.is-pri { height: auto; padding: 0; font-size: 11.5px; font-weight: var(--fw-semi); border-radius: 0; }
+  .hd-kpi b, .hd-kpi:first-child b { font-size: 17px; }
+
+  .k-kpi b, .fh-kpi b { font-size: var(--fs-fig); }
+  .fh-kpis .fh-kpi:first-child b { font-size: 22px; }
+  .fh-kpi:not(:first-child) b { font-size: 15px; }
+  .fh-kpi { padding: 14px; }
+  .fh-kpis .fh-kpi:first-child { padding: 16px; border-radius: var(--card-r); box-shadow: 0 8px 20px -12px rgba(43, 20, 89, .5); }
+  .k-card, .fh-card, .mw-card, .rc-sheet, .rc-feed, .hd-card, .tg-card, .tg-chart, .tg-depts, .mm-box, .ck-card, .att-today, .fh-kpi, .k-kpi, .hd-kpi {
+    border-radius: var(--card-r); box-shadow: var(--card-shadow);
+  }
+
+  .tg-hero { padding: 18px; }
+  .tg-hero h2 { font-size: 22px; }
+  .tg-hero h2 span { font-size: 14px; }
+  .tg-speed b { font-size: 24px; }
+  .tg-clock b { font-size: 18px; }
+  .tg-card b { font-size: 18px; }
+  .vc-bal b { font-size: 22px; }
+  .att-head h1 { font-size: 26px; }
+  .ck-big { height: 52px; font-size: 16px; }
+  .ck-live b { font-size: 19px; }
+  .me-amt input { font-size: 26px; }
+  .fl-acts button { min-height: 68px; border-width: 1px; }
+}
+
+/* Phone app chrome */
+.m-htitle b { font-size: 16px; font-weight: var(--fw-bold); }
+.m-tab.is-on { font-weight: var(--fw-bold); }
+.m-tabbar { box-shadow: 0 8px 24px rgba(29, 16, 61, .24); }
+.m-primary { height: var(--btn-h-lg); border-radius: 12px; font-size: 15px; font-weight: var(--fw-semi); letter-spacing: 0; box-shadow: none; }
+.m-secondary { height: var(--btn-h-lg); border-radius: 12px; font-size: 15px; font-weight: var(--fw-semi); }
+.m-row-btn { height: 48px; border-radius: 12px; font-size: 14px; font-weight: var(--fw-semi); }
+.m-list button { min-height: 50px; font-size: 14.5px; font-weight: var(--fw-medium); }
+.m-list { border-radius: 14px; }
+.m-tile { font-weight: var(--fw-semi); border-radius: 14px; }
+.m-segment button { height: 38px; font-size: 13.5px; font-weight: var(--fw-semi); }
+.m-field input, .m-field select { height: 48px; border-radius: 12px; }
+.m-profile b { font-size: 16px; }
+.m-login-hero h1 { font-size: 28px; font-weight: var(--fw-bold); }
+.m-login-head h2 { font-size: 22px; font-weight: var(--fw-bold); }
+.m-login-alt button, .m-install { height: 44px; font-size: 14px; font-weight: var(--fw-semi); }
+.m-sheet { border-radius: 20px 20px 0 0; }
+
+/* Reports calendar */
+.rp-cal-head h3 { font-size: 16px; }
+.rp-cal-nav, .rp-cal-today { font-weight: var(--fw-semi); }
+.rp-cal-day small { font-weight: var(--fw-semi); }
+
+/* Buttons written with inline styles on the older screens: same primary colour, weight and height as the rest */
+button.tm-h9 { background: var(--brand) !important; }
+.app main button[style*="font-weight: 700"], .m-screen button[style*="font-weight: 700"], .m-sheet-root button[style*="font-weight: 700"] { font-weight: 600 !important; }
+.app main button[style*="height: 42px"], .app main button[style*="height: 44px"], .app main button[style*="height: 46px"], .app main button[style*="height: 48px"] { height: 40px !important; }

@@ -155,7 +155,7 @@ export const financeMethods = {
     // Lists are stored newest first; the book reads them oldest first (ties keep that order).
     f.grants.slice().reverse().forEach(g => L.push({ id: g.id, at: g.at, time: g.time || '', dir: 'in', amt: g.amt, kind: 'float', p: '', cat: 'Float received from Management', who: this.grantFrom(g), method: g.method || '', ref: g.note || '', by: g.by, src: 'grant' }));
     (s.reqs || []).forEach(r => {
-      // Paid outside the float (marked "already paid"): not part of the float at all.
+      // Already recorded in the cash book (marked so when paid): that record is the entry, not this request.
       if (r.st !== 'paid' || !r.paidOn || r.paidOutside) return;
       const paid = r.paidAmt || r.amt, cat = r.cat || (r.alloc ? String(r.alloc).replace(/^office:/, '') : 'Request');
       L.push(Object.assign({ id: r.id, at: r.paidOn, time: r.paidAt || '', dir: 'out', amt: paid, asked: r.amt, kind: 'request', p: r.p || '', cat, who: name(r.who), whoK: r.who, method: r.paidVia || (r.pay && r.pay.by) || '', ref: r.id, by: r.paidBy || '', src: 'req' }, r.paidFrom ? { voucher: r.paidFrom.voucher || '' } : {}));
@@ -417,7 +417,7 @@ export const reportMethods = {
     (s.invoices || []).forEach(i => (i.payments || []).filter(p => p.ok && /^\d{4}-/.test(p.at || '')).forEach(p => out.push({ id: p.id, at: p.at, dir: 'in', amt: p.amt, cat: 'Client payment', party: i.c, p: i.p || '', ref: i.id + (p.ref ? ' · ' + p.ref : ''), src: 'invoice' })));
     // A paid request is what was actually paid (it can be less than asked), plus the transaction charges of
     // sending it (bank or mobile money fee), which are company costs, not part of the person's float.
-    (s.reqs || []).filter(r => r.st === 'paid' && r.paidOn).forEach(r => {
+    (s.reqs || []).filter(r => r.st === 'paid' && r.paidOn && !r.paidOutside).forEach(r => {
       out.push({ id: r.id, at: r.paidOn, dir: 'out', amt: r.paidAmt || r.amt, cat: 'Staff requests · ' + (r.cat || 'Other'), party: this.av(r.who).n, p: r.p || '', ref: r.id, src: 'request' });
       if (r.payFee > 0) out.push({ id: r.id + '-fee', at: r.paidOn, dir: 'out', amt: r.payFee, cat: CHARGES, party: (r.pay && r.pay.by) || 'Bank / mobile money', p: r.p || '', ref: 'Charges · ' + r.id, src: 'request' });
     });

@@ -8,7 +8,7 @@ export default function FieldAppPage({ v }) {
         <span style={{ font: "600 11px 'IBM Plex Mono',monospace", letterSpacing: ".16em", color: "#8A7239" }}>
           FIELD STAFF VIEW
         </span>
-        <h1 style={{ margin: "0", fontSize: "clamp(22px,2.4vw,28px)", fontWeight: "700", letterSpacing: "-.02em" }}>
+        <h1 style={{ margin: "0", fontSize: "22px", fontWeight: "700", letterSpacing: "-.02em" }}>
           {"Mobile app · "}<span>{v.fieldMe.n}</span>
         </h1>
         <span style={{ fontSize: "13px", color: "#6E6A7C" }}>
@@ -116,7 +116,7 @@ export default function FieldAppPage({ v }) {
                         </div>
                       </Fragment>
                     ))}
-                    <span style={{ fontSize: "11.5px", fontWeight: "700", color: "#6E6A7C", letterSpacing: ".06em", textTransform: "uppercase", padding: "8px 2px 0" }}>
+                    <span style={{ fontSize: "12px", fontWeight: "600", color: "#6E6A7C", padding: "8px 2px 0" }}>
                       My money requests
                     </span>
                     {(v.myReqs || []).map((r, _i0) => (

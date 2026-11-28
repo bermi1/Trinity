@@ -6,6 +6,7 @@ import './styles/global.css';
 import './styles/interactions.css';
 import './styles/mobile.css';
 import './styles/kit.css';
+import './styles/calm.css';
 import { startFitNumbers } from './lib/fitNumbers';
 
 // The public event registration page (reached by scanning the QR code) needs no account and skips the office system.

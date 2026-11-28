@@ -9,7 +9,7 @@ export default function DashboardPage({ v }) {
           <span style={{ font: "600 11px 'IBM Plex Mono',monospace", letterSpacing: ".16em", color: "#8A7239" }}>
             COMPANY COMMAND CENTER
           </span>
-          <h1 style={{ margin: "0", fontSize: "clamp(22px,2.4vw,28px)", fontWeight: "700", letterSpacing: "-.02em" }}>
+          <h1 style={{ margin: "0", fontSize: "22px", fontWeight: "700", letterSpacing: "-.02em" }}>
             <span>{v.greeting}</span>{", "}<span>{v.me.first}</span>
           </h1>
           <p style={{ margin: "0", color: "#6E6A7C", fontSize: "14px" }}>
@@ -36,7 +36,7 @@ export default function DashboardPage({ v }) {
           <Fragment key={_i0}>
             <div className="tm-h10" onClick={k.go} style={{ background: "#fff", border: "1px solid #E8E4EF", borderRadius: "14px", padding: "18px", display: "flex", flexDirection: "column", gap: "10px", cursor: "pointer", transition: "border-color .15s,box-shadow .15s" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "11.5px", fontWeight: "700", color: "#6E6A7C", letterSpacing: ".06em", textTransform: "uppercase" }}>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#6E6A7C" }}>
                   {k.l}
                 </span>
                 <span style={{ width: "28px", height: "28px", borderRadius: "8px", background: "#F4F1FA", color: "#6D3CC2", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -46,7 +46,7 @@ export default function DashboardPage({ v }) {
                 </span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "8px" }}>
-                <span className="dk-val" style={{ fontSize: "28px", fontWeight: "700", letterSpacing: "-.02em", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                <span className="dk-val" style={{ fontSize: "24px", fontWeight: "700", letterSpacing: "-.02em", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
                   <span style={{ fontSize: "13px", color: "#6E6A7C", fontWeight: "600", marginRight: "4px" }}>
                     {k.u}
                   </span>
@@ -89,7 +89,7 @@ export default function DashboardPage({ v }) {
                 <span style={{ width: "10px", height: "3px", borderRadius: "2px", background: "#6D3CC2" }} />
                 Revenue
               </span>
-              <span style={{ fontSize: "20px", fontWeight: "700" }}>
+              <span style={{ fontSize: "18px", fontWeight: "700" }}>
                 {v.chart.totRev}
               </span>
             </div>
@@ -98,7 +98,7 @@ export default function DashboardPage({ v }) {
                 <span style={{ width: "10px", height: "3px", borderRadius: "2px", background: "#B49A5A" }} />
                 Expenses
               </span>
-              <span style={{ fontSize: "20px", fontWeight: "700" }}>
+              <span style={{ fontSize: "18px", fontWeight: "700" }}>
                 {v.chart.totExp}
               </span>
             </div>
@@ -106,7 +106,7 @@ export default function DashboardPage({ v }) {
               <span style={{ fontSize: "12px", color: "#6E6A7C" }}>
                 Net cash flow
               </span>
-              <span style={{ fontSize: "20px", fontWeight: "700", color: "#1F7549" }}>
+              <span style={{ fontSize: "18px", fontWeight: "700", color: "#1F7549" }}>
                 {v.chart.net}
               </span>
             </div>
@@ -114,7 +114,7 @@ export default function DashboardPage({ v }) {
               <span style={{ fontSize: "12px", color: "#6E6A7C" }}>
                 Margin
               </span>
-              <span style={{ fontSize: "20px", fontWeight: "700" }}>
+              <span style={{ fontSize: "18px", fontWeight: "700" }}>
                 {v.chart.margin}
               </span>
             </div>
@@ -234,7 +234,7 @@ export default function DashboardPage({ v }) {
                 </g>
               </svg>
               <div style={{ position: "absolute", inset: "0", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                <b style={{ fontSize: "30px", letterSpacing: "-.02em" }}>
+                <b style={{ fontSize: "24px", letterSpacing: "-.02em" }}>
                   {v.donut.total}
                 </b>
                 <span style={{ fontSize: "11.5px", color: "#6E6A7C" }}>
@@ -259,7 +259,7 @@ export default function DashboardPage({ v }) {
             </div>
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <span style={{ fontSize: "11.5px", fontWeight: "700", color: "#6E6A7C", letterSpacing: ".06em", textTransform: "uppercase", paddingBottom: "6px" }}>
+            <span style={{ fontSize: "12px", fontWeight: "600", color: "#6E6A7C", paddingBottom: "6px" }}>
               Needs your attention
             </span>
             {(v.attention || []).map((a, _i0) => (
