@@ -7,7 +7,51 @@ const digits = v => String(v || '').replace(/\D/g, '');
 // Confirm a payment before it is recorded: the amount (editable, up to what was asked), how it is paid
 // (taken from the request), the transaction charges and the day. Used by the Float page's "Waiting to be
 // paid" list and by "Mark paid" on the Requests page, so a payment is never recorded by one stray tap.
+// A paid request: change its payment (amount, how, charges, day, from the float or not) with a reason,
+// or undo it (back to waiting for payment).
+function EditPay({ P }) {
+  const E = P.edit;
+  const [f, setF] = useState(() => ({ amt: E.amt, method: E.method, fee: E.fee, at: E.at, outside: E.outside, reason: '' }));
+  const [err, setErr] = useState(''); const [undo, setUndo] = useState(false); const [why, setWhy] = useState('');
+  const set = (k, v) => { setErr(''); setF(x => Object.assign({}, x, { [k]: v })); };
+  const save = () => { const m = P.edit.save(f); if (m) setErr(m); };
+  const back = () => { const m = P.edit.undo(why); if (m) setErr(m); };
+  return (
+    <div className="fm-back" onClick={P.close}>
+      <div className="fm fl-sheet" role="dialog" aria-label="Edit payment" onClick={e => e.stopPropagation()}>
+        <header className="fm-head"><div><h2>Edit payment · {P.id}</h2><p>{P.who} · {P.what}</p></div><button type="button" className="fm-x" onClick={P.close} aria-label="Close">×</button></header>
+        <div className="fm-body">
+          <p className="mr-pay"><b>Paid</b> {E.paidLine}</p>
+          {E.fromBook ? <p className="k-sub">Paid with {E.fromBook} from the cash book. To change it, undo this payment ({E.fromBook} becomes a normal expense again), then mark it paid the right way.</p> : <>
+            <div className="k-chips ps-mode" role="tablist" aria-label="Where the money came from">
+              {[[false, 'From the float'], [true, 'Not from the float']].map(([k, l]) => <button key={l} type="button" role="tab" aria-selected={f.outside === k} className={f.outside === k ? 'is-on' : ''} onClick={() => set('outside', k)}>{l}</button>)}
+            </div>
+            <label className="fh-amt fl-money"><span>TZS</span><input inputMode="numeric" value={f.amt ? n(f.amt) : ''} onChange={e => set('amt', digits(e.target.value))} placeholder="0" aria-label="Amount paid" /></label>
+            <small className="k-sub">Asked {P.askedT}</small>
+            <div className="ff" data-field="Paid by"><span className="ff-l">Paid by</span>
+              <div className="ff-chips" role="radiogroup" aria-label="Paid by">{P.methods.map(m => <button key={m} type="button" role="radio" aria-checked={f.method === m} className={f.method === m ? 'is-on' : ''} onClick={() => set('method', m)}>{m}</button>)}</div>
+            </div>
+            <label className="fh-amt"><span>Transaction charges</span><input inputMode="numeric" value={f.fee ? n(f.fee) : ''} onChange={e => set('fee', digits(e.target.value))} placeholder="0" aria-label="Transaction charges" /></label>
+            <label className="fl-date"><span>Date paid</span><input type="date" value={f.at} max={P.today} onChange={e => set('at', e.target.value || E.at)} aria-label="Date paid" /></label>
+            <input className="ff-search" value={f.reason} onChange={e => set('reason', e.target.value)} placeholder="Why the change? (required)" aria-label="Reason for the change" />
+          </>}
+          {E.history.length ? <ul className="fl-edits">{E.history.map((h, i) => <li key={i}>{h}</li>)}</ul> : null}
+          {undo ? <div className="fl-del"><p><b>Undo this payment?</b> {P.id} goes back to waiting for payment{E.fromBook ? '' : E.outside ? '' : ' and the float goes back up'}.</p>
+            <div className="fh-row"><input className="ff-search" autoFocus value={why} onChange={e => { setErr(''); setWhy(e.target.value); }} placeholder="Reason (required)" aria-label="Reason for undoing" /><Btn kind="dark" onClick={back}>Undo payment</Btn></div></div> : null}
+          {err ? <div className="fm-err" role="alert">{err}</div> : null}
+        </div>
+        <footer className="fm-foot">{undo ? <Btn kind="ghost" onClick={() => setUndo(false)}>Keep it</Btn> : <Btn kind="ghost" onClick={() => setUndo(true)}>Undo payment</Btn>}{E.fromBook || undo ? null : <Btn kind="dark" onClick={save}>Save change</Btn>}</footer>
+      </div>
+    </div>
+  );
+}
+
 export default function PaySheet({ P }) {
+  if (P.edit) return <EditPay P={P} />;
+  return <PaySheetNew P={P} />;
+}
+
+function PaySheetNew({ P }) {
   const [f, setF] = useState(() => ({ amt: String(P.asked), method: P.method, fee: '', at: P.today }));
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
   const set = (k, v) => { setErr(''); setF(x => Object.assign({}, x, { [k]: v })); };

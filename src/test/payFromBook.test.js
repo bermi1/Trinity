@@ -56,6 +56,39 @@ describe('a request already paid outside the float', () => {
   });
 });
 
+describe('changing a paid request', () => {
+  it('edits amount, charges, day and float/outside with a reason; undo puts it back to waiting', () => {
+    const a = app('finance', { reqs: [req()] });
+    expect(a.payReq(a.state.reqs[0], '50000', '500', { method: 'M-Pesa' })).toBe('');
+    expect(a.floatBalance()).toBe(1e6 - 50500);
+    const P = () => a.payVals(Object.assign({}, a.state, { paySheet: 'REQ-0009' }));
+    expect(P().edit.save({ amt: '30000', fee: '', method: 'Cash', at: D, outside: false, reason: '' })).toMatch(/reason/);
+    expect(P().edit.save({ amt: '30000', fee: '', method: 'Cash', at: D, outside: false, reason: 'Paid less' })).toBe('');
+    expect(a.state.reqs[0]).toMatchObject({ paidAmt: 30000, payFee: 0, paidVia: 'Cash' });
+    expect(a.state.staff[0].fl).toBe(30000);
+    expect(a.floatBalance()).toBe(1e6 - 30000);
+    expect(P().edit.save({ amt: '30000', method: 'Bank', at: '2026-09-01', outside: true, reason: 'Boss paid it' })).toBe('');
+    expect(a.floatBalance()).toBe(1e6);
+    expect(P().edit.history.length).toBe(2);
+    expect(P().edit.undo('')).toMatch(/reason/);
+    expect(P().edit.undo('Wrong request')).toBe('');
+    expect(a.state.reqs[0]).toMatchObject({ st: 'approved', step: 5 });
+    expect(a.state.reqs[0].paidAmt).toBeUndefined();
+    expect(a.state.staff[0].fl).toBe(0);
+  });
+  it('undoing a cash book payment frees the record again', async () => {
+    const a = app('finance', { reqs: [req()] });
+    await a.addExpense({ amt: '40000', cat: 'Transport', method: 'Cash', payee: 'GM' });
+    const id = a.pt().entries[0].id;
+    expect(a.payFromBook(a.state.reqs[0], id)).toBe('');
+    expect(a.editPayment(a.state.reqs[0], { amt: '1', reason: 'x' })).toMatch(/undo/);
+    expect(a.undoPayment(a.state.reqs[0], 'Wrong one')).toBe('');
+    expect(a.pt().entries[0].req).toBeUndefined();
+    expect(a.state.reqs[0].rec).toBeUndefined();
+    expect(a.floatBalance()).toBe(1e6 - 40000);
+  });
+});
+
 describe('deleting a cash book record', () => {
   it('Finance removes it and the float goes back up; staff cannot', async () => {
     const a = app('finance');

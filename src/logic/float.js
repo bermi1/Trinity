@@ -251,6 +251,62 @@ export const floatMethods = {
     this.toast(r.id + ' marked paid with ' + e.voucher + ' · the float is not reduced again');
     return '';
   },
+  // Change a payment already recorded on a request: amount, how, charges, the day, and whether it came
+  // from the float. A reason is required and the old values are kept on the request (payEdits).
+  editPayment(r, f) {
+    const cur = (this.state.reqs || []).find(q => q.id === r.id) || r;
+    if (!this.canPay()) return 'Only Finance and Management change payments';
+    if (cur.st !== 'paid') return cur.id + ' is not paid';
+    if (cur.paidFrom) return cur.id + ' was paid with ' + cur.paidFrom.voucher + ' from the cash book · undo the payment to change it';
+    const reason = String(f.reason || '').trim(); if (!reason) return 'Give the reason for the change';
+    const amt = Math.round(+String(f.amt == null ? '' : f.amt).replace(/[^0-9.]/g, '') || 0);
+    if (!(amt > 0)) return 'Enter the amount paid';
+    if (amt > cur.amt) return 'More than was requested (' + this.fmtT(cur.amt) + ')';
+    const fee = parseFee(f.fee); if (fee < 0) return 'Transaction charges must be a number';
+    const out = !!f.outside, today = this.fToday(), was = cur.paidOn;
+    let at = /^\d{4}-\d{2}-\d{2}$/.test(f.at || '') ? f.at : was;
+    if (at > today) return 'The date cannot be in the future';
+    if (!out && at !== was && daysBetween(at, today) > 7) return 'From the float: up to 7 days back only';
+    const method = METHODS.includes(f.method) ? f.method : cur.paidVia || '';
+    const old = { amt: cur.paidAmt || cur.amt, via: cur.paidVia || '', fee: cur.payFee || 0, on: was, outside: !!cur.paidOutside };
+    const edit = { by: this.me().k, at: today + ' ' + tzTime(this.nowDate()), reason, was: old };
+    const patch = { paidAmt: amt, paidOn: at, paidVia: method, payFee: fee, paidOutside: out, payEdits: [...(cur.payEdits || []), edit] };
+    const d = amt - old.amt;
+    this.setState(x => ({ reqs: x.reqs.map(q => (q.id === cur.id ? Object.assign({}, q, patch) : q)),
+      staff: d && !(cur.rec && cur.rec.st === 'ok') ? x.staff.map(p => (p.k === cur.who ? Object.assign({}, p, { fl: Math.max(0, (p.fl || 0) + d) }) : p)) : x.staff }));
+    const note = cur.id + ' payment changed · ' + reason;
+    [old.outside ? null : was, out ? null : at].filter((k, i, a) => k && a.indexOf(k) === i).forEach(k => {
+      if (this.floatSent(k)) this.notify({ to: this.ROLES.ceo.k, ic: 'wallet', t: 'Payment changed after the report · ' + cur.id, s: dayLabel(k) + ' · ' + reason + ' · by ' + this.me().n, go: 'float' });
+      else if (k !== today) this.floatRevised(k, note);
+    });
+    this.log('wallet', 'amber', 'Payment changed · ' + cur.id, this.fmtT(old.amt) + ' → ' + this.fmtT(amt) + ' · ' + reason, cur.id);
+    this.toast(cur.id + ' payment updated' + (!out && this.fl().grants.length ? this.floatCheckBelowZero(note) : ''));
+    return '';
+  },
+  // Take a payment back (recorded by mistake): the request is approved again, waiting to be paid.
+  undoPayment(r, reason) {
+    const cur = (this.state.reqs || []).find(q => q.id === r.id) || r;
+    if (!this.canPay()) return 'Only Finance and Management change payments';
+    if (cur.st !== 'paid') return cur.id + ' is not paid';
+    reason = String(reason || '').trim(); if (!reason) return 'Give the reason';
+    if (!cur.paidFrom && cur.rec && cur.rec.st) return cur.id + ' already has receipts from ' + this.av(cur.who).first + ' · change the payment instead';
+    const amt = cur.paidAmt || cur.amt, was = { amt, via: cur.paidVia || '', fee: cur.payFee || 0, on: cur.paidOn, outside: !!cur.paidOutside, from: cur.paidFrom ? cur.paidFrom.voucher : '' };
+    const keep = Object.assign({}, cur);
+    ['paidOn', 'paidAt', 'paidAmt', 'paidBy', 'paidVia', 'payFee', 'paidOutside', 'paidFrom'].forEach(k => delete keep[k]);
+    if (cur.paidFrom) delete keep.rec;
+    const next = Object.assign(keep, { st: 'approved', step: 5, payEdits: [...(cur.payEdits || []), { by: this.me().k, at: this.fToday() + ' ' + tzTime(this.nowDate()), reason: 'Payment undone · ' + reason, was }] });
+    const exp = cur.paidFrom && cur.paidFrom.id;
+    this.setState(x => ({ reqs: x.reqs.map(q => (q.id === cur.id ? next : q)),
+      staff: cur.paidFrom ? x.staff : x.staff.map(p => (p.k === cur.who ? Object.assign({}, p, { fl: Math.max(0, (p.fl || 0) - amt) }) : p)),
+      petty: exp ? Object.assign({}, x.petty, { entries: x.petty.entries.map(y => { if (y.id !== exp) return y; const c = Object.assign({}, y); delete c.req; return c; }) }) : x.petty }));
+    if (!cur.paidOutside && !cur.paidFrom && cur.paidOn) {
+      if (this.floatSent(cur.paidOn)) this.notify({ to: this.ROLES.ceo.k, ic: 'x', t: 'Payment undone after the report · ' + cur.id, s: dayLabel(cur.paidOn) + ' · ' + this.fmtT(amt) + ' · ' + reason + ' · by ' + this.me().n, go: 'float' });
+      else if (cur.paidOn !== this.fToday()) this.floatRevised(cur.paidOn, cur.id + ' payment undone · ' + reason);
+    }
+    this.log('x', 'red', 'Payment undone · ' + cur.id, this.fmtT(amt) + ' · ' + reason, cur.id);
+    this.toast(cur.id + ' is back to waiting for payment' + (exp ? ' · ' + was.from + ' is a normal expense again' : ''));
+    return '';
+  },
   // Never deleted: a voided expense stays in the list, struck through, and no longer counts.
   voidExpense(id, reason) {
     if (!this.canFloat()) return 'Only Finance and Management void expenses';
@@ -519,7 +575,7 @@ export function floatVals(s) {
 // amount (editable, up to what was asked), how it is paid (from the request), the charges and the day.
 export function payVals(s) {
   const r = s.paySheet ? (s.reqs || []).find(x => x.id === s.paySheet) : null;
-  if (!r || r.st !== 'approved' || !this.canPay()) return null;
+  if (!r || !['approved', 'paid'].includes(r.st) || !this.canPay()) return null;
   const by = r.pay && r.pay.by, method = METHODS.includes(by) ? by : by ? (r.pay.bank || /bank/i.test(by) ? 'Bank' : 'M-Pesa') : 'Cash';
   return { id: r.id, who: this.av(r.who).n, first: this.av(r.who).first, what: this.reqWhat(r), where: this.projLabel(r.p), asked: r.amt, askedT: this.fmtT(r.amt),
     payTo: r.pay ? [r.pay.by, r.pay.bank, r.pay.name, r.pay.no].filter(Boolean).join(' · ') : '', method, methods: METHODS, today: this.fToday(), minDay: this.floatMinDay(),
@@ -528,5 +584,11 @@ export function payVals(s) {
     book: this.canFloat() ? this.bookChoices(r) : [],
     paidOutside: x => { const m = this.payReq(r, x.amt, x.fee, { method: x.method, date: x.at, outside: true }); if (!m) this.setState({ paySheet: null }); return m; },
     payFromBook: id => { const m = this.payFromBook(r, id); if (!m) this.setState({ paySheet: null }); return m; },
-    close: () => this.setState({ paySheet: null }) };
+    close: () => this.setState({ paySheet: null }),
+    // A paid request: the sheet edits the payment instead.
+    edit: r.st !== 'paid' ? null : { amt: String(r.paidAmt || r.amt), method: r.paidVia || method, fee: r.payFee ? String(r.payFee) : '', at: r.paidOn || this.fToday(), outside: !!r.paidOutside,
+      fromBook: r.paidFrom ? r.paidFrom.voucher : '', paidLine: this.fmtT(r.paidAmt || r.amt) + ' · ' + (r.paidOn ? dayLabel(r.paidOn) : '') + (r.paidBy ? ' · by ' + this.av(r.paidBy).n : ''),
+      history: (r.payEdits || []).map(e => e.at + ' · ' + this.av(e.by).first + ' · ' + e.reason + (e.was ? ' (was ' + this.fmtT(e.was.amt) + (e.was.on ? ', ' + dayLabel(e.was.on, false) : '') + (e.was.outside ? ', not from the float' : '') + ')' : '')),
+      save: x => { const m = this.editPayment(r, x); if (!m) this.setState({ paySheet: null }); return m; },
+      undo: why => { const m = this.undoPayment(r, why); if (!m) this.setState({ paySheet: null }); return m; } } };
 }

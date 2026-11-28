@@ -205,6 +205,7 @@ function Approvals({ v }) {
                 ) : null}
                 {v.R.paidLine ? <div className="rq-paid" role="status">{v.R.paidLine}</div> : null}
                 {v.R.paidLine && (v.R.setFee || v.R.feeN) ? <div className="fl-charges"><ChargesEdit fee={v.R.feeN} save={v.R.setFee} /></div> : null}
+                {v.R.editPay ? <button type="button" className="me-save rq-editpay" onClick={v.R.editPay}>Edit payment</button> : null}
                 {v.R.canPay ? (
                   <button className="tm-h2" onClick={v.R.pay} style={{ alignSelf: "flex-start", height: "44px", padding: "0 20px", border: "none", borderRadius: "10px", background: "#2B1459", color: "#fff", fontSize: "14px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

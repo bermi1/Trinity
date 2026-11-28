@@ -1787,3 +1787,4 @@
   .hd-fline { font-size: 12px; gap: 2px 12px; }
 }
 .hd-poc ul.hd-att { list-style: none; margin: 0; padding: 0; }
+.rq-editpay { align-self: flex-start; }
