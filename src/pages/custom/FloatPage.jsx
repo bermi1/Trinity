@@ -116,13 +116,29 @@ function GrantSheet({ F, onClose }) {
   const [err, setErr] = useState('');
   const set = (k, v) => { setErr(''); setF(x => Object.assign({}, x, { [k]: v })); };
   return (
-    <Sheet title="Float received" sub={F.role === 'ceo' ? 'Money you give Finance' : 'Money from Management · Management is told'} onClose={onClose}
-      foot={<Btn kind="dark" onClick={() => { const m = F.receive(f); if (m) setErr(m); else onClose(true); }}>Record float</Btn>}>
+    <Sheet title="Give float to Finance" sub="It shows on the Float as “Float received” · Finance and the GM are told" onClose={onClose} label="Give float to Finance"
+      foot={<Btn kind="dark" onClick={() => { const m = F.receive(f); if (m) setErr(m); else onClose(true); }}>Give float</Btn>}>
       <Money value={f.amt} set={v => set('amt', v)} label="Float amount" autoFocus />
       <div className="ff-quick">{QUICK.map(v => <button key={v} type="button" onClick={() => set('amt', String(v))}>{v / 1e6}M</button>)}</div>
       <div className="ff"><span className="ff-l">Received by</span><Chips opts={F.methods} v={f.method} set={v => set('method', v)} label="Float method" /></div>
       <input className="ff-search" value={f.note} onChange={e => set('note', e.target.value)} placeholder="Note (e.g. Float for the week)" aria-label="Float note" />
       <label className="fl-date"><span>Date</span><input type="date" value={f.at} min={F.minDay} max={F.today} onChange={e => set('at', e.target.value || F.today)} aria-label="Float date" /></label>
+      {err ? <div className="fm-err" role="alert">{err}</div> : null}
+    </Sheet>
+  );
+}
+
+// Finance asks the boss for float (pre-filled with the shortfall when approved requests are more than the balance).
+function AskSheet({ F, onClose }) {
+  const [f, setF] = useState({ amt: F.shortfall ? String(F.shortfall) : '', note: F.shortfall ? 'Approved requests waiting are more than the float balance' : '' });
+  const [err, setErr] = useState('');
+  const set = (k, v) => { setErr(''); setF(x => Object.assign({}, x, { [k]: v })); };
+  return (
+    <Sheet title="Ask the boss for float" sub={F.asked ? 'Already asked: TZS ' + n(F.asked.amt) + ' · ' + F.asked.at : 'Management is told; when they give it, it shows here as “Float received”'} onClose={onClose} label="Ask the boss for float"
+      foot={<Btn kind="dark" onClick={() => { const m = F.ask(f); if (m) setErr(m); else onClose(true); }}>Send request</Btn>}>
+      <Money value={f.amt} set={v => set('amt', v)} label="Float amount asked" autoFocus />
+      <div className="ff-quick">{QUICK.map(v => <button key={v} type="button" onClick={() => set('amt', String(v))}>{v / 1e6}M</button>)}</div>
+      <input className="ff-search" value={f.note} onChange={e => set('note', e.target.value)} placeholder="What is it for? (a short sentence)" aria-label="What the float is for" />
       {err ? <div className="fm-err" role="alert">{err}</div> : null}
     </Sheet>
   );
@@ -398,7 +414,8 @@ export default function FloatPage({ v }) {
         <small><span>Opened today {F.todayLine.open}</span> · <span>In +{F.todayLine.in}</span> · <span>Out −{F.todayLine.out}</span></small>
       </section>
       <div className={'fl-acts' + (F.canEdit ? '' : ' is-view')}>
-        {F.canEdit ? <button type="button" onClick={() => F.setSheet('grant')}><Icon d={Fx.ic.wallet} size={22} /><b>Float received</b></button> : null}
+        {F.canGive ? <button type="button" onClick={() => F.setSheet('grant')}><Icon d={Fx.ic.wallet} size={22} /><b>Give float to Finance</b></button> : null}
+        {F.canAsk ? <button type="button" onClick={() => F.setSheet('ask')}><Icon d={Fx.ic.wallet} size={22} /><b>Ask the boss for float</b></button> : null}
         {F.canEdit ? <button type="button" onClick={() => F.setSheet('expense')}><Icon d={Fx.ic.receipt} size={22} /><b>Daily expense</b></button> : null}
         <button type="button" className={F.view === 'report' ? 'is-on' : ''} aria-pressed={F.view === 'report'} onClick={() => F.setView('report')}><Icon d={Fx.ic.fileText} size={22} /><b>Daily report</b></button>
       </div>
@@ -412,7 +429,8 @@ export default function FloatPage({ v }) {
       {F.view === 'report' ? <Report F={Fx} D={D} /> : F.view === 'project' ? <ByProject F={Fx} phone={phone} /> : F.view === 'book' ? <CashBook F={Fx} D={D} phone={phone} openLine={openById} /> : <DayList F={Fx} D={D} open={openLine} />}
       {!ownReceipts && (F.toCheck.length || F.advances.length) ? <Receipts F={Fx} compact /> : null}
       {sheet === 'expense' ? <ExpenseSheet F={Fx} day={D >= F.minDay && D <= F.today ? D : F.today} onClose={close} /> : null}
-      {sheet === 'grant' ? <GrantSheet F={Fx} onClose={close} /> : null}
+      {sheet === 'grant' && F.canGive ? <GrantSheet F={Fx} onClose={close} /> : null}
+      {sheet === 'ask' && F.canAsk ? <AskSheet F={Fx} onClose={close} /> : null}
       {sheet === 'waiting' ? <WaitingSheet F={Fx} onClose={close} /> : null}
       {lineSheet ? <LineSheet l={lineSheet} F={Fx} onClose={close} onEdit={() => F.setSheet({ edit: lineSheet.id, at: sheet.at })} /> : null}
       {editSheet ? <ExpenseSheet F={Fx} edit={editSheet} onClose={close} /> : null}

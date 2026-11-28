@@ -61,15 +61,11 @@ export const financeMethods = {
   fl() { return Object.assign({ grants: [], allocs: [], asks: [] }, this.state.float || {}); },
   setFloat(ch) { this.setState(x => ({ float: Object.assign({ grants: [], allocs: [], asks: [] }, x.float || {}, ch) })); },
 
-  // Management gives Finance a float (or answers Finance's request for one).
-  giveFloat(amt, note) {
-    amt = Math.round(+amt || 0); if (amt <= 0) return 'Enter the amount';
-    const f = this.fl();
-    this.setFloat({ grants: [{ id: 'FG' + Date.now().toString(36), amt, note: (note || '').trim(), by: this.me().k, at: dayKey(0) }, ...f.grants], asks: f.asks.map(a => (a.st === 'open' ? Object.assign({}, a, { st: 'given' }) : a)) });
-    const fk = this.ROLES.finance.k; if (fk !== this.me().k) this.remind(fk, 'Float received · ' + this.fmtT(amt), 'finance', 'wallet', 'From ' + this.me().n + (note ? ' · ' + note : ''));
-    this.toast('Float given · ' + this.fmtT(amt));
-    return '';
-  },
+  // Management gives Finance a float (or answers Finance's request for one). It is the float's "Float
+  // received": Finance never records it again (see receiveFloat).
+  giveFloat(amt, note, opts) { return this.receiveFloat(Object.assign({ amt, note }, opts || {})); },
+  // Who a grant came from: the boss by name; grants Finance recorded itself (before this rule) say so.
+  grantFrom(g) { const ceo = this.ROLES.ceo && this.ROLES.ceo.k; return g.by && ceo && g.by !== ceo ? 'Recorded by Finance' : g.by ? this.av(g.by).n : g.from || 'Management'; },
   askFloat(amt, note) {
     amt = Math.round(+amt || 0); if (amt <= 0) return 'Enter the amount';
     if (String(note || '').trim().length < 10) return 'Describe what the float is for (at least a short sentence)';
@@ -110,7 +106,7 @@ export const financeMethods = {
     const s = this.state, f = this.fl(), L = [], name = k => (k ? this.av(k).n : '');
     if (!f.grants.length) return L;
     // Lists are stored newest first; the book reads them oldest first (ties keep that order).
-    f.grants.slice().reverse().forEach(g => L.push({ id: g.id, at: g.at, time: g.time || '', dir: 'in', amt: g.amt, kind: 'float', p: '', cat: 'Float from Management', who: g.from || 'Management', method: g.method || '', ref: g.note || '', by: g.by, src: 'grant' }));
+    f.grants.slice().reverse().forEach(g => L.push({ id: g.id, at: g.at, time: g.time || '', dir: 'in', amt: g.amt, kind: 'float', p: '', cat: 'Float received from Management', who: this.grantFrom(g), method: g.method || '', ref: g.note || '', by: g.by, src: 'grant' }));
     (s.reqs || []).forEach(r => {
       if (r.st !== 'paid' || !r.paidOn) return;
       const paid = r.paidAmt || r.amt, cat = r.cat || (r.alloc ? String(r.alloc).replace(/^office:/, '') : 'Request');

@@ -77,13 +77,27 @@ describe('the float book', () => {
     expect(a.state.notes.some(n => n.to === 'DK' && /Float below zero/.test(n.t))).toBe(true);
   });
 
-  it('only Finance and Management record; Finance recording the float tells Management', () => {
-    expect(app('gm').receiveFloat({ amt: '1000000' })).toMatch(/Only/);
-    const a = app();
-    expect(a.receiveFloat({ amt: '2,000,000', method: 'M-Pesa', note: 'Extra for transport' })).toBe('');
-    expect(a.fl().grants[0]).toMatchObject({ amt: 2e6, method: 'M-Pesa', at: D, time: '12:00', by: 'RT' });
-    expect(a.state.notes.some(n => n.to === 'DK' && n.t === 'Float received · TZS 2,000,000')).toBe(true);
+  it('only Management gives float; it is the float received, and Finance and the GM are told', () => {
+    expect(app('gm').receiveFloat({ amt: '1000000' })).toMatch(/Only Management/);
+    // Finance cannot add a grant (the same money would count twice): it asks the boss instead.
+    const fin = app();
+    expect(fin.giveFloat(1000000, 'More float')).toMatch(/Only Management/);
+    expect(fin.receiveFloat({ amt: '1000000' })).toMatch(/ask the boss/);
+    expect(fin.fl().grants.length).toBe(3);
+    const a = app('ceo');
+    expect(a.giveFloat('2,000,000', 'Extra for transport', { method: 'M-Pesa' })).toBe('');
+    expect(a.fl().grants[0]).toMatchObject({ amt: 2e6, method: 'M-Pesa', at: D, time: '12:00', by: 'DK' });
+    const line = a.floatBook().find(l => l.id === a.fl().grants[0].id);
+    expect(line).toMatchObject({ kind: 'float', dir: 'in', amt: 2e6, cat: 'Float received from Management', who: 'Daniel K.' });
+    expect(a.dailyFloat(D).grants.some(g => g.amt === 2e6 && g.from === 'Daniel K.')).toBe(true);
+    expect(a.state.notes.some(n => n.to === 'RT' && n.t === 'Float received · TZS 2,000,000 from Daniel K.')).toBe(true);
+    expect(a.state.notes.some(n => n.to === 'GN' && n.t === 'Float received · TZS 2,000,000 from Daniel K.')).toBe(true);
     expect(a.receiveFloat({ amt: '1000', at: '2026-11-10' })).toMatch(/7 days/);
+  });
+  it('a grant Finance recorded before still counts, labelled "Recorded by Finance"', () => {
+    const a = app('finance', { float: { grants: [{ id: 'G9', amt: 1e6, at: D, by: 'RT' }], allocs: [], asks: [] } });
+    expect(a.floatBalance()).toBe(1e6);
+    expect(a.floatBook().find(l => l.id === 'G9').who).toBe('Recorded by Finance');
   });
 });
 

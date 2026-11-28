@@ -64,18 +64,19 @@ export const floatMethods = {
     return ' · ⚠ float is below zero, Management told';
   },
 
-  // Money from the boss: recorded by Management or by Finance (then Management is told).
+  // Money from the boss: only Management gives it, and that IS the float's "Float received" — Finance does
+  // not record it again (the same money would count twice). Finance and the GM are told. Finance asks for
+  // float instead (askFloat).
   receiveFloat(f) {
-    if (!this.canFloat()) return 'Only Finance and Management record the float';
+    if ((this.state.role || 'ceo') !== 'ceo') return (this.state.role || 'ceo') === 'finance' ? 'Only Management gives float · ask the boss for float instead' : 'Only Management gives float';
     const amt = num(f.amt); if (amt <= 0) return 'Enter the amount';
     const d = this.floatDate(f.at); if (d.error) return d.error;
     const me = this.me(), fl = this.fl();
     const g = { id: 'FG' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + me.k, amt, note: String(f.note || '').trim(), method: METHODS.includes(f.method) ? f.method : 'Cash', from: 'Management', by: me.k, at: d.at, time: tzTime(this.nowDate()) };
     this.setFloat({ grants: [g, ...fl.grants], asks: fl.asks.map(a => (a.st === 'open' ? Object.assign({}, a, { st: 'given' }) : a)) });
-    if ((this.state.role || 'ceo') !== 'ceo') this.notify({ to: this.ROLES.ceo.k, ic: 'wallet', t: 'Float received · ' + this.fmtT(amt), s: 'Recorded by ' + me.n + ' · ' + g.method + (g.note ? ' · ' + g.note : ''), go: 'finance' });
-    else { const fk = this.ROLES.finance.k; if (fk !== me.k) this.remind(fk, 'Float received · ' + this.fmtT(amt), 'float', 'wallet', 'From ' + me.n + (g.note ? ' · ' + g.note : '')); }
+    [this.ROLES.finance && this.ROLES.finance.k, this.ROLES.gm && this.ROLES.gm.k].filter(k => k && k !== me.k).forEach(k => this.remind(k, 'Float received · ' + this.fmtT(amt) + ' from ' + me.n, 'float', 'wallet', (g.note ? g.note + ' · ' : '') + 'Balance ' + this.fmtT(this.floatBalance())));
     if (d.at !== this.fToday()) this.floatRevised(d.at, 'Float received ' + this.fmtT(amt) + ' added');
-    this.toast('Float received · ' + this.fmtT(amt) + ' · balance ' + this.fmtT(this.floatBalance()));
+    this.toast('Float given to Finance · ' + this.fmtT(amt) + ' · balance ' + this.fmtT(this.floatBalance()));
     return '';
   },
 
@@ -367,7 +368,7 @@ export function floatVals(s) {
   const line = l => {
     const e = l.kind === 'expense' ? entries.find(x => x.id === l.id) : null;
     return { id: l.id, kind: l.kind, time: l.time || '', dir: l.dir, amt: (l.dir === 'in' ? '+' : '−') + f(l.amt), raw: l.amt, void: !!l.void, ic: ICON[l.kind] || 'wallet',
-      what: l.kind === 'float' ? 'Float from Management' : l.kind === 'request' ? (l.cat || 'Request') + ' · ' + l.ref : l.kind === 'charge' ? 'Charges · ' + l.ref : l.kind === 'returned' ? 'Change returned · ' + l.ref : l.cat + (l.what ? ' · ' + l.what : ''),
+      what: l.kind === 'float' ? 'Float received from Management' : l.kind === 'request' ? (l.cat || 'Request') + ' · ' + l.ref : l.kind === 'charge' ? 'Charges · ' + l.ref : l.kind === 'returned' ? 'Change returned · ' + l.ref : l.cat + (l.what ? ' · ' + l.what : ''),
       where: l.kind === 'float' ? (l.ref || '') : this.projLabel(l.p), who: l.who || '', method: l.method || '', ref: l.ref || '', by: l.by ? this.av(l.by).n : '', p: l.p || '',
       photo: e && e.photo ? () => this.openDoc({ n: e.photo.name, url: e.photo.url, path: e.photo.path }) : null,
       voidInfo: e && e.void ? 'Void · ' + e.void.reason + ' · ' + this.av(e.void.by).n + ' ' + e.void.at : '',
@@ -416,7 +417,8 @@ export function floatVals(s) {
       staffReqs: k => this.floatStaffReqs(k),
       book: (a, b) => this.pettyBook(a, b).map(r => Object.assign({}, r, { amtT: r.bf || r.cd ? '' : (r.dir === 'in' ? '+' : '−') + n0(r.amt), balT: (r.bal < 0 ? '−' : '') + n0(Math.abs(r.bal)), neg: r.bal < 0, dayT: dayLabel(r.at, false) })),
       exportBook: (a, b) => this.exportPettyBook(a, b), monthStart,
-      addExpense: x => this.addExpense(x), receive: x => this.receiveFloat(x),
+      addExpense: x => this.addExpense(x), receive: x => this.receiveFloat(x), canGive: role === 'ceo', canAsk: role === 'finance',
+      ask: x => this.askFloat(num(x.amt), x.note), shortfall: Math.max(0, W.total - td.close), asked: this.fl().asks.find(a => a.st === 'open') || null,
       print: D => this.printDailyFloat(D), send: (D, o) => this.sendDailyFloat(D, o), shareUrl: typeof location !== 'undefined' ? location.origin + '/?go=float' : ''
     }
   };
