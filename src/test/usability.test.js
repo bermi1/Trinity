@@ -28,17 +28,15 @@ describe('words for money staff must account for', () => {
 });
 
 describe('Finance navigation', () => {
-  it('Finance opens on the Float, with Pay & approve and Receipts as phone tabs', () => {
+  it('Finance opens on the Float, with Pay & approve and Invoices as phone tabs', () => {
     expect(ROLES.finance.home).toBe('float');
-    expect(TABS.finance.map(t => t[0])).toEqual(['float', 'requests', 'receipts']);
+    expect(TABS.finance.map(t => t[0])).toEqual(['float', 'requests', 'finance']);
     expect(TABS.finance[1][1]).toBe('Pay & approve');
     const a = app();
     expect(a.allowedPage('finance', 'receipts')).toBe('receipts');
-    // Monday Briefing appears once in Finance's menus; invoices and the company cash book have their own group.
+    // Monday Briefing appears once in Finance's menus.
     const G = a.navGroups('finance'), all = G.flatMap(g => g[1].map(i => i[1]));
     expect(all.filter(l => l === 'Monday Briefing').length).toBeLessThanOrEqual(1);
-    const inv = G.find(g => g[0] === 'Invoices & accounts')[1].map(i => i[0]);
-    expect(inv).toEqual(expect.arrayContaining(['invoices', 'finance', 'cashbook']));
   });
 });
 

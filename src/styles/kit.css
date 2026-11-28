@@ -1666,3 +1666,7 @@
 .ch-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
 .ch-edit .fh-amt { flex: 1 1 180px; }
 @media (max-width: 700px) { .ch-btn { min-height: 40px; } }
+/* Finance's grouped pages: tabs at the top */
+.fin-tabs { margin: 0 0 4px; }
+.fin-tabs .fin-n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #B23A46; color: #fff; font-size: 11px; }
+@media (max-width: 700px) { .fin-tabs { margin: 0 0 8px; } .fin-tabs button { min-height: 40px; } }

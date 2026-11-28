@@ -69,7 +69,7 @@ export const TABS = {
   // Staff quick buttons: Requests, Reports and Calendar; everything else is under More.
   staff:[['requests','Requests','banknote'],['reporting','Reports','fileText'],['meetings','Calendar','calendar']],
   // Finance on the phone: the Float (home), paying and approving, checking receipts; the rest is under More.
-  finance:[['float','Float','wallet'],['requests','Pay & approve','banknote'],['receipts','Receipts','receipt']],
+  finance:[['float','Float','wallet'],['requests','Pay & approve','banknote'],['finance','Invoices','chart']],
   reception:[['reception','Desk','message'],['today','My work','checkSquare'],['clients','Clients','users'],['requests','Requests','banknote']],
   store:[['storekeeper','Store','home'],['today','My work','checkSquare'],['requests','Requests','banknote'],['projects','Projects','folder']],
   pa:[['meetings','Calendar','calendar'],['projects','Projects','folder'],['today','My work','checkSquare'],['clients','Clients','users']],

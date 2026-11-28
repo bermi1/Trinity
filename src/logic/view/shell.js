@@ -5,13 +5,21 @@ import { colorFor } from '../admin';
 import { HIDDEN_ROLES } from '../constants';
 
 const ROLES_LABEL = {ceo:'Management', gm:'General Manager', clientservice:'Client Service', creative:'Creative', operations:'Operations', staff:'Staff', finance:'Finance', reception:'Reception', store:'Store', production:'Printing', pa:'Personal Assistant'};
+// Finance's tabs inside "Pay & approve" and "Invoices & finance".
+export const FIN_TABS = {
+  pay: [['financeportal', 'My queue'], ['requests', 'Requests'], ['receipts', 'Receipts']],
+  books: [['finance', 'Overview'], ['invoices', 'Invoices'], ['cashbook', 'Company cash book'], ['freports', 'Finance reports']]
+};
+
 export function renderVals() {
   const s = this.state, IC = this.IC, ST = this.ST;
   const narrow = s.w < 960, wide = s.w >= 1240;
   const unread = this.myNotes(s).filter(n => !n.read).length;
   const vreqs = this.visibleReqs(s), myReq = vreqs.filter(r => r.st === 'pending' && r.step === 4);
-  const navPage = s.page === 'project' ? 'projects' : s.page === 'job' ? 'production' : s.page;
   const role = s.role || 'ceo', R = this.ROLES[role];
+  // Finance's grouped pages: one menu item each, the pages inside as tabs.
+  const finGroup = role === 'finance' ? Object.keys(FIN_TABS).find(g => FIN_TABS[g].some(t => t[0] === s.page)) : null;
+  const navPage = s.page === 'project' ? 'projects' : s.page === 'job' ? 'production' : finGroup === 'pay' ? 'requests' : finGroup === 'books' ? 'finance' : s.page;
   const lowN = s.stock.filter(i => i.q < i.min).length, finQ = vreqs.filter(q => q.st === 'pending' && q.step === 3).length, myOpen = s.tasks.filter(t => t.who === R.k && t.st !== 'done').length;
   const G = this.navGroups(role);
   // "More" opens by itself when the page you are on is inside it; its count adds up what waits inside.
@@ -76,7 +84,10 @@ export function renderVals() {
   const q = (l, ic, on, primary) => ({l, ic:IC[ic], on, bg:primary ? '#2B1459' : '#fff', c:primary ? '#fff' : '#17152A', bd:primary ? '#2B1459' : '#E8E4EF', icc:primary ? '#E2CE98' : '#6D3CC2'});
   const quick = [q('Create project','folder',() => this.openModal('project'),true), q('Create invoice','fileText',() => this.openModal('invoice')), q('Add task','checkSquare',() => this.openModal('task')), q('Request payment','banknote',() => this.openModal('req')),...(this.isOff('procurement') ? [] : [q('Purchase request','cart',() => this.openModal('proc'))]), q('New lead','users',() => this.openModal('lead')), q('Create proposal','clipboard',() => this.openModal('proposal')), q('Schedule meeting','calendar',() => this.openModal('meet'))];
 
+  const recN = vreqs.filter(q => q.st === 'paid' && q.rec && q.rec.st === 'submitted').length;
+  const finTabs = finGroup ? FIN_TABS[finGroup].map(([k, l]) => ({ k, l, on: k === s.page, n: k === 'financeportal' ? finQ : k === 'receipts' ? recN : 0, go: () => this.go(k) })) : null;
   return Object.assign({
+    finTabs,
     ic:IC, showLogin:!s.auth, showApp:s.auth, email:s.email, pw:s.pw, loginErr:s.loginErr,
     onEmail:e => this.setState({email:e.target.value,loginErr:''}), onPw:e => this.setState({pw:e.target.value,loginErr:''}),
     signIn:() => this.signIn(), 
