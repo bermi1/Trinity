@@ -468,7 +468,9 @@ export function reportVals(s) {
       showProfit: (s.role || 'ceo') !== 'finance',
       projects: projects.map(p => ({ id: p.id, n: p.n, c: p.c, value: f(p.value), invoiced: f(p.invoiced), got: f(p.got), spent: f(p.spent), profit: (p.profit < 0 ? '−' : '') + f(Math.abs(p.profit)), neg: p.profit < 0, margin: p.got ? Math.round(p.profit / p.got * 100) + '%' : '—' })),
       aging: aging.map(a => Object.assign(a, { t: f(a.v) })), agingMax: Math.max(1, ...aging.map(a => a.v)),
-      book: book.slice(0, 200).map(e => ({ id: e.id, at: e.at, dir: e.dir, cat: e.cat, party: e.party, proj: e.proj, ref: e.ref, amt: f(e.amt), run: (e.run < 0 ? '−' : '') + f(Math.abs(e.run)) })),
+      book: book.slice(0, 200).map(e => ({ id: e.id, at: e.at, dir: e.dir, cat: e.cat, party: e.party, proj: e.proj, ref: e.ref, amt: f(e.amt), run: (e.run < 0 ? '−' : '') + f(Math.abs(e.run)),
+        // Finance's own entries: transaction charges can be added or corrected.
+        feeN: e.src === 'ledger' && !/-fee$/.test(e.id) ? (e.fee || 0) : null, setFee: e.src === 'ledger' && !/-fee$/.test(e.id) && this.canFloat && this.canFloat() ? v => this.setCharges('ledger', e.id, v) : null })),
       bookCount: book.length,
       export: () => this.exportCash(rows, R.label), add: e => this.addEntry(e),
       inCats: IN_CATS, outCats: OUT_CATS, projOpts: (s.projects || []).filter(p => p.st !== 'done').map(p => ({ v: p.id, l: p.client }))

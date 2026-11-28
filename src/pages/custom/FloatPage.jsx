@@ -1,3 +1,4 @@
+import ChargesEdit from '../../components/ChargesEdit';
 import { useEffect, useRef, useState } from 'react';
 import { Btn, Empty } from '../../ui/kit';
 import Icon from '../../mobile/Icon';
@@ -73,7 +74,7 @@ function ExpenseSheet({ F, onClose, edit, day }) {
   const setDirty = F.setDirty;
   useEffect(() => { if (setDirty) setDirty(dirty); }, [dirty, setDirty]);
   useEffect(() => () => { if (setDirty) setDirty(false); }, [setDirty]);
-  const total = (+f.amt || 0) + (f.method === 'Cash' ? 0 : +f.fee || 0);
+  const total = (+f.amt || 0) + (+f.fee || 0);
   const after = F.balanceN - total + (e0 ? (+e0.amt || 0) + (+e0.fee || 0) : 0);
   const save = async again => {
     setBusy(true);
@@ -98,7 +99,7 @@ function ExpenseSheet({ F, onClose, edit, day }) {
         </>
       )}
       <div className="ff" data-field="Paid by"><span className="ff-l">Paid by</span><Chips opts={F.methods} v={f.method} set={v => set('method', v)} label="Payment method" /></div>
-      {f.method !== 'Cash' ? <label className="fh-amt"><span>Charges</span><input inputMode="numeric" value={f.fee ? n(f.fee) : ''} onChange={e => set('fee', digits(e.target.value))} placeholder="0" aria-label="Transaction charges" /></label> : null}
+      <label className="fh-amt"><span>Transaction charges</span><input inputMode="numeric" value={f.fee ? n(f.fee) : ''} onChange={e => set('fee', digits(e.target.value))} placeholder="0" aria-label="Transaction charges" /></label>
       {edit ? <input className="ff-search" value={f.reason} onChange={e => set('reason', e.target.value)} placeholder="Why does it change? (required)" aria-label="Reason for the change" /> : (
         <div className="fh-row fl-two">
           {f.settle ? null : <label className="bi-up"><input type="file" accept="image/*" capture="environment" onChange={e => set('photo', e.target.files[0] || null)} aria-label="Receipt photo" />{f.photo ? '✓ ' + f.photo.name : '↑ Receipt photo'}</label>}
@@ -151,6 +152,7 @@ function LineSheet({ l, F, onClose, onEdit }) {
     <Sheet title={l.what} sub={l.void ? l.voidInfo : l.where} onClose={onClose} label="Line details"
       foot={<>{l.openReq ? <Btn kind="ghost" onClick={l.openReq}>Open the request</Btn> : null}{l.canEdit ? <Btn kind="ghost" onClick={onEdit}>Change</Btn> : null}{l.canVoid && !voiding ? <Btn kind="ghost" onClick={() => setVoiding(true)}>Void</Btn> : null}</>}>
       <dl className="fl-dl">{rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd className={l.void && k === 'Amount' ? 'is-void' : ''}>{v}</dd></div>)}</dl>
+      {l.setFee || l.feeN ? <div className="fl-charges"><ChargesEdit fee={l.feeN} save={l.canFee ? v => l.setFee(v) : null} /></div> : null}
       {l.photo ? <Btn kind="ghost" onClick={l.photo}>View receipt photo</Btn> : null}
       {l.edits.length ? <ul className="fl-edits">{l.edits.map((e, i) => <li key={i}>{e}</li>)}</ul> : null}
       {l.openReq && !l.canEdit ? <p className="k-sub">Request payments are changed on the request, not here.</p> : null}

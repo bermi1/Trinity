@@ -1,6 +1,7 @@
 // Generated from the Claude Design file by scripts/dc-to-jsx.mjs.
 import { Fragment, useEffect, useRef } from 'react';
 import MyRequests from './custom/MyRequests';
+import ChargesEdit from '../components/ChargesEdit';
 import FixRequest from './custom/FixRequest';
 import ReqItems from '../components/ReqItems';
 import { RecCheck } from '../components/AccountForm';
@@ -203,6 +204,7 @@ function Approvals({ v }) {
                   </>
                 ) : null}
                 {v.R.paidLine ? <div className="rq-paid" role="status">{v.R.paidLine}</div> : null}
+                {v.R.paidLine && (v.R.setFee || v.R.feeN) ? <div className="fl-charges"><ChargesEdit fee={v.R.feeN} save={v.R.setFee} /></div> : null}
                 {v.R.canPay ? (
                   <button className="tm-h2" onClick={v.R.pay} style={{ alignSelf: "flex-start", height: "44px", padding: "0 20px", border: "none", borderRadius: "10px", background: "#2B1459", color: "#fff", fontSize: "14px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
