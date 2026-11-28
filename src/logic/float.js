@@ -6,7 +6,7 @@
 // Advances: whoever receives money for a request accounts for it (what was spent, receipts, the change);
 // Finance accepts it or sends it back.
 // Mixed into TrinityApp, so `this` is the app.
-import { tzDay, tzTime, tzHour, parseFee, DOC_CSS, FIT_JS, COMPANY } from './finance';
+import { tzDay, tzTime, tzHour, parseFee, DOC_CSS, REPORT_CSS, COMPANY, keepCodes } from './finance';
 
 export const EXP_CATS = ['Water', 'Transport', 'Printing', 'Airtime', 'Courier', 'Refreshments', 'Fuel', 'Other'];
 export const METHODS = ['Cash', 'M-Pesa', 'Tigo Pesa', 'Airtel Money', 'Bank'];
@@ -300,6 +300,7 @@ h2{display:flex;align-items:baseline;gap:8px;margin:12px 0 2px;font-size:12px;le
 table{font-size:10.5px;margin-top:3px}th{padding:5px 6px;font-size:9.5px}td{padding:4px 6px;vertical-align:top}td.r,th.r{white-space:nowrap}tfoot td{font-weight:800;border-top:1.5px solid #2B1459;border-bottom:none}
 tr.void td{text-decoration:line-through;color:#A9A3B8}.none{margin:2px 0 0;color:#6E6A7C;font-style:italic;font-size:11px}
 .sign{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:20px}.sig{border-top:1px solid #CFC8DD;padding-top:6px;font-size:11px;color:#6E6A7C;min-height:56px;display:flex;flex-direction:column;justify-content:flex-end}.sig b{color:#17152A}
+${REPORT_CSS}
 </style></head><body><div class=bar><button onclick="print()">Download PDF</button></div><div class=page><div class=fit>
 <div class=top><img src="${origin}/brand/trinity-logo-full.png" alt="Trinity Mark"><div class=inv><h1>DAILY FLOAT REPORT</h1><div><b>${esc(R.ref)}</b></div><div>${esc(R.label)}</div></div></div>
 <div class=band></div>
@@ -330,8 +331,8 @@ ${sec(8, 'Paid requests not yet accounted for', R.advances.length ? R.advances.l
 <div class=sign><div class=sig><span>Prepared by (Finance)</span><b>${esc(R.preparedBy)}</b><span>Sign · ${esc(R.preparedAt || 'time')}</span></div><div class=sig><span>Received by Management</span><b>&nbsp;</b><span>Sign · date</span></div></div>
 </div>
 <div class=foot><span>${COMPANY.box}</span><span>${esc(R.ref)} · Trinity Mark 360</span></div>
-</div><script>${FIT_JS}</script></body></html>`;
-    return html;
+</div></body></html>`;
+    return keepCodes(html);
   },
   // Download PDF: the printable page in a new tab (Print → Save as PDF; works on phones too).
   printDailyFloat(D) {

@@ -63,14 +63,75 @@ describe('money request privacy', () => {
     expect([...V.MR.open, ...V.MR.done].map(r => r.id)).not.toContain('REQ-0418');
   });
 
-  it('Finance sees what it verifies, pays and reconciles, not requests at other steps', () => {
+  it('Finance sees every request, at every step and of every person', () => {
     const a = app('finance');
     a.setState({ reqFilter: 'all' });
     const l = listIds(a);
+    expect(l.sort()).toEqual(ids(a.state.reqs).sort());
     expect(l).toContain('REQ-0425'); // at Finance
     expect(l).toContain('REQ-0412'); // paid
-    expect(l).not.toContain('REQ-0418'); // waiting for Management
-    expect(l).not.toContain('REQ-0405'); // rejected at the GM
+    expect(l).toContain('REQ-0418'); // waiting for Management
+    expect(l).toContain('REQ-0405'); // rejected at the GM
+    // Steps 1, 2 and 4 are all visible.
+    const steps = a.visibleReqs().filter(r => r.st === 'pending').map(r => r.step);
+    [1, 2, 3, 4].forEach(n => { if (a.state.reqs.some(r => r.st === 'pending' && r.step === n)) expect(steps).toContain(n); });
+    // The project page shows them too.
+    const r = a.state.reqs.find(x => x.id === 'REQ-0418');
+    if (r.p) { a.setState({ projectId: r.p }); expect(ids(a.renderVals().P.reqs || [])).toContain('REQ-0418'); }
+  });
+
+  it('Finance cannot approve, reject or pay out of its step; the page says view only', () => {
+    const a = app('finance');
+    const pend = a.state.reqs.filter(r => r.st === 'pending' && r.step !== 3);
+    expect(pend.length).toBeGreaterThan(0);
+    pend.forEach(r => {
+      expect(a.canAct(r)).toBe(false);
+      const before = JSON.stringify(a.state.reqs.find(x => x.id === r.id));
+      expect(a.decide(r, true)).toMatch(/view only/);
+      expect(a.decide(r, false)).toMatch(/view only/);
+      expect(JSON.stringify(a.state.reqs.find(x => x.id === r.id))).toBe(before);
+      expect(a.payReq(r)).toMatch(/not approved/);
+      expect(a.state.reqs.find(x => x.id === r.id).st).toBe('pending');
+      a.setState({ reqFilter: 'all', reqSel: r.id });
+      const V = a.renderVals();
+      expect(V.R.id).toBe(r.id);
+      expect(V.R.canDecide).toBe(false);
+      expect(V.R.canPay).toBe(false);
+      expect(V.R.viewOnly).toMatch(/you can view only/);
+    });
+    const gmReq = pend.find(r => r.step === 2);
+    if (gmReq) { a.setState({ reqSel: gmReq.id }); expect(a.renderVals().R.viewOnly).toBe('Waiting for the GM · you can view only'); }
+    const rej = a.state.reqs.find(r => r.st === 'rejected');
+    a.setState({ reqSel: rej.id });
+    expect(a.renderVals().R.viewOnly).toMatch(/Rejected/);
+    expect(a.decide(rej, true)).toMatch(/not waiting/);
+    // Nothing out of step is offered on the Float page or the home page.
+    expect(a.renderVals().FL.verify.every(x => a.state.reqs.find(r => r.id === x.id).step === 3)).toBe(true);
+  });
+
+  it('Finance still verifies at its step and pays approved requests', () => {
+    const a = app('finance');
+    const r = a.state.reqs.find(x => x.id === 'REQ-0425');
+    expect(r).toMatchObject({ st: 'pending', step: 3 });
+    a.setState({ reqFilter: 'all', reqSel: r.id });
+    expect(a.renderVals().R.canDecide).toBe(true);
+    expect(a.renderVals().R.viewOnly).toBe('');
+    expect(a.decide(r, true)).toBeUndefined();
+    expect(a.state.reqs.find(x => x.id === r.id).step).toBeGreaterThan(3);
+    const ap = a.state.reqs.find(x => x.st === 'approved');
+    expect(ap).toBeTruthy();
+    a.setState({ reqSel: ap.id });
+    expect(a.renderVals().R.canPay).toBe(true);
+    expect(a.renderVals().R.viewOnly).toBe('');
+    expect(a.payReq(ap)).toBe('');
+    expect(a.state.reqs.find(x => x.id === ap.id).st).toBe('paid');
+  });
+
+  it('Management keeps its override at any step; the GM only at its own', () => {
+    const c = app('ceo'), r = c.state.reqs.find(x => x.st === 'pending' && x.step === 3);
+    expect(c.decide(r, true)).toBeUndefined();
+    const g = app('gm'), q = g.state.reqs.find(x => x.st === 'pending' && x.step !== 2);
+    expect(g.decide(q, true)).toMatch(/view only/);
   });
 
   it('Management, the GM and the PA see every request', () => {
@@ -115,5 +176,23 @@ describe('report privacy', () => {
       a.setState({ reports: [rep('JM', ['MM']), rep('AJ', ['GN'])].filter(r => r.by !== me) });
       expect(a.renderVals().RPT.inbox).toHaveLength(2);
     });
+  });
+});
+
+describe('Finance reminds the approver', () => {
+  it('sends the GM a reminder that opens the request, and notes it', () => {
+    const a = new TrinityApp(); a.confirm = () => true; a.setState({ role: 'finance' });
+    const r = a.state.reqs.find(x => x.st === 'pending' && x.step === 2);
+    if (!r) return;
+    const gm = a.reqWaitingFor(r);
+    expect(a.canRemindReq(r)).toBe(true);
+    expect(a.remindReq(r.id)).toBe('');
+    expect(a.state.notes.some(n => n.to === gm && /Reminder: .* is waiting for you/.test(n.t) && n.go === 'request:' + r.id)).toBe(true);
+    expect(a.state.reqs.find(x => x.id === r.id).reminders.at(-1)).toMatchObject({ to: gm });
+    a.setState({ reqFilter: 'all', reqSel: r.id });
+    expect(a.renderVals().R.remindTo).toBeTruthy();
+    // No reminder button where Finance itself must act.
+    const own = a.state.reqs.find(x => x.st === 'pending' && x.step === 3);
+    if (own) expect(a.canRemindReq(own)).toBe(false);
   });
 });

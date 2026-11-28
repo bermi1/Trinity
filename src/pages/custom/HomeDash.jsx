@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { CashChart } from './FinanceReports';
 import MyWhatsApp from './MyWhatsApp';
 import TargetPanel from './TargetPanel';
@@ -5,6 +6,28 @@ import TargetPanel from './TargetPanel';
 const TONE = { amber: ['#FFF4E0', '#9A6200'], purple: ['#F0EBFA', '#5A2FA8'], green: ['#E7F6EE', '#1F7549'], red: ['#FDECEE', '#B23A46'] };
 
 // Company home: the few numbers that matter, then what needs attention today.
+// A float request from Finance, for Management: balance now → after, Approve (it is given at once) or Decline.
+function FloatAsk({ a }) {
+  const [no, setNo] = useState(false), [why, setWhy] = useState(''), [err, setErr] = useState('');
+  return (
+    <div className="hd-ask">
+      <b>Float request · {a.amt}</b>
+      <small>{a.who} · {a.at}</small>
+      <span className="hd-ask-bal">Balance {a.before} → <b>{a.after}</b></span>
+      {a.note ? <p>{a.note}</p> : null}
+      {no ? (
+        <div className="hd-ask-row"><input value={why} onChange={e => setWhy(e.target.value)} placeholder="Reason (required)" aria-label="Reason for declining" />
+          <button type="button" className="me-save" onClick={() => { const m = a.decline(why); if (m) setErr(m); }}>Decline</button>
+          <button type="button" className="me-cancel" onClick={() => setNo(false)}>Cancel</button></div>
+      ) : (
+        <div className="hd-ask-row"><button type="button" className="me-save" onClick={() => { const m = a.approve(); if (m) setErr(m); }}>Approve · give {a.amt}</button>
+          <button type="button" className="me-cancel" onClick={() => setNo(true)}>Decline</button></div>
+      )}
+      {err ? <div className="fm-err" role="alert">{err}</div> : null}
+    </div>
+  );
+}
+
 export default function HomeDash({ v }) {
   const H = v.HD;
   if (!H) return null;
@@ -24,6 +47,11 @@ export default function HomeDash({ v }) {
             <div><dt>Waiting to be paid</dt><dd>{H.float.waitN} · {H.float.waitT}</dd></div>
             <div><dt>Daily report</dt><dd>{H.float.sentLine}</dd></div>
           </dl>
+          {H.float.asks && H.float.asks.length ? (
+            <div className="hd-asks">
+              {H.float.asks.map(a => <FloatAsk key={a.id} a={a} />)}
+            </div>
+          ) : null}
           <button type="button" className="k-btn is-dark hd-fopen" onClick={H.float.open}>Open today’s report</button>
         </section>
       ) : null}

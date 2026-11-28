@@ -693,18 +693,44 @@ export default class TrinityApp extends Logic {
   }
 
   canPay() { const role = this.state.role || 'ceo'; return role === 'ceo' || role === 'finance'; }
-  // Privacy of money requests. Management, the GM and the PA (who follows Management's approvals) see every
-  // request. Everyone else sees only their own requests (asked by them or for them) and the ones waiting for
-  // their approval right now. Finance also sees what it must verify, pay and reconcile: requests at the
-  // Finance step, approved ones waiting for payment and paid ones.
-  seesAllReqs() { return ['ceo', 'gm', 'pa'].includes(this.state.role || 'ceo'); }
+  // Privacy of money requests. Management, the GM, the PA (who follows Management's approvals) and Finance
+  // see every request. Everyone else sees only their own requests (asked by them or for them) and the ones
+  // waiting for their approval right now. Seeing is not acting: Finance acts only at its own steps
+  // (verify at the Finance step, pay approved requests, check receipts), see canAct and canPay.
+  seesAllReqs() { return ['ceo', 'gm', 'pa', 'finance'].includes(this.state.role || 'ceo'); }
+  // Why this person cannot act on a request they can see ('' when they can, or it is their own).
+  reqViewOnly(r) {
+    if (!r || (this.state.role || 'ceo') !== 'finance') return '';
+    const me = this.me().k;
+    if (r.st === 'pending' && this.canAct(r)) return '';
+    if (r.st === 'approved' && this.canPay()) return '';
+    if (r.st === 'paid' || ((r.who === me || r.by === me) && r.st !== 'rejected')) return '';
+    if (r.st === 'rejected') return 'Rejected · you can view only';
+    if (r.st === 'approved') return 'Approved · waiting for Finance to pay · you can view only';
+    const step = { 1: 'the Project Manager', 2: 'the GM', 3: 'Finance', 4: 'Management' }[r.step] || this.CHAIN[r.step] || 'approval';
+    return 'Waiting for ' + step + ' · you can view only';
+  }
+  // Finance (and Management) can nudge whoever a pending request is waiting on: an in-app reminder that
+  // opens the request, optionally WhatsApp too; noted on the request so everyone sees it was chased.
+  reqWaitingFor(r) { return r && r.st === 'pending' ? this.approverAt(r, r.step) : null; }
+  canRemindReq(r) { const k = this.reqWaitingFor(r); return !!k && k !== this.me().k && ['finance', 'ceo', 'gm', 'pa'].includes(this.state.role || 'ceo') && !this.canAct(r); }
+  remindReq(id, viaWa) {
+    const r = (this.state.reqs || []).find(x => x.id === id); if (!r || !this.canRemindReq(r)) return 'Nothing to remind';
+    const k = this.reqWaitingFor(r), a = this.av(k), what = r.id + ' · ' + this.fmtT(r.amt) + ' · ' + this.av(r.who).n + ' · ' + this.reqWhat(r);
+    this.notify({ to: k, ic: 'clock', t: 'Reminder: ' + r.id + ' is waiting for you', s: what + ' · from ' + this.me().n, go: 'request:' + r.id });
+    const at = this.fToday() + ' ' + this.now();
+    this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { reminders: [...(q.reminders || []), { by: this.me().k, to: k, at }] }) : q)) }));
+    if (viaWa) this.waOpen(k, 'Habari ' + a.first + ', a reminder: request ' + r.id + ' (' + this.fmtT(r.amt) + ', ' + this.av(r.who).n + ') is waiting for your approval in Trinity Mark 360.');
+    this.toast('Reminder sent to ' + a.first);
+    return '';
+  }
   reqWaitingOnMe(r) { return !!r && r.st === 'pending' && (this.canAct(r) || this.approverAt(r, r.step) === this.me().k); }
   canSeeReq(r) {
     if (!r) return false;
     if (this.seesAllReqs()) return true;
     const me = this.me().k;
     if (r.who === me || r.by === me || this.reqWaitingOnMe(r)) return true;
-    return (this.state.role || 'ceo') === 'finance' && (r.st === 'approved' || r.st === 'paid' || (r.st === 'pending' && r.step === 3));
+    return false;
   }
   visibleReqs(s) { return ((s || this.state).reqs || []).filter(r => this.canSeeReq(r)); }
   // Requests up to this amount need only the Project Manager and Finance (0 = every request takes all steps).
@@ -802,6 +828,10 @@ export default class TrinityApp extends Logic {
   reqWhat(r) { const t = r.type || 'project'; return t === 'project' ? (r.cat || 'Project') + ' · ' + (this.proj(r.p).name || 'Project') : (t === 'internal' && r.cat && r.cat !== 'Internal office' ? 'Internal · ' + r.cat : REQ_TYPES[t].l.replace(' request', '')) + ' · ' + (r.title || r.purpose || ''); }
   // `reason` (optional) is kept on a rejected request so the person sees what to fix (Finance's "Send back").
   decide(r, ok, reason) {
+    // Only the person whose step it is may approve, verify or reject (Management may act at any step).
+    const cur = r && (this.state.reqs || []).find(q => q.id === r.id);
+    if (!cur || !this.canAct(cur)) { const m = cur && cur.st === 'pending' ? cur.id + ' is waiting for ' + this.CHAIN[cur.step] + ' · you can view only' : (cur ? cur.id : 'This request') + ' is not waiting for approval'; this.toast(m); return m; }
+    r = cur;
     const t = this.now(), skip = [];
     const n = this.nextStep(r, r.step);
     for (let i = r.step + 1; i < n; i++) skip.push(i);
@@ -826,6 +856,10 @@ export default class TrinityApp extends Logic {
     const o = opts || {}, amt = paid == null || String(paid).trim() === '' ? r.amt : Math.round(+String(paid).replace(/[^0-9.]/g, '') || 0);
     if (!(amt > 0)) { this.toast('Enter the amount paid'); return 'Enter the amount paid'; }
     if (amt > r.amt) { this.toast('More than was requested (' + this.fmtT(r.amt) + ')'); return 'More than was requested'; }
+    // Only Finance and Management pay; approved requests only (Management may settle a pending one from the book).
+    const cur = (this.state.reqs || []).find(q => q.id === r.id) || r;
+    if (!this.canPay()) { this.toast('Only Finance pays requests · you can view only'); return 'Only Finance pays requests'; }
+    if (cur.st !== 'approved' && !(cur.st === 'pending' && (this.state.role || 'ceo') === 'ceo')) { const m = cur.st === 'paid' ? r.id + ' is already paid' : r.id + ' is not approved yet · it can be paid once approved'; this.toast(m); return m; }
     const fee = parseFee(charges);
     if (fee < 0) { this.toast('Transaction charges must be a number'); return 'Transaction charges must be a number'; }
     const d = this.floatDate(o.date); if (d.error) { this.toast(d.error); return d.error; }
