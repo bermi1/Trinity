@@ -1755,3 +1755,35 @@
   .vc-asof-m { display: inline; }
   .vc-bal { margin-bottom: 10px; }
 }
+/* Management / GM home: an at-a-glance strip, then three columns of key cards (float, attention, work, sales) */
+.hd-kpis.is-m { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.hd-kpis.is-m .hd-kpi { min-width: 0; }
+.hd-kpis.is-m .hd-kpi b { white-space: nowrap; }
+.hd-mgrid { display: grid; grid-template-columns: minmax(340px, 1fr) minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.hd-col { display: grid; gap: 18px; min-width: 0; align-content: start; }
+.hd-float.is-mini .vc { margin: 0; }
+.hd-float.is-mini .hd-asks { margin: 0; }
+.hd-fline { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: #6E6A7C; }
+.hd-fline span { white-space: nowrap; }
+.hd-fline b { color: #17152A; font-variant-numeric: tabular-nums; }
+.hd-fline .is-warn, .hd-fline .is-warn b { color: #B23A46; }
+.hd-stages.is-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.hd-stages > button { background: #F7F7FA; border: none; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 2px; font: inherit; text-align: left; color: inherit; cursor: pointer; min-width: 0; }
+.hd-stages > button:hover { background: #F0EBFA; }
+.hd-stages > button.is-warn b { color: #9A6200; }
+.hd-stages b small { font-size: 13px; font-weight: 600; color: #8A8D99; }
+@media (max-width: 1100px) {
+  .hd-mgrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .hd-mgrid > .hd-col:last-child { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+}
+@media (max-width: 700px) {
+  .hd-mgrid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .hd-mgrid > .hd-col, .hd-mgrid > .hd-col:last-child { display: contents; }
+  .hd-mgrid .hd-float { order: 1; } .hd-mgrid .hd-att { order: 2; } .hd-mgrid .hd-projc { order: 3; }
+  .hd-mgrid .hd-pipec { order: 4; } .hd-mgrid .hd-poc { order: 5; } .hd-mgrid .hd-teamc { order: 6; }
+  .hd-kpis.is-m .hd-kpi:last-child:nth-child(odd) { grid-column: 1 / -1 !important; }
+  .hd-stages > button { padding: 8px 10px; }
+  .hd-stages > button b { font-size: 17px; }
+  .hd-fline { font-size: 12px; gap: 2px 12px; }
+}
+.hd-poc ul.hd-att { list-style: none; margin: 0; padding: 0; }

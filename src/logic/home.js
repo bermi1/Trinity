@@ -46,18 +46,36 @@ export function homeVals(s) {
       advN: adv.length, advT: this.fmtT(advT), advOver: adv.filter(r => r.overdue).length, top };
     return { card, asks, balance: sg(d.close), neg: d.close < 0, out: this.fmtT(d.out), waitN: W.n, waitT: this.fmtT(W.total),
       sent: !!sent, sentLine: sent ? 'Sent ' + String(sent.sentAt || '').slice(11) + ' · ' + this.av(sent.by).n : 'Not sent yet',
+      go: () => this.finGo('float', { flView: 'day' }),
       open: () => { this.finGo('float', { flView: 'report', flDay: today }); setTimeout(() => { try { const el = document.querySelector('.fl-report'); if (el) el.scrollIntoView({ block: 'start' }); } catch (e) { /* not rendered */ } }, 120); } };
+  })();
+  // Management, the GM and the PA get the at-a-glance strip, ordered by what matters most:
+  // what waits for me, money this month, money owed, projects. (Finance keeps its own four figures.)
+  const mgmt = ['ceo', 'gm', 'pa'].includes(role);
+  const kpis = [
+    { l: 'Active projects', v: String(live.length), s: live.filter(p => p.st === 'late' || p.st === 'risk').length + ' need attention', on: () => this.go('projects') },
+    { l: 'Open leads', v: String(open.length), s: open.filter(l => this.leadStage(l) >= 3).length + ' with a proposal', on: () => this.go('clients') },
+    { l: 'Owed by clients', v: this.fmtM(owed / 1e6), s: unpaid.filter(i => i.st === 'overdue').length + ' overdue', warn: unpaid.some(i => i.st === 'overdue'), on: () => this.finGo('invoices') },
+    { l: 'Waiting for you', v: String(myAppr.length), s: myAppr.length ? this.fmtT(myAppr.reduce((a, b) => a + b.amt, 0)) : 'All clear', on: () => this.go('requests') }
+  ];
+  const mkpis = (() => {
+    if (!mgmt) return null;
+    const waitN = myAppr.length + (fl ? fl.asks.length : 0), waitT = myAppr.reduce((a, b) => a + b.amt, 0);
+    const out = [{ l: 'Waiting for you', v: String(waitN), s: waitN ? [myAppr.length ? this.fmtT(waitT) : '', fl && fl.asks.length ? fl.asks.length + ' float request' + (fl.asks.length === 1 ? '' : 's') : ''].filter(Boolean).join(' · ') : 'All clear', warn: waitN > 0, on: () => this.go('requests') }];
+    if (this.canInvoice() && this.cashEntries) {
+      const m = (this.fToday ? this.fToday() : new Date().toISOString()).slice(0, 7), rows = this.cashEntries().filter(e => (e.at || '').slice(0, 7) === m);
+      const tin = rows.filter(e => e.dir === 'in').reduce((a, e) => a + e.amt, 0), tout = rows.filter(e => e.dir === 'out').reduce((a, e) => a + e.amt, 0);
+      out.push({ l: 'Money in this month', v: this.fmtT(tin), s: 'Out ' + this.fmtT(tout), on: () => this.finGo('reports') });
+    }
+    out.push(kpis[2], { l: 'Active projects', v: String(live.length), s: live.filter(p => p.st === 'late' || p.st === 'risk').length + ' at risk or delayed', warn: live.some(p => p.st === 'late' || p.st === 'risk'), on: () => this.go('projects') });
+    return out;
   })();
   return {
     HD: {
+      mgmt, mkpis,
       hello: (hr < 12 ? 'Good morning, ' : hr < 17 ? 'Good afternoon, ' : 'Good evening, ') + me.n.split(' ')[0],
       date: new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
-      kpis: [
-        { l: 'Active projects', v: String(live.length), s: live.filter(p => p.st === 'late' || p.st === 'risk').length + ' need attention', on: () => this.go('projects') },
-        { l: 'Open leads', v: String(open.length), s: open.filter(l => this.leadStage(l) >= 3).length + ' with a proposal', on: () => this.go('clients') },
-        { l: 'Owed by clients', v: this.fmtM(owed / 1e6), s: unpaid.filter(i => i.st === 'overdue').length + ' overdue', warn: unpaid.some(i => i.st === 'overdue'), on: () => this.finGo('invoices') },
-        { l: 'Waiting for you', v: String(myAppr.length), s: myAppr.length ? this.fmtT(myAppr.reduce((a, b) => a + b.amt, 0)) : 'All clear', on: () => this.go('requests') }
-      ],
+      kpis,
       att, stages: stages.map(x => Object.assign(x, { w: Math.round(x.n / pmax * 100), vt: '' })),
       po: (() => { const ps = live.filter(p => ['approval', 'execution'].includes(this.flowOf(p))); const miss = ps.filter(p => !p.po); return { got: ps.length - miss.length, miss: miss.length, list: miss.slice(0, 5).map(p => ({ t: p.client + ' · ' + p.name, s: this.flowOf(p) === 'execution' ? 'Work started without a PO' : 'Waiting for approval', on: () => this.go('project', { projectId: p.id }) })) }; })(),
       float: fl, pstages, customers: (s.customers || []).length, won: (s.leads || []).filter(l => this.leadStage(l) === 5).length,
@@ -66,7 +84,7 @@ export function homeVals(s) {
       actions: [
         ['New work', 'plus', () => this.openModal('work')], ['Assign task', 'checkSquare', () => this.openModal('task')], ['Invoice', 'fileText', () => this.openModal('invoice')], ['Request', 'banknote', () => this.openModal('req')]
       ].map(([l, , on]) => ({ l, on })),
-      goClients: () => this.go('clients'), goProjects: () => this.go('projects'), goTeam: () => this.go('today', { todoTab: 'team' })
+      goClients: () => this.go('clients'), goProjects: () => this.go('projects'), goTeam: () => this.go('today', { todoTab: 'team' }), goAtt: () => this.go('attendance')
     }
   };
 }

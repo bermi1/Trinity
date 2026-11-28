@@ -49,99 +49,140 @@ function FloatAsk({ a }) {
   );
 }
 
+const Chev = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg>;
+
+// Management's float on the home page, kept small: the card, one line of what matters, the requests
+// waiting for Management, and the way to the Float page (where the full breakdown lives).
+function FloatBlock({ F }) {
+  const C = F.card;
+  return (
+    <section className="hd-card hd-float is-mini" aria-label="Today's float">
+      <header><h3>Today’s float</h3><span className={F.sent ? 'hd-sent' : 'hd-unsent'}>{F.sent ? '✓ Report sent' : '✗ Report not sent'}</span></header>
+      <FloatCard F={F} />
+      <p className="hd-fline">
+        <span><b>{F.waitN}</b> waiting to be paid{F.waitN ? <> · <b>{F.waitT}</b></> : null}</span>
+        <span className={C.advOver ? 'is-warn' : ''}><b>{C.advN}</b> not yet accounted for{C.advOver ? <> · {C.advOver} overdue</> : null}</span>
+      </p>
+      {F.asks && F.asks.length ? <div className="hd-asks">{F.asks.map(a => <FloatAsk key={a.id} a={a} />)}</div> : null}
+      <button type="button" className="k-btn is-dark hd-fopen" onClick={F.go}>Open float</button>
+    </section>
+  );
+}
+
+function Kpis({ list, cls }) {
+  return (
+    <section className={'hd-kpis' + (cls ? ' ' + cls : '')}>
+      {list.map(k => (
+        <button key={k.l} type="button" className="hd-kpi" onClick={k.on}>
+          <span>{k.l}</span><b>{k.v}</b><small className={k.warn ? 'is-warn' : ''}>{k.s}</small>
+        </button>
+      ))}
+    </section>
+  );
+}
+
 export default function HomeDash({ v }) {
   const H = v.HD;
   if (!H) return null;
+  const top = (
+    <header className="hd-top">
+      <div><h1>{H.hello}</h1><p>{H.date}</p></div>
+      <div className="hd-acts">{H.actions.map((a, i) => <button key={a.l} type="button" className={'hd-btn' + (i === 0 ? ' is-pri' : '')} onClick={a.on}><i aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d={v.ic[['plus', 'checkSquare', 'fileText', 'banknote'][i]]} /></svg></i><span>{a.l}</span></button>)}</div>
+    </header>
+  );
+  const att = (
+    <section className="hd-card hd-att">
+      <header><h3>Needs attention</h3><span>{H.att.length}</span></header>
+      {H.att.length ? (
+        <ul>
+          {H.att.map((a, i) => (
+            <li key={i}><button type="button" onClick={a.on}>
+              <em style={{ background: TONE[a.tone][0], color: TONE[a.tone][1] }}>{a.tag}</em>
+              <span><b>{a.t}</b><small>{a.s}</small></span>
+              <Chev />
+            </button></li>
+          ))}
+        </ul>
+      ) : <p className="hd-empty">Nothing waiting. All clear.</p>}
+    </section>
+  );
+  const pipe = (
+    <section className="hd-card hd-pipec">
+      <header><h3>Sales pipeline</h3><button type="button" className="hd-link" onClick={H.goClients}>Open</button></header>
+      <ul className="hd-pipe">
+        {H.stages.map(x => <li key={x.l}><span>{x.l}</span><i><b style={{ width: Math.max(4, x.w) + '%' }} /></i><em>{x.n}</em>{x.vt ? <small>{x.vt}</small> : null}</li>)}
+      </ul>
+      <footer className="hd-foot"><span><b>{H.won}</b> won</span><span><b>{H.customers}</b> customers</span></footer>
+    </section>
+  );
+  const proj = team => (
+    <section className="hd-card hd-projc">
+      <header><h3>Projects by stage</h3><button type="button" className="hd-link" onClick={H.goProjects}>Open</button></header>
+      <div className="hd-stages">{H.pstages.map(p => <div key={p.l}><b>{p.n}</b><span>{p.l}</span></div>)}</div>
+      {team ? <footer className="hd-foot"><button type="button" className="hd-link" onClick={H.goTeam}><b>{H.team.sent}</b> of {H.team.total} sent their day today →</button></footer> : null}
+    </section>
+  );
+  const po = (
+    <section className="hd-card hd-poc" aria-label="Purchase orders">
+      <header><h3>Purchase orders</h3></header>
+      <div className="hd-stages"><div><b>{H.po.got}</b><span>PO received</span></div><div className={H.po.miss ? 'is-warn' : ''}><b>{H.po.miss}</b><span>PO not received</span></div></div>
+      {H.po.list.length ? <ul className="hd-att">{H.po.list.map((x, i) => <li key={i}><button type="button" onClick={x.on}><em style={{ background: '#FFF4E0', color: '#9A6200' }}>No PO</em><span><b>{x.t}</b><small>{x.s}</small></span><Chev /></button></li>)}</ul> : null}
+    </section>
+  );
+  const activity = (
+    <section className="hd-card hd-wide hd-actc">
+      <header><h3>Recent activity</h3></header>
+      <ul className="hd-act">{H.activity.map((a, i) => <li key={i}><time>{a.time}</time><span><b>{a.t}</b><small>{a.s}</small></span></li>)}</ul>
+    </section>
+  );
+
+  if (H.mgmt) {
+    // Management / GM / PA: what waits for me and the money first, then the float, attention, work, sales.
+    const T = v.TG && !v.TG.empty ? v.TG : null, A = v.ATT;
+    const kpis = H.mkpis.slice();
+    if (T) kpis.splice(Math.min(2, kpis.length), 0, { l: 'Company target · ' + T.year, v: T.pace + '%', s: T.earned + ' of ' + T.target, warn: T.status === 'behind', on: () => { const el = document.querySelector('.hd-target'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
+    const today = (
+      <section className="hd-card hd-teamc" aria-label="Today's team">
+        <header><h3>Today’s team</h3></header>
+        <div className="hd-stages is-3">
+          {A ? <button type="button" onClick={H.goAtt}><b>{A.counts.in + A.counts.left}<small> / {A.people.length}</small></b><span>Checked in</span></button> : null}
+          {A ? <button type="button" className={A.counts.late ? 'is-warn' : ''} onClick={H.goAtt}><b>{A.counts.late}</b><span>Late</span></button> : null}
+          <button type="button" onClick={H.goTeam}><b>{H.team.sent}<small> / {H.team.total}</small></b><span>Day sent</span></button>
+        </div>
+      </section>
+    );
+    return (
+      <div className="hd is-m">
+        {top}
+        <MyWhatsApp v={v} />
+        <Kpis list={kpis} cls="is-m" />
+        <div className="hd-mgrid">
+          <div className="hd-col">{H.float ? <FloatBlock F={H.float} /> : null}{today}</div>
+          <div className="hd-col">{att}{proj(false)}</div>
+          <div className="hd-col">{pipe}{po}</div>
+        </div>
+        {v.TG ? <div className="hd-target"><TargetPanel T={v.TG} /></div> : null}
+        <div className="hd-grid">
+          {v.REP ? <div className="hd-wide"><CashChart R={v.REP} /></div> : null}
+          {activity}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="hd">
-      <header className="hd-top">
-        <div><h1>{H.hello}</h1><p>{H.date}</p></div>
-        <div className="hd-acts">{H.actions.map((a, i) => <button key={a.l} type="button" className={'hd-btn' + (i === 0 ? ' is-pri' : '')} onClick={a.on}><i aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d={v.ic[['plus', 'checkSquare', 'fileText', 'banknote'][i]]} /></svg></i><span>{a.l}</span></button>)}</div>
-      </header>
+      {top}
       <MyWhatsApp v={v} />
-      {H.float ? (
-        <section className="hd-card hd-float" aria-label="Today's float">
-          <header><h3>Today’s float</h3><span className={H.float.sent ? 'hd-sent' : 'hd-unsent'}>{H.float.sent ? '✓ Report sent' : '✗ Report not sent'}</span></header>
-          <div className="vc-wrap">
-          <FloatCard F={H.float} />
-          <div className="vc-stats">
-            <div><span>Opened today</span><b>{H.float.card.opened}</b></div>
-            <div><span>In today</span><b className="is-in">+{H.float.card.in}</b></div>
-            <div><span>Out today</span><b className="is-out">−{H.float.out}</b></div>
-            <div><span>Waiting to be paid</span><b>{H.float.waitN} · {H.float.waitT}</b></div>
-            <div><span>Not yet accounted for</span><b className={H.float.card.advOver ? 'is-out' : ''}>{H.float.card.advN} · {H.float.card.advT}</b>{H.float.card.advOver ? <small>{H.float.card.advOver} overdue</small> : null}</div>
-            <div><span>Daily report</span><b>{H.float.sentLine}</b></div>
-          </div>
-          </div>
-          {H.float.card.usedPct != null ? (
-            <div className="vc-use">
-              <div className="vc-use-l"><span>This month</span><b>{H.float.card.spentMonth} used of {H.float.card.gotMonth} received</b></div>
-              <div className="vc-bar" role="img" aria-label={H.float.card.usedPct + '% of this month’s float used'}><i style={{ width: H.float.card.usedPct + '%' }} /></div>
-            </div>
-          ) : null}
-          {H.float.card.top.length ? (
-            <div className="vc-top"><span>Spent today on</span>{H.float.card.top.map(t => <div key={t.name}><em>{t.name}</em><b>{t.t}</b></div>)}</div>
-          ) : null}
-          {H.float.asks && H.float.asks.length ? (
-            <div className="hd-asks">
-              {H.float.asks.map(a => <FloatAsk key={a.id} a={a} />)}
-            </div>
-          ) : null}
-          <button type="button" className="k-btn is-dark hd-fopen" onClick={H.float.open}>Open today’s report</button>
-        </section>
-      ) : null}
-
       {v.TG ? <TargetPanel T={v.TG} /> : null}
-
-      <section className="hd-kpis">
-        {H.kpis.map(k => (
-          <button key={k.l} type="button" className="hd-kpi" onClick={k.on}>
-            <span>{k.l}</span><b>{k.v}</b><small className={k.warn ? 'is-warn' : ''}>{k.s}</small>
-          </button>
-        ))}
-      </section>
-
+      <Kpis list={H.kpis} />
       <div className="hd-grid">
-        <section className="hd-card hd-att">
-          <header><h3>Needs attention</h3><span>{H.att.length}</span></header>
-          {H.att.length ? (
-            <ul>
-              {H.att.map((a, i) => (
-                <li key={i}><button type="button" onClick={a.on}>
-                  <em style={{ background: TONE[a.tone][0], color: TONE[a.tone][1] }}>{a.tag}</em>
-                  <span><b>{a.t}</b><small>{a.s}</small></span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg>
-                </button></li>
-              ))}
-            </ul>
-          ) : <p className="hd-empty">Nothing waiting. All clear.</p>}
-        </section>
-
-        <section className="hd-card">
-          <header><h3>Sales pipeline</h3><button type="button" className="hd-link" onClick={H.goClients}>Open</button></header>
-          <ul className="hd-pipe">
-            {H.stages.map(x => <li key={x.l}><span>{x.l}</span><i><b style={{ width: Math.max(4, x.w) + '%' }} /></i><em>{x.n}</em>{x.vt ? <small>{x.vt}</small> : null}</li>)}
-          </ul>
-          <footer className="hd-foot"><span><b>{H.won}</b> won</span><span><b>{H.customers}</b> customers</span></footer>
-        </section>
-
-        <section className="hd-card">
-          <header><h3>Projects by stage</h3><button type="button" className="hd-link" onClick={H.goProjects}>Open</button></header>
-          <div className="hd-stages">{H.pstages.map(p => <div key={p.l}><b>{p.n}</b><span>{p.l}</span></div>)}</div>
-          <footer className="hd-foot"><button type="button" className="hd-link" onClick={H.goTeam}><b>{H.team.sent}</b> of {H.team.total} sent their day today →</button></footer>
-        </section>
-
-        <section className="hd-card" aria-label="Purchase orders">
-          <header><h3>Purchase orders</h3></header>
-          <div className="hd-stages"><div><b>{H.po.got}</b><span>PO received</span></div><div className={H.po.miss ? 'is-warn' : ''}><b>{H.po.miss}</b><span>PO not received</span></div></div>
-          {H.po.list.length ? <ul className="hd-att">{H.po.list.map((x, i) => <li key={i}><button type="button" onClick={x.on}><em style={{ background: '#FFF4E0', color: '#9A6200' }}>No PO</em><span><b>{x.t}</b><small>{x.s}</small></span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 6l6 6-6 6" /></svg></button></li>)}</ul> : null}
-        </section>
+        {att}
+        {pipe}
+        {proj(true)}
+        {po}
         {v.REP ? <div className="hd-wide"><CashChart R={v.REP} /></div> : null}
-
-        <section className="hd-card hd-wide">
-          <header><h3>Recent activity</h3></header>
-          <ul className="hd-act">{H.activity.map((a, i) => <li key={i}><time>{a.time}</time><span><b>{a.t}</b><small>{a.s}</small></span></li>)}</ul>
-        </section>
+        {activity}
       </div>
     </div>
   );
