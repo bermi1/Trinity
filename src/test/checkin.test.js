@@ -68,7 +68,8 @@ describe('my check-in (own face, own device)', () => {
   it('every role except the store gets My check-in after its home item, and may open it', () => {
     const a = staff();
     Object.keys(a.ROLES).forEach(r => {
-      const first = a.navGroups(r)[0][1].map(i => i[0]);
+      // Finance's own work is grouped (Money first); check-in sits in its "My day" group.
+      const G = a.navGroups(r), first = (r === 'finance' ? G.find(g => g[0] === 'My day') : G[0])[1].map(i => i[0]);
       if (r === 'store') expect(first).not.toContain('checkin');
       else expect(first[1]).toBe('checkin');
       expect(a.allowedPage(r, 'checkin')).toBe('checkin');

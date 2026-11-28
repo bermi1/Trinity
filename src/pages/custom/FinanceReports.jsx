@@ -1,3 +1,4 @@
+import ChargesEdit from '../../components/ChargesEdit';
 import { useState } from 'react';
 import { Btn, Empty } from '../../ui/kit';
 
@@ -82,7 +83,7 @@ function Breakdown({ title, items, tone, empty }) {
 export function Reports({ R }) {
   return (
     <>
-      <Periods R={R} />
+      <div className="fr-bookbar"><Periods R={R} /><div className="fh-row"><Btn kind="dark" onClick={R.pdf}>Save PDF</Btn></div></div>
       <RepKpis R={R} />
       <CashChart R={R} />
       <div className="fr-two">
@@ -160,6 +161,7 @@ export function CashBook({ R, canAdd }) {
         <Periods R={R} />
         <div className="fh-row">
           {canAdd ? <Btn kind="dark" onClick={() => setAdding(!adding)}>Record money in / out</Btn> : null}
+          <Btn kind="ghost" onClick={R.pdf}>Save PDF</Btn>
           <Btn kind="ghost" onClick={R.export}>Download (Excel CSV)</Btn>
         </div>
       </div>
@@ -175,7 +177,7 @@ export function CashBook({ R, canAdd }) {
                 {list.map(e => (
                   <tr key={e.id + e.at}>
                     <td className="fr-date">{e.at.slice(5)}</td>
-                    <td><b>{e.cat}</b><small>{[e.party, e.proj, e.ref].filter(Boolean).join(' · ')}</small></td>
+                    <td><b>{e.cat}</b><small>{[e.party, e.proj, e.ref].filter(Boolean).join(' · ')}</small>{e.setFee && e.dir === 'out' ? <ChargesEdit fee={e.feeN} save={e.setFee} compact /> : null}</td>
                     <td className="r is-green">{e.dir === 'in' ? e.amt : ''}</td>
                     <td className="r is-red">{e.dir === 'out' ? e.amt : ''}</td>
                     <td className="r">{e.run}</td>

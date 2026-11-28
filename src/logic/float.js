@@ -86,7 +86,7 @@ export const floatMethods = {
     if (!f.cat) return { error: 'Choose what it was for' };
     const what = String(f.note || '').trim(); if (f.cat === 'Other' && !what) return { error: 'Say what it was for' };
     const method = METHODS.includes(f.method) ? f.method : 'Cash';
-    const fee = method === 'Cash' ? 0 : parseFee(f.fee); if (fee < 0) return { error: 'Charges must be a number' };
+    const fee = parseFee(f.fee); if (fee < 0) return { error: 'Transaction charges must be a number' };
     if (f.p && !(this.state.projects || []).some(x => x.id === f.p)) return { error: 'Choose the project' };
     return { amt, cat: f.cat, what, method, fee, p: f.p || '', who: String(f.who || '').trim() };
   },
@@ -125,7 +125,7 @@ export const floatMethods = {
       if (!this.confirm('Pay ' + r.id + ' (' + this.fmtT(r.amt) + ') now? It has not finished its approvals.')) return 'Not paid';
     }
     const amt = num(f.amt) || r.amt, method = METHODS.includes(f.method) ? f.method : 'Cash';
-    return this.payReq(r, String(amt), method === 'Cash' ? '' : f.fee, { method, date: f.at }) || '';
+    return this.payReq(r, String(amt), f.fee, { method, date: f.at }) || '';
   },
   // The petty cash book, as in the Excel sheet: balance brought forward, one row per line (oldest first)
   // with the float's running balance after it, and the balance carried down.
@@ -156,6 +156,41 @@ export const floatMethods = {
       XLSX.writeFile(wb, name);
     } catch (e) { this.toast('Could not create the Excel file'); return rows; }
     return rows;
+  },
+  // Transaction charges on an entry already recorded (a daily expense, a paid request or a company cash
+  // book entry): Finance and Management can add or correct them at any time. The change is noted on the
+  // record, and if that day's report was already sent the day is marked revised.
+  setCharges(kind, id, fee, reason) {
+    if (!this.canFloat()) return 'Only Finance and Management change transaction charges';
+    const v = parseFee(fee); if (v < 0) return 'Transaction charges must be a number';
+    const note = { by: this.me().k, at: this.fToday() + ' ' + tzTime(this.nowDate()), reason: String(reason || '').trim() || 'Transaction charges', was: null };
+    if (kind === 'expense') {
+      const e = this.pt().entries.find(x => x.id === id); if (!e) return 'Expense not found';
+      if (e.void) return 'This expense is void';
+      if ((e.fee || 0) === v) return '';
+      note.was = { amt: e.amt, fee: e.fee || 0 };
+      this.setState(x => ({ petty: Object.assign({}, x.petty, { entries: x.petty.entries.map(y => (y.id === id ? Object.assign({}, y, { fee: v, edits: [...(y.edits || []), note] }) : y)) }) }));
+      this.floatRevised(e.at, 'Charges on ' + e.voucher + ': ' + this.fmtT(e.fee || 0) + ' → ' + this.fmtT(v));
+      this.toast('Charges saved · ' + e.voucher + ' · ' + this.fmtT(v));
+      return '';
+    }
+    if (kind === 'request') {
+      const r = (this.state.reqs || []).find(x => x.id === id); if (!r) return 'Request not found';
+      if (r.st !== 'paid') return 'Only a paid request has transaction charges';
+      if ((r.payFee || 0) === v) return '';
+      this.setState(x => ({ reqs: x.reqs.map(q => (q.id === id ? Object.assign({}, q, { payFee: v, feeEdits: [...(q.feeEdits || []), Object.assign(note, { was: { fee: q.payFee || 0 } })] }) : q)) }));
+      this.floatRevised(r.paidOn, 'Charges on ' + r.id + ': ' + this.fmtT(r.payFee || 0) + ' → ' + this.fmtT(v));
+      this.toast('Charges saved · ' + r.id + ' · ' + this.fmtT(v));
+      return '';
+    }
+    if (kind === 'ledger') {
+      const l = (this.state.ledger || []).find(x => x.id === id); if (!l) return 'Entry not found';
+      if ((l.fee || 0) === v) return '';
+      this.setState(x => ({ ledger: x.ledger.map(y => (y.id === id ? Object.assign({}, y, { fee: v, feeEdits: [...(y.feeEdits || []), Object.assign(note, { was: { fee: y.fee || 0 } })] }) : y)) }));
+      this.toast('Charges saved · ' + this.fmtT(v));
+      return '';
+    }
+    return 'Nothing to change';
   },
   // Same-day correction, with a reason; the earlier values are kept on the record.
   editExpense(id, f) {
@@ -365,6 +400,15 @@ export function floatVals(s) {
   const sg = v => (v < 0 ? '−' : '') + f(Math.abs(v));
   const canEdit = this.canFloat(), entries = this.pt().entries;
   const ICON = { float: 'wallet', request: 'banknote', expense: 'receipt', charge: 'pie', returned: 'refresh' };
+  // The transaction charges of a line's payment (a charge line points to its payment), editable by
+  // Finance / Management at any time.
+  const chargesOf = l => {
+    if (l.void || !['expense', 'request', 'charge'].includes(l.kind)) return {};
+    const pid = l.kind === 'charge' ? String(l.id).replace(/-fee$/, '') : l.id;
+    const kind = l.src === 'req' ? 'request' : 'expense';
+    const fee = kind === 'request' ? ((s.reqs || []).find(r => r.id === pid) || {}).payFee || 0 : (entries.find(x => x.id === pid) || {}).fee || 0;
+    return { feeN: fee, fee: fee ? f(fee) : 'None', canFee: canEdit, setFee: (v, why) => this.setCharges(kind, pid, v, why) };
+  };
   const line = l => {
     const e = l.kind === 'expense' ? entries.find(x => x.id === l.id) : null;
     return { id: l.id, kind: l.kind, time: l.time || '', dir: l.dir, amt: (l.dir === 'in' ? '+' : '−') + f(l.amt), raw: l.amt, void: !!l.void, ic: ICON[l.kind] || 'wallet',
@@ -372,12 +416,14 @@ export function floatVals(s) {
       where: l.kind === 'float' ? (l.ref || '') : this.projLabel(l.p), who: l.who || '', method: l.method || '', ref: l.ref || '', by: l.by ? this.av(l.by).n : '', p: l.p || '',
       photo: e && e.photo ? () => this.openDoc({ n: e.photo.name, url: e.photo.url, path: e.photo.path }) : null,
       voidInfo: e && e.void ? 'Void · ' + e.void.reason + ' · ' + this.av(e.void.by).n + ' ' + e.void.at : '',
-      edits: e && e.edits ? e.edits.map(x => x.at + ' · ' + this.av(x.by).first + ' · ' + x.reason + ' (was ' + f(x.was.amt) + ')') : [],
+      edits: e && e.edits ? e.edits.map(x => x.at + ' · ' + this.av(x.by).first + ' · ' + x.reason + (x.was && x.was.fee != null && x.was.amt === e.amt ? ' (charges were ' + f(x.was.fee) + ')' : ' (was ' + f(x.was.amt) + ')')) : [],
       expense: e ? { amt: String(e.amt), cat: e.cat, note: e.what || '', p: e.p || '', who: e.who || '', method: e.method || 'Cash', fee: e.fee ? String(e.fee) : '', at: e.at } : null,
       canEdit: canEdit && !!e && !e.void && e.at === today, canVoid: canEdit && !!e && !e.void,
       edit: x => this.editExpense(l.id, x), doVoid: r => this.voidExpense(l.id, r),
-      openReq: l.src === 'req' ? () => this.openReq(l.ref) : null };
+      openReq: l.src === 'req' ? () => this.openReq(l.ref) : null,
+      ...chargesOf(l) };
   };
+
   const dayView = D => { const d = this.floatDay(D, book); return { D, label: dayLabel(D), isToday: D === today, open: sg(d.open), in: f(d.in), out: f(d.out), close: sg(d.close), neg: d.close < 0, lines: d.lines.slice().reverse().map(line), sent: !!this.floatSent(D) }; };
   const W = this.floatWaiting(), adv = this.floatAdvances();
   const reqs = s.reqs || [], toCheck = reqs.filter(r => r.st === 'paid' && r.rec && r.rec.st === 'submitted');
@@ -433,6 +479,6 @@ export function payVals(s) {
   return { id: r.id, who: this.av(r.who).n, first: this.av(r.who).first, what: this.reqWhat(r), where: this.projLabel(r.p), asked: r.amt, askedT: this.fmtT(r.amt),
     payTo: r.pay ? [r.pay.by, r.pay.bank, r.pay.name, r.pay.no].filter(Boolean).join(' · ') : '', method, methods: METHODS, today: this.fToday(), minDay: this.floatMinDay(),
     floatLeft: this.fl().grants.length ? this.floatBalance() : null,
-    pay: x => { const m = this.payReq(r, x.amt, x.method === 'Cash' ? '' : x.fee, { method: x.method, date: x.at }); if (!m) this.setState({ paySheet: null }); return m; },
+    pay: x => { const m = this.payReq(r, x.amt, x.fee, { method: x.method, date: x.at }); if (!m) this.setState({ paySheet: null }); return m; },
     close: () => this.setState({ paySheet: null }) };
 }

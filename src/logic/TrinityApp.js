@@ -404,8 +404,11 @@ export default class TrinityApp extends Logic {
         ['More',[['briefing','Monday Briefing','presentation'],['calendar','Calendar','calendar'],['projects','Projects','folder'],['rooms','Meeting rooms','calendar'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
       // Finance every day: the Float, paying and approving, and checking receipts. Invoices, the Finance
       // overview and the company cash book wait under More.
-      finance:[['Finance',[['float','Float','wallet',finQ],['requests','Pay & approve','banknote'],['receipts','Receipts','receipt',recN],['financeportal','My queue','checkSquare',finQ],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['briefing','Monday Briefing','presentation'],['today','My work','checkSquare',myOpen]]],
-        ['More',[['invoices','Invoices','fileText'],['finance','Finance','chart'],['cashbook','Company cash book','receipt'],['freports','Finance reports','pie'],['proposals','Proposals','clipboard'],['procurement','Procurement','cart'],...company.filter(i => i[0] !== 'briefing')], true]],
+      // Finance: the same pages, in ordered groups — money first, then invoices and accounts, then her day.
+      finance:[['Money',[['float','Float','wallet',finQ],['financeportal','My queue','checkSquare',finQ],['requests','Pay & approve','banknote'],['receipts','Receipts','receipt',recN]]],
+        ['Invoices & accounts',[['invoices','Invoices','fileText'],['finance','Finance','chart'],['cashbook','Company cash book','receipt'],['freports','Finance reports','pie']]],
+        ['My day',[['today','My work','checkSquare',myOpen],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['briefing','Monday Briefing','presentation']]],
+        ['More',[['proposals','Proposals','clipboard'],['procurement','Procurement','cart'],...company.filter(i => i[0] !== 'briefing')], true]],
       reception:[['Front office',[['reception','Front desk','message'],['attendance','Staff check-in','clock'],['event','Event registration','clipboard'],['meetings','Calendar','calendar'],['reporting','Reports','fileText',rptN],['payslips','My payslips','wallet'],['today','My work','checkSquare',myOpen],['rooms','Meeting rooms','calendar'],['calendar','Calendar','calendar'],['clients','Client enquiries','users']]],
         ['More',[['staff','Staff directory','user'],['briefing','Monday Briefing','presentation'],['documents','Documents','paperclip'],['notifications','Notifications','bell',unread],mob,['settings','Settings','settings']], true]],
       store:[['Store',[['storekeeper','My store','home',lowN],['today','My work','checkSquare',myOpen],['requisitions','Requisitions','clipboard',srqN],['store','Inventory','package'],['movements','Stock ledger','receipt'],['procurement','Procurement','cart']]],
@@ -428,9 +431,10 @@ export default class TrinityApp extends Logic {
     if (role === 'staff' && this.isCsStaff && this.isCsStaff()) G = G.map(([t, items, more], gi) => [t, gi === 0 ? [...items.slice(0, 1), ['clients', 'My clients & leads', 'users'], ...items.slice(1)] : items, more]);
     // Memos sit with each person's everyday pages, with a count of the ones waiting on them.
     const meK = this.me().k, memoN = (s.memos || []).filter(m => m.st !== 'done' && (m.who === meK || (!m.who && (m.to === meK || this.isManagerOf(m.dept))))).length;
-    if (role !== 'store') G = G.map(([t, items, more], gi) => [t, gi === 0 && !items.some(i => i[0] === 'memos') ? [...items.slice(0, 2), ['memos', 'Memos', 'fileText', memoN], ...items.slice(2)] : items, more]);
+    const dayGroup = role === 'finance' ? Math.max(0, G.findIndex(g => g[0] === 'My day')) : 0;
+    if (role !== 'store') G = G.map(([t, items, more], gi) => [t, gi === dayGroup && !items.some(i => i[0] === 'memos') ? [...items.slice(0, 2), ['memos', 'Memos', 'fileText', memoN], ...items.slice(2)] : items, more]);
     // My check-in: everyone checks themselves in and out with their own face, right after their home page.
-    if (role !== 'store') G = G.map(([t, items, more], gi) => [t, gi === 0 && !items.some(i => i[0] === 'checkin') ? [...items.slice(0, 1), ['checkin', 'My check-in', 'clock'], ...items.slice(1)] : items, more]);
+    if (role !== 'store') G = G.map(([t, items, more], gi) => [t, gi === dayGroup && !items.some(i => i[0] === 'checkin') ? [...items.slice(0, 1), ['checkin', 'My check-in', 'clock'], ...items.slice(1)] : items, more]);
     // Sections the administrator switched off are hidden everywhere.
     // Notifications open from the bell (and the Alerts tab on phones), not from the side menu.
     G = G.map(([t, items, more]) => [t, items.filter(i => !this.isOff(i[0]) && i[0] !== 'notifications' && i[0] !== 'settings' && !(i[0] === 'briefing' && !this.canBriefing()) && !(s.embed && i[0] === 'ceomobile')), more]).filter(g => g[1].length);

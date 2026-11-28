@@ -11,7 +11,7 @@ export default function PaySheet({ P }) {
   const [f, setF] = useState(() => ({ amt: String(P.asked), method: P.method, fee: '', at: P.today }));
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
   const set = (k, v) => { setErr(''); setF(x => Object.assign({}, x, { [k]: v })); };
-  const amt = +f.amt || 0, fee = f.method === 'Cash' ? 0 : +f.fee || 0;
+  const amt = +f.amt || 0, fee = +f.fee || 0;
   const left = P.floatLeft == null ? null : P.floatLeft - amt - fee;
   const go = () => { setBusy(true); const m = P.pay(f); setBusy(false); if (m) setErr(m); };
   return (
@@ -25,7 +25,7 @@ export default function PaySheet({ P }) {
           <div className="ff" data-field="Paid by"><span className="ff-l">Paid by</span>
             <div className="ff-chips" role="radiogroup" aria-label="Paid by">{P.methods.map(m => <button key={m} type="button" role="radio" aria-checked={f.method === m} className={f.method === m ? 'is-on' : ''} onClick={() => set('method', m)}>{m}</button>)}</div>
           </div>
-          {f.method !== 'Cash' ? <label className="fh-amt"><span>Charges</span><input inputMode="numeric" value={f.fee ? n(f.fee) : ''} onChange={e => set('fee', digits(e.target.value))} placeholder="0" aria-label="Transaction charges" /></label> : null}
+          <label className="fh-amt"><span>Transaction charges</span><input inputMode="numeric" value={f.fee ? n(f.fee) : ''} onChange={e => set('fee', digits(e.target.value))} placeholder="0" aria-label="Transaction charges" /></label>
           <label className="fl-date"><span>Date paid</span><input type="date" value={f.at} min={P.minDay} max={P.today} onChange={e => set('at', e.target.value || P.today)} aria-label="Date paid" /></label>
           {left != null && left < 0 ? <p className="bi-ret" role="status">This takes the float below zero (−TZS {n(-left)}). It is still recorded and Management is told.</p> : null}
           <p className="k-sub">{P.first} must then account for it: what was spent, the receipts and the change.</p>

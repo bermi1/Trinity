@@ -398,6 +398,49 @@ export const reportMethods = {
     this.log(e.dir === 'in' ? 'trendUp' : 'wallet', e.dir === 'in' ? 'green' : 'amber', (e.dir === 'in' ? 'Money in · ' : 'Money out · ') + e.cat, this.fmtT(amt));
     return '';
   },
+  // The money report as a branded one-page A4 PDF (the invoice's look): the period's money in and out,
+  // where it went, where it came from, what clients owe, projects and the cash book lines.
+  moneyReportHtml(D) {
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const origin = typeof location !== 'undefined' ? location.origin : '';
+    const ref = 'MR-' + dayKey(0).replace(/-/g, '');
+    const table = (head, rows) => `<table><thead><tr>${head.map(h => `<th${h[0] === '>' ? ' class=r' : ''}>${esc(h.replace(/^>/, ''))}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
+    const tr = cells => `<tr>${cells.map(c => (c && typeof c === 'object' ? `<td class=r>${esc(c.r)}</td>` : `<td>${esc(c)}</td>`)).join('')}</tr>`;
+    const none = t => `<p class=none>${esc(t)}</p>`;
+    const MAX = 60, lines = D.book.slice(0, MAX);
+    return `<!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>${esc(ref)} · Money report · ${esc(D.label)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel=stylesheet>
+<style>
+${DOC_CSS}
+.inv{text-align:right}.inv h1{margin:0;font-size:24px;letter-spacing:.14em;color:#2B1459}.inv b{color:#8A7239}
+.kp{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:8px}.kp div{background:#F7F5FB;border-radius:10px;padding:8px 10px}.kp span{display:block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#8A7239;font-weight:700}.kp b{font-size:15px;white-space:nowrap}.kp .g b{color:#1F7549}.kp .r b{color:#B23A46}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+h2{margin:12px 0 2px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#2B1459}
+table{font-size:10.5px;margin-top:3px}th{padding:5px 6px;font-size:9.5px}td{padding:4px 6px;vertical-align:top}td.r,th.r{white-space:nowrap}
+.none{margin:2px 0 0;color:#6E6A7C;font-style:italic;font-size:11px}.more{font-size:10.5px;color:#6E6A7C;margin-top:4px}
+.sign{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:18px}.sig{border-top:1px solid #CFC8DD;padding-top:6px;font-size:11px;color:#6E6A7C;min-height:50px;display:flex;flex-direction:column;justify-content:flex-end}
+</style></head><body><div class=bar><button onclick="print()">Save PDF</button></div><div class=page><div class=fit>
+<div class=top><img src="${origin}/brand/trinity-logo-full.png" alt="Trinity Mark"><div class=inv><h1>MONEY REPORT</h1><div><b>${esc(ref)}</b></div><div>${esc(D.label)}</div></div></div>
+<div class=band></div>
+<div class=kp>${D.kpis.map(k => `<div class="${k.tone === 'green' ? 'g' : k.tone === 'red' ? 'r' : ''}"><span>${esc(k.l)}</span><b>${esc(k.v)}</b></div>`).join('')}</div>
+<div class=two><div><h2>Where the money went</h2>${D.outCat.length ? table(['What for', '>%', '>Amount (TZS)'], D.outCat.map(x => tr([x.l, { r: x.pct + '%' }, { r: x.t.replace(/^TZS /, '') }]))) : none('No spending in this period.')}</div>
+<div><h2>Where the money came from</h2>${D.inCli.length ? table(['From', '>%', '>Amount (TZS)'], D.inCli.map(x => tr([x.l, { r: x.pct + '%' }, { r: x.t.replace(/^TZS /, '') }]))) : none('No money in this period.')}</div></div>
+<div class=two><div><h2>What clients owe us</h2>${table(['Age', '>Invoices', '>Amount (TZS)'], D.aging.map(a => tr([a.l, { r: a.n }, { r: a.t.replace(/^TZS /, '') }])))}</div>
+<div><h2>Projects</h2>${D.projects.length ? table(['Project', '>Invoiced (TZS)', '>Received', '>Spent'].concat(D.showProfit ? ['>Profit'] : []), D.projects.map(p => tr([p.c + ' · ' + p.n, { r: p.invoiced.replace(/TZS /, '') }, { r: p.got.replace(/TZS /, '') }, { r: p.spent.replace(/TZS /, '') }].concat(D.showProfit ? [{ r: p.profit.replace(/TZS /, '') }] : [])))) : none('No projects.')}</div></div>
+<h2>Money in and out · ${esc(D.label)}</h2>${lines.length ? table(['Date', 'Details', '>In', '>Out', '>Balance'], lines.map(e => tr([e.at, e.cat + [e.party, e.proj, e.ref].filter(Boolean).map(x => ' · ' + x).join(''), { r: e.dir === 'in' ? e.amt.replace(/^TZS /, '') : '' }, { r: e.dir === 'out' ? e.amt.replace(/^TZS /, '') : '' }, { r: e.run.replace(/TZS /, '') }]))) : none('Nothing recorded in this period.')}
+${D.book.length > MAX ? `<p class=more>Showing the latest ${MAX} of ${D.book.length} lines · the full list is in the Excel download.</p>` : ''}
+<div class=sign><div class=sig><span>Prepared by (Finance)</span><b>${esc(D.by)}</b><span>Sign · date</span></div><div class=sig><span>Received by Management</span><span>Sign · date</span></div></div>
+</div>
+<div class=foot><span>${COMPANY.box}</span><span>${esc(ref)} · Trinity Mark 360</span></div>
+</div><script>${FIT_JS}</script></body></html>`;
+  },
+  printMoneyReport(D) {
+    const html = this.moneyReportHtml(D);
+    let w = null; try { w = window.open('', '_blank'); } catch (e) { w = null; }
+    if (!w) { this.toast('Allow pop-ups to open the report'); return html; }
+    w.document.open(); w.document.write(html); w.document.close();
+    return html;
+  },
   exportCash(rows, label) {
     const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
     const csv = [['Date', 'In/Out', 'Category', 'Paid to / from', 'Project', 'Reference', 'Amount (TZS)'].map(q).join(',')]
@@ -468,9 +511,12 @@ export function reportVals(s) {
       showProfit: (s.role || 'ceo') !== 'finance',
       projects: projects.map(p => ({ id: p.id, n: p.n, c: p.c, value: f(p.value), invoiced: f(p.invoiced), got: f(p.got), spent: f(p.spent), profit: (p.profit < 0 ? '−' : '') + f(Math.abs(p.profit)), neg: p.profit < 0, margin: p.got ? Math.round(p.profit / p.got * 100) + '%' : '—' })),
       aging: aging.map(a => Object.assign(a, { t: f(a.v) })), agingMax: Math.max(1, ...aging.map(a => a.v)),
-      book: book.slice(0, 200).map(e => ({ id: e.id, at: e.at, dir: e.dir, cat: e.cat, party: e.party, proj: e.proj, ref: e.ref, amt: f(e.amt), run: (e.run < 0 ? '−' : '') + f(Math.abs(e.run)) })),
+      book: book.slice(0, 200).map(e => ({ id: e.id, at: e.at, dir: e.dir, cat: e.cat, party: e.party, proj: e.proj, ref: e.ref, amt: f(e.amt), run: (e.run < 0 ? '−' : '') + f(Math.abs(e.run)),
+        // Finance's own entries: transaction charges can be added or corrected.
+        feeN: e.src === 'ledger' && !/-fee$/.test(e.id) ? (e.fee || 0) : null, setFee: e.src === 'ledger' && !/-fee$/.test(e.id) && this.canFloat && this.canFloat() ? v => this.setCharges('ledger', e.id, v) : null })),
       bookCount: book.length,
       export: () => this.exportCash(rows, R.label), add: e => this.addEntry(e),
+      pdf: () => { const V = reportVals.call(this, this.state).REP; return this.printMoneyReport({ label: R.label, kpis: V.kpis, outCat: V.outCat, inCli: V.inCli, aging: V.aging, projects: V.projects, showProfit: V.showProfit, book: V.book, by: this.me().n }); },
       inCats: IN_CATS, outCats: OUT_CATS, projOpts: (s.projects || []).filter(p => p.st !== 'done').map(p => ({ v: p.id, l: p.client }))
     }
   };

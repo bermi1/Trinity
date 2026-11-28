@@ -1650,3 +1650,19 @@
   .rq-type .ff-chips button { min-height: 40px; }
 }
 .fl-report { scroll-margin-top: 80px; }
+/* Transaction charges on recorded payments */
+.fl-charges { margin: 10px 0; }
+.ch-show { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: #6E6A7C; }
+.ch-show.is-compact { display: flex; font-size: 12px; margin-top: 2px; }
+.ch-btn { font-size: 13px; min-height: 32px; }
+.ch-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
+.ch-edit .fh-amt { flex: 1 1 180px; }
+@media (max-width: 700px) { .ch-btn { min-height: 40px; } }
+/* Transaction charges on recorded payments */
+.fl-charges { margin: 10px 0; }
+.ch-show { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: #6E6A7C; }
+.ch-show.is-compact { display: flex; font-size: 12px; margin-top: 2px; }
+.ch-btn { font-size: 13px; min-height: 32px; }
+.ch-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
+.ch-edit .fh-amt { flex: 1 1 180px; }
+@media (max-width: 700px) { .ch-btn { min-height: 40px; } }
