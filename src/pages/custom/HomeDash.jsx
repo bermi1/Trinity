@@ -6,6 +6,27 @@ import TargetPanel from './TargetPanel';
 const TONE = { amber: ['#FFF4E0', '#9A6200'], purple: ['#F0EBFA', '#5A2FA8'], green: ['#E7F6EE', '#1F7549'], red: ['#FDECEE', '#B23A46'] };
 
 // Company home: the few numbers that matter, then what needs attention today.
+// The float as a bank-style virtual card: the balance, who holds it, the last money from the boss.
+function FloatCard({ F }) {
+  const C = F.card;
+  return (
+    <div className={'vc' + (F.neg ? ' is-neg' : '')} role="group" aria-label={'Float balance ' + F.balance}>
+      <div className="vc-top-row">
+        <span className="vc-brand"><b>TRINITY MARK</b><small>Float account<em className="vc-asof-m"> · as of {C.asOf.split(' · ')[1] || C.asOf}</em></small></span>
+        <svg className="vc-nfc" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M8.5 7.5a6 6 0 0 1 0 9M12 5a9.5 9.5 0 0 1 0 14M5 10a2.5 2.5 0 0 1 0 4" /></svg>
+      </div>
+      <div className="vc-chip" aria-hidden="true"><i /><i /><i /><i /></div>
+      <div className="vc-bal"><small>Available balance</small><b>{F.balance}</b></div>
+      <div className="vc-num" aria-hidden="true">•••• •••• FLOAT {(C.asOf.match(/\d{4}/) || [''])[0]}</div>
+      <div className="vc-foot">
+        <span><small>Held by</small><b>{C.holder}</b></span>
+        <span><small>Last from the boss</small><b>{C.last ? C.last.amt + ' · ' + C.last.at.slice(8) + '/' + C.last.at.slice(5, 7) : '—'}</b></span>
+        <span className="vc-asof"><small>As of</small><b>{C.asOf}</b></span>
+      </div>
+    </div>
+  );
+}
+
 // A float request from Finance, for Management: balance now → after, Approve (it is given at once) or Decline.
 function FloatAsk({ a }) {
   const [no, setNo] = useState(false), [why, setWhy] = useState(''), [err, setErr] = useState('');
@@ -41,12 +62,26 @@ export default function HomeDash({ v }) {
       {H.float ? (
         <section className="hd-card hd-float" aria-label="Today's float">
           <header><h3>Today’s float</h3><span className={H.float.sent ? 'hd-sent' : 'hd-unsent'}>{H.float.sent ? '✓ Report sent' : '✗ Report not sent'}</span></header>
-          <b className={'hd-fbal' + (H.float.neg ? ' is-neg' : '')}>{H.float.balance}</b>
-          <dl className="hd-fl">
-            <div><dt>Out today</dt><dd>{H.float.out}</dd></div>
-            <div><dt>Waiting to be paid</dt><dd>{H.float.waitN} · {H.float.waitT}</dd></div>
-            <div><dt>Daily report</dt><dd>{H.float.sentLine}</dd></div>
-          </dl>
+          <div className="vc-wrap">
+          <FloatCard F={H.float} />
+          <div className="vc-stats">
+            <div><span>Opened today</span><b>{H.float.card.opened}</b></div>
+            <div><span>In today</span><b className="is-in">+{H.float.card.in}</b></div>
+            <div><span>Out today</span><b className="is-out">−{H.float.out}</b></div>
+            <div><span>Waiting to be paid</span><b>{H.float.waitN} · {H.float.waitT}</b></div>
+            <div><span>Not yet accounted for</span><b className={H.float.card.advOver ? 'is-out' : ''}>{H.float.card.advN} · {H.float.card.advT}</b>{H.float.card.advOver ? <small>{H.float.card.advOver} overdue</small> : null}</div>
+            <div><span>Daily report</span><b>{H.float.sentLine}</b></div>
+          </div>
+          </div>
+          {H.float.card.usedPct != null ? (
+            <div className="vc-use">
+              <div className="vc-use-l"><span>This month</span><b>{H.float.card.spentMonth} used of {H.float.card.gotMonth} received</b></div>
+              <div className="vc-bar" role="img" aria-label={H.float.card.usedPct + '% of this month’s float used'}><i style={{ width: H.float.card.usedPct + '%' }} /></div>
+            </div>
+          ) : null}
+          {H.float.card.top.length ? (
+            <div className="vc-top"><span>Spent today on</span>{H.float.card.top.map(t => <div key={t.name}><em>{t.name}</em><b>{t.t}</b></div>)}</div>
+          ) : null}
           {H.float.asks && H.float.asks.length ? (
             <div className="hd-asks">
               {H.float.asks.map(a => <FloatAsk key={a.id} a={a} />)}

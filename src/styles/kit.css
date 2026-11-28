@@ -1683,3 +1683,75 @@
 .hd-ask-row input { flex: 1 1 160px; min-height: 40px; border: 1px solid #E8E4EF; border-radius: 10px; padding: 0 10px; font: inherit; }
 .hd-ask-row button { min-height: 40px; }
 .fl-askbal { margin: 6px 0 10px; font-size: 13.5px; color: #3D3950; }
+/* Today's float on the Management / GM home: a bank-style virtual card and its breakdown */
+.vc { position: relative; overflow: hidden; border-radius: 18px; padding: 18px 20px 16px; color: #fff; margin: 6px 0 14px;
+  background: radial-gradient(120% 140% at 100% 0%, rgba(226,206,152,.28) 0%, rgba(226,206,152,0) 45%), linear-gradient(135deg, #160B33 0%, #2B1459 45%, #5A2FA8 100%);
+  box-shadow: 0 18px 36px -18px rgba(43,20,89,.65), inset 0 1px 0 rgba(255,255,255,.12); }
+.vc::after { content: ''; position: absolute; right: -60px; bottom: -80px; width: 220px; height: 220px; border-radius: 50%; border: 28px solid rgba(255,255,255,.05); }
+.vc.is-neg { background: linear-gradient(135deg, #3A0D14 0%, #7A1E2B 60%, #B23A46 100%); }
+.vc-top-row { display: flex; justify-content: space-between; align-items: flex-start; }
+.vc-brand b { display: block; font-size: 13px; letter-spacing: .28em; color: #E2CE98; }
+.vc-brand small { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.7); }
+.vc-nfc { color: rgba(255,255,255,.75); }
+.vc-chip { width: 42px; height: 32px; border-radius: 7px; margin: 14px 0 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 5px;
+  background: linear-gradient(135deg, #F3E2B3, #C9A961 55%, #A98A45); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+.vc-chip i { border: 1px solid rgba(90,64,20,.45); border-radius: 2px; }
+.vc-bal small { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.72); }
+.vc-bal b { display: block; font-size: clamp(26px, 7vw, 34px); font-weight: 800; letter-spacing: -.01em; white-space: nowrap; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.vc-num { margin: 10px 0 12px; font: 600 13px/1 'IBM Plex Mono', ui-monospace, monospace; letter-spacing: .18em; color: rgba(255,255,255,.78); }
+.vc-foot { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10px 22px; }
+.vc-foot small { display: block; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.62); }
+.vc-foot b { font-size: 13px; font-weight: 700; white-space: nowrap; }
+.vc-asof { margin-left: auto; text-align: right; }
+.vc-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.vc-stats div { background: #F7F5FB; border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.vc-stats span { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #6E6A7C; font-weight: 700; }
+.vc-stats b { display: block; font-size: 15px; color: #17152A; white-space: nowrap; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.vc-stats b.is-in { color: #1F7549; } .vc-stats b.is-out { color: #B23A46; }
+.vc-stats small { color: #B23A46; font-weight: 700; font-size: 11px; }
+.vc-use { margin: 0 0 12px; }
+.vc-use-l { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: #6E6A7C; margin-bottom: 6px; }
+.vc-use-l b { color: #17152A; font-size: 12.5px; }
+.vc-bar { height: 8px; border-radius: 6px; background: #EEEAF4; overflow: hidden; }
+.vc-bar i { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, #6D3CC2, #B49A5A); }
+.vc-top { border-top: 1px solid #F1EEF6; padding-top: 10px; margin-bottom: 12px; display: grid; gap: 4px; }
+.vc-top > span { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #6E6A7C; font-weight: 700; }
+.vc-top div { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; } .vc-top em { font-style: normal; color: #3D3950; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) { .vc-stats { grid-template-columns: 1fr 1fr; } .vc-asof { margin-left: 0; text-align: left; } }
+/* Wide screens: the card keeps a card's shape, the breakdown sits beside it */
+@media (min-width: 900px) {
+  .vc-wrap { display: grid; grid-template-columns: minmax(320px, 400px) 1fr; gap: 16px; align-items: stretch; margin-bottom: 12px; }
+  .vc-wrap .vc { margin: 0; min-height: 252px; gap: 2px; display: flex; flex-direction: column; justify-content: space-between; }
+  .vc-wrap .vc-chip { margin: 10px 0 8px; } .vc-wrap .vc-num { margin: 6px 0 10px; }
+  .vc-wrap .vc-stats { grid-template-columns: 1fr 1fr; margin: 0; align-content: stretch; }
+  .vc-wrap .vc-stats div { display: flex; flex-direction: column; justify-content: center; }
+  .vc-wrap .vc-asof { margin-left: 0; text-align: left; }
+}
+.ps-mode { margin-bottom: 10px; }
+.fl-del { background: #FDECEE; border-radius: 12px; padding: 10px 12px; margin-top: 10px; }
+.fl-del p { margin: 0 0 8px; font-size: 13px; color: #7A1E2B; }
+/* Phones: a smaller, card-sized float card */
+@media (max-width: 600px) {
+  .vc { padding: 13px 15px 12px; border-radius: 14px; margin: 4px 0 10px; }
+  .vc::after { width: 160px; height: 160px; right: -50px; bottom: -70px; border-width: 22px; }
+  .vc-brand b { font-size: 11px; letter-spacing: .22em; }
+  .vc-brand small { font-size: 9.5px; }
+  .vc-nfc { width: 20px; height: 20px; }
+  .vc-chip { width: 32px; height: 24px; margin: 8px 0 6px; padding: 4px; gap: 2px; border-radius: 5px; }
+  .vc-bal small { font-size: 9.5px; }
+  .vc-bal b { font-size: 23px; }
+  .vc-num { margin: 6px 0 8px; font-size: 10.5px; }
+  .vc-foot { gap: 6px 16px; }
+  .vc-foot small { font-size: 8.5px; }
+  .vc-foot b { font-size: 11.5px; }
+  .vc-stats { gap: 8px; }
+  .vc-stats div { padding: 8px 10px; }
+  .vc-stats span { font-size: 9.5px; }
+  .vc-stats b { font-size: 13px; }
+}
+.vc-asof-m { display: none; font-style: normal; }
+@media (max-width: 600px) {
+  .vc-num, .vc-foot .vc-asof { display: none; }
+  .vc-asof-m { display: inline; }
+  .vc-bal { margin-bottom: 10px; }
+}

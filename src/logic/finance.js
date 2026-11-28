@@ -157,13 +157,14 @@ export const financeMethods = {
     (s.reqs || []).forEach(r => {
       if (r.st !== 'paid' || !r.paidOn) return;
       const paid = r.paidAmt || r.amt, cat = r.cat || (r.alloc ? String(r.alloc).replace(/^office:/, '') : 'Request');
-      L.push({ id: r.id, at: r.paidOn, time: r.paidAt || '', dir: 'out', amt: paid, asked: r.amt, kind: 'request', p: r.p || '', cat, who: name(r.who), whoK: r.who, method: r.paidVia || (r.pay && r.pay.by) || '', ref: r.id, by: r.paidBy || '', src: 'req' });
+      L.push(Object.assign({ id: r.id, at: r.paidOn, time: r.paidAt || '', dir: 'out', amt: paid, asked: r.amt, kind: 'request', p: r.p || '', cat, who: name(r.who), whoK: r.who, method: r.paidVia || (r.pay && r.pay.by) || '', ref: r.id, by: r.paidBy || '', src: 'req' }, r.paidFrom ? { voucher: r.paidFrom.voucher || '' } : {}));
       if (r.payFee > 0) L.push({ id: r.id + '-fee', at: r.paidOn, time: r.paidAt || '', dir: 'out', amt: r.payFee, kind: 'charge', p: r.p || '', cat: CHARGES, who: (r.pay && r.pay.by) || 'Bank / mobile money', method: r.paidVia || (r.pay && r.pay.by) || '', ref: r.id, by: r.paidBy || '', src: 'req' });
       const rc = r.rec;
       if (rc && rc.st === 'ok' && rc.back > 0) L.push({ id: r.id + '-back', at: rc.okAt || rc.at || r.paidOn, time: rc.okTime || '', dir: 'in', amt: rc.back, kind: 'returned', p: r.p || '', cat: 'Change returned', who: name(r.who), whoK: r.who, method: rc.backVia || 'Cash', ref: r.id, by: rc.by || '', src: 'req', paid, spent: rc.spent });
     });
+    // An expense that became a request's payment (payFromBook) is that request's line: counted once.
     ((s.petty || {}).entries || []).slice().reverse().forEach(e => {
-      if (e.dir !== 'out') return;
+      if (e.dir !== 'out' || e.req) return;
       const v = !!e.void;
       L.push({ id: e.id, at: e.at, time: e.time || '', dir: 'out', amt: e.amt, kind: 'expense', p: e.p || '', cat: e.cat, what: e.what || '', who: e.who || '', method: e.method || 'Cash', ref: e.voucher || '', by: e.by, src: 'petty', void: v, fee: e.fee || 0, photo: e.photo || null });
       if (e.fee > 0) L.push({ id: e.id + '-fee', at: e.at, time: e.time || '', dir: 'out', amt: e.fee, kind: 'charge', p: e.p || '', cat: CHARGES, who: e.method || '', method: e.method || '', ref: e.voucher || '', by: e.by, src: 'petty', void: v });
@@ -425,7 +426,7 @@ export const reportMethods = {
     });
     // Daily expenses paid from the float are company spending too (old petty cash top-ups were only cash
     // moving from the bank to the box). Voided expenses do not count.
-    ((s.petty || {}).entries || []).filter(e => e.dir === 'out' && !e.void).forEach(e => {
+    ((s.petty || {}).entries || []).filter(e => e.dir === 'out' && !e.void && !e.req).forEach(e => {
       out.push({ id: e.id, at: e.at, dir: 'out', amt: e.amt, cat: 'Daily expense · ' + e.cat, party: e.who || e.what || '', p: e.p || '', ref: e.voucher, src: 'petty' });
       if (e.fee > 0) out.push({ id: e.id + '-fee', at: e.at, dir: 'out', amt: e.fee, cat: CHARGES, party: e.method || 'Mobile money', p: e.p || '', ref: 'Charges · ' + e.voucher, src: 'petty' });
     });

@@ -30,7 +30,21 @@ export function homeVals(s) {
     const asks = role === 'ceo' ? this.fl().asks.filter(a => a.st === 'open').map(a => ({ id: a.id, amt: this.fmtT(a.amt), who: this.av(a.by).n, at: a.at + (a.time ? ' ' + a.time : ''), note: a.note,
       before: this.fmtT(a.balBefore != null ? a.balBefore : d.close), after: this.fmtT((a.balBefore != null ? a.balBefore : d.close) + a.amt),
       approve: () => this.approveFloatAsk(a.id), decline: why => this.declineFloatAsk(a.id, why) })) : [];
-    return { asks, balance: sg(d.close), neg: d.close < 0, out: this.fmtT(d.out), waitN: W.n, waitT: this.fmtT(W.total),
+    // Card details: who holds the float, the last money from the boss, this month's use, money not yet accounted for.
+    const grants = this.fl().grants.slice().sort((x, y) => String(y.at + (y.time || '')).localeCompare(String(x.at + (x.time || '')))), last = grants[0];
+    const month = today.slice(0, 7), mStart = month + '-01';
+    const gotMonth = grants.filter(g => (g.at || '').slice(0, 7) === month).reduce((x, g) => x + g.amt, 0);
+    const byP = this.floatByProject(mStart, today, true), spentMonth = byP.reduce((x, r) => x + r.total, 0);
+    const adv = this.floatAdvances(today), advT = adv.reduce((x, r) => x + r.paid, 0);
+    const top = this.floatByProject(today, today, true).filter(r => r.total > 0).sort((x, y) => y.total - x.total).slice(0, 3).map(r => ({ name: r.name, t: this.fmtT(r.total) }));
+    const fin = this.ROLES.finance || {}, now = new Date();
+    const card = { holder: fin.n || 'Finance', since: grants.length ? grants[grants.length - 1].at : '',
+      asOf: now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + ' · ' + this.now(),
+      last: last ? { amt: this.fmtT(last.amt), at: last.at, by: this.av(last.by).n } : null,
+      opened: sg(d.open), in: this.fmtT(d.in), gotMonth: this.fmtT(gotMonth), spentMonth: this.fmtT(spentMonth),
+      usedPct: gotMonth ? Math.min(100, Math.round(spentMonth / gotMonth * 100)) : null,
+      advN: adv.length, advT: this.fmtT(advT), advOver: adv.filter(r => r.overdue).length, top };
+    return { card, asks, balance: sg(d.close), neg: d.close < 0, out: this.fmtT(d.out), waitN: W.n, waitT: this.fmtT(W.total),
       sent: !!sent, sentLine: sent ? 'Sent ' + String(sent.sentAt || '').slice(11) + ' · ' + this.av(sent.by).n : 'Not sent yet',
       open: () => { this.finGo('float', { flView: 'report', flDay: today }); setTimeout(() => { try { const el = document.querySelector('.fl-report'); if (el) el.scrollIntoView({ block: 'start' }); } catch (e) { /* not rendered */ } }, 120); } };
   })();

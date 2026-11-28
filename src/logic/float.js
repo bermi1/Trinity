@@ -208,6 +208,49 @@ export const floatMethods = {
     this.toast(e.voucher + ' updated' + warn);
     return '';
   },
+  // Removes a cash book row for good (a mistake, a double entry). Void keeps it visible instead.
+  deleteExpense(id) {
+    if (!this.canFloat()) return 'Only Finance and Management delete cash book records';
+    const e = this.pt().entries.find(x => x.id === id); if (!e) return 'Record not found';
+    if (e.req) return e.voucher + ' is the payment of ' + e.req + ' · it cannot be deleted';
+    this.setState(x => ({ petty: Object.assign({}, x.petty, { entries: x.petty.entries.filter(y => y.id !== id) }) }));
+    const what = e.voucher + ' · ' + this.fmtT(e.amt) + ' ' + e.cat;
+    if (this.floatSent(e.at)) this.notify({ to: this.ROLES.ceo.k, ic: 'x', t: 'Cash book record deleted after the report · ' + e.voucher, s: dayLabel(e.at) + ' · ' + this.fmtT(e.amt) + ' ' + e.cat + ' · by ' + this.me().n, go: 'finance' });
+    else if (e.at !== this.fToday()) this.floatRevised(e.at, 'Expense ' + e.voucher + ' deleted');
+    this.log('x', 'red', 'Cash book record deleted · ' + what, dayLabel(e.at) + ' · by ' + this.me().n, e.voucher);
+    this.toast(e.voucher + ' deleted');
+    return '';
+  },
+  // Expenses already in the cash book that could be a request's payment (spent before it was approved):
+  // the same person first, then amounts that fit, newest first. Last 30 days, not void, not used yet.
+  bookChoices(r) {
+    const from = shiftDay(this.fToday(), -30), name = this.av(r.who).n;
+    return this.pt().entries.filter(e => e.dir === 'out' && !e.void && !e.req && e.at >= from)
+      .map(e => ({ e, score: (e.whoK === r.who || (e.who && e.who === name) ? 4 : 0) + (e.amt === r.amt ? 2 : e.amt <= r.amt ? 1 : -9) + ((e.p || '') === (r.p || '') ? 1 : 0) }))
+      .filter(x => x.score >= 0)
+      .sort((a, b) => b.score - a.score || (b.e.at + (b.e.time || '')).localeCompare(a.e.at + (a.e.time || '')))
+      .slice(0, 8).map(({ e }) => ({ id: e.id, voucher: e.voucher, at: e.at, day: dayLabel(e.at, false), amt: e.amt, amtT: this.fmtT(e.amt), what: e.cat + (e.what ? ' · ' + e.what : ''), who: e.who || '', where: this.projLabel(e.p), fee: e.fee || 0 }));
+  },
+  // The request was already paid and recorded as an expense in the cash book (before it was approved):
+  // mark it paid with that record. The expense becomes the request's payment, so the float goes down once.
+  payFromBook(r, expId) {
+    const cur = (this.state.reqs || []).find(q => q.id === r.id) || r;
+    if (!this.canPay()) return 'Only Finance pays requests';
+    if (cur.st === 'paid') return r.id + ' is already paid';
+    if (cur.st !== 'approved' && !(cur.st === 'pending' && (this.state.role || 'ceo') === 'ceo')) return r.id + ' is not approved yet · it can be marked paid once approved';
+    const e = this.pt().entries.find(x => x.id === expId); if (!e || e.void) return 'Choose the cash book record';
+    if (e.req) return e.voucher + ' is already the payment of ' + e.req;
+    if (e.amt > cur.amt) return e.voucher + ' (' + this.fmtT(e.amt) + ') is more than was requested (' + this.fmtT(cur.amt) + ')';
+    const me = this.me(), today = this.fToday(), t = tzTime(this.nowDate());
+    const patch = Object.assign({ step: 6, st: 'paid', paidOn: e.at, paidAt: e.time || t, paidAmt: e.amt, paidBy: me.k, paidVia: e.method || 'Cash', paidFrom: { id: e.id, voucher: e.voucher },
+      rec: { st: 'ok', spent: e.amt, back: 0, at: today, okAt: today, okTime: t, by: me.k, note: 'Paid and recorded in the cash book · ' + e.voucher }, log: [...(cur.log || []), this.now()] }, e.fee ? { payFee: e.fee } : {});
+    this.setState(x => ({ reqs: x.reqs.map(q => (q.id === r.id ? Object.assign({}, q, patch) : q)),
+      petty: Object.assign({}, x.petty, { entries: x.petty.entries.map(y => (y.id === e.id ? Object.assign({}, y, { req: r.id }) : y)) }) }));
+    this.remind(r.who, r.id + ' marked paid · ' + this.fmtT(e.amt), 'request:' + r.id, 'wallet', 'Already paid and recorded in the cash book (' + e.voucher + ')');
+    this.log('wallet', 'green', 'Paid from the cash book · ' + this.fmtT(e.amt), this.av(r.who).n + ' · ' + e.voucher, r.id);
+    this.toast(r.id + ' marked paid with ' + e.voucher + ' · the float is not reduced again');
+    return '';
+  },
   // Never deleted: a voided expense stays in the list, struck through, and no longer counts.
   voidExpense(id, reason) {
     if (!this.canFloat()) return 'Only Finance and Management void expenses';
@@ -420,7 +463,8 @@ export function floatVals(s) {
       edits: e && e.edits ? e.edits.map(x => x.at + ' · ' + this.av(x.by).first + ' · ' + x.reason + (x.was && x.was.fee != null && x.was.amt === e.amt ? ' (charges were ' + f(x.was.fee) + ')' : ' (was ' + f(x.was.amt) + ')')) : [],
       expense: e ? { amt: String(e.amt), cat: e.cat, note: e.what || '', p: e.p || '', who: e.who || '', method: e.method || 'Cash', fee: e.fee ? String(e.fee) : '', at: e.at } : null,
       canEdit: canEdit && !!e && !e.void && e.at === today, canVoid: canEdit && !!e && !e.void,
-      edit: x => this.editExpense(l.id, x), doVoid: r => this.voidExpense(l.id, r),
+      edit: x => this.editExpense(l.id, x), doVoid: r => this.voidExpense(l.id, r), canDelete: canEdit && !!e, doDelete: () => this.deleteExpense(l.id),
+      fromBook: l.voucher ? 'Paid from the cash book · ' + l.voucher : '',
       openReq: l.src === 'req' ? () => this.openReq(l.ref) : null,
       ...chargesOf(l) };
   };
@@ -481,5 +525,7 @@ export function payVals(s) {
     payTo: r.pay ? [r.pay.by, r.pay.bank, r.pay.name, r.pay.no].filter(Boolean).join(' · ') : '', method, methods: METHODS, today: this.fToday(), minDay: this.floatMinDay(),
     floatLeft: this.fl().grants.length ? this.floatBalance() : null,
     pay: x => { const m = this.payReq(r, x.amt, x.fee, { method: x.method, date: x.at }); if (!m) this.setState({ paySheet: null }); return m; },
+    book: this.canFloat() ? this.bookChoices(r) : [],
+    payFromBook: id => { const m = this.payFromBook(r, id); if (!m) this.setState({ paySheet: null }); return m; },
     close: () => this.setState({ paySheet: null }) };
 }
