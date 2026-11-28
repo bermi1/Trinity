@@ -34,11 +34,11 @@ describe('Finance navigation', () => {
     expect(TABS.finance[1][1]).toBe('Pay & approve');
     const a = app();
     expect(a.allowedPage('finance', 'receipts')).toBe('receipts');
-    // Monday Briefing appears once in Finance's menus; invoices and the company cash book wait under More.
+    // Monday Briefing appears once in Finance's menus; invoices and the company cash book have their own group.
     const G = a.navGroups('finance'), all = G.flatMap(g => g[1].map(i => i[1]));
     expect(all.filter(l => l === 'Monday Briefing').length).toBeLessThanOrEqual(1);
-    const more = G.find(g => g[2])[1].map(i => i[0]);
-    expect(more).toEqual(expect.arrayContaining(['invoices', 'finance', 'cashbook']));
+    const inv = G.find(g => g[0] === 'Invoices & accounts')[1].map(i => i[0]);
+    expect(inv).toEqual(expect.arrayContaining(['invoices', 'finance', 'cashbook']));
   });
 });
 
